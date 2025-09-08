@@ -365,3 +365,119 @@ I've thoroughly analyzed and improved the shutdown handling in your Playwright P
 - **Session backups** are saved in each profile's directory for recovery
 
 The improvements should resolve both the crash recovery dialog issue and the problem with tabs not being saved properly. The system now properly manages Chrome's internal session tracking and ensures clean exits are recorded correctly.
+
+### **Follow-up Fix: Duplicate Cleanup Messages**
+
+**Issue**: User noticed duplicate cleanup messages in terminal output:
+```
+🧹 Cleaning up disconnected browser session: 33c8b7f6-7e9c-4501-b11a-7cb2b413ac0b
+✅ Marked profile vpn-fresh as exited cleanly
+✅ Session 33c8b7f6-7e9c-4501-b11a-7cb2b413ac0b cleaned up successfully
+```
+
+**Root Cause**: Race condition between browser `disconnected` and context `close` event handlers both triggering cleanup simultaneously when user quits Chrome normally.
+
+**Fix Implemented**: Added cleanup synchronization mechanism:
+- Added `cleanupInProgress` Set to track sessions being cleaned up
+- Modified `handleBrowserDisconnect()` to check and prevent duplicate cleanup
+- Updated `closeBrowser()` to use same synchronization
+- Both handlers now properly coordinate to avoid duplicate execution
+
+**Result**: Clean, single cleanup message per session exit.
+
+---
+
+## Cache Clearing Feature Implementation
+
+**Date**: December 2024
+
+### **Problem**: 
+Browser profiles accumulate significant cache data over time, consuming unnecessary disk space. Users needed a way to clear cache files while preserving important profile data like cookies, bookmarks, and preferences.
+
+### **Solution Implemented**:
+
+#### **1. ProfileManager Cache Clearing Methods**
+- **`clearProfileCache(nameOrId)`**: Clear cache for a specific profile
+- **`clearAllProfilesCache()`**: Clear cache for all profiles with detailed results
+- **`clearCacheDirectories(userDataDir)`**: Core cache clearing logic
+- **`formatBytes(bytes)`**: Human-readable file size formatting
+
+#### **2. Cache Directories Targeted**:
+```javascript
+// Main browser caches
+'Default/Cache', 'Default/Code Cache', 'Default/GPUCache'
+'Default/DawnGraphiteCache', 'Default/DawnWebGPUCache'
+'GraphiteDawnCache', 'GrShaderCache', 'ShaderCache'
+
+// Extension and component caches  
+'component_crx_cache', 'extensions_crx_cache'
+
+// Temporary data
+'Default/blob_storage', 'Default/Shared Dictionary'
+
+// Temporary files
+'BrowserMetrics-spare.pma', 'SingletonCookie', 'SingletonLock', etc.
+```
+
+#### **3. ProfileLauncher Integration**
+- **`closeBrowser(sessionId, options)`**: Added `clearCache` option
+- **`closeAllBrowsers(options)`**: Supports cache clearing for all sessions
+- Automatic cache size reporting when cleared
+
+#### **4. CLI Commands Added**
+
+**New `clear-cache` command:**
+```bash
+# Clear cache for all profiles
+ppm clear-cache --all
+
+# Clear cache for specific profile  
+ppm clear-cache --profile "My Profile"
+
+# Skip confirmation prompt
+ppm clear-cache --all --yes
+```
+
+**Enhanced `launch` command:**
+```bash
+# Launch with cache clearing on exit
+ppm launch --clear-cache-on-exit "My Profile"
+```
+
+#### **5. Features**:
+- **Safe cache clearing**: Only removes cache files, preserves cookies/bookmarks/preferences
+- **Size reporting**: Shows exactly how much disk space was freed
+- **Error handling**: Non-critical errors don't stop the process
+- **Confirmation prompts**: Prevents accidental cache clearing
+- **Detailed logging**: Shows which directories/files were cleared
+- **Automatic integration**: Works with existing browser close workflows
+
+#### **6. Usage Examples**:
+
+**Clear cache for all profiles:**
+```bash
+$ ppm clear-cache --all
+🧹 Cache Clearing Operation
+Profiles to clean: 3
+  1. work-profile (Work browsing profile)
+  2. personal-profile (Personal browsing)  
+  3. testing-profile (Test profile)
+
+✅ Cache cleared: 247.3 MB freed
+🎉 Cache clearing completed successfully!
+```
+
+**Launch with auto-cache-clear:**
+```bash
+$ ppm launch personal-profile --clear-cache-on-exit
+# ... browser session ...
+# On exit:
+✓ Browser closed successfully!
+✓ Cache cleared: 45.2 MB freed
+```
+
+### **Benefits**:
+- **Reduced disk usage**: Significant space savings by removing cache files
+- **Preserved functionality**: All important profile data remains intact
+- **Flexible usage**: Can clear cache on-demand or automatically on exit
+- **User-friendly**: Clear feedback on space savings and operations performed

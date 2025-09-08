@@ -385,6 +385,7 @@ program
     .option('-f, --fresh', 'Launch with a fresh temporary profile')
     .option('--load-extensions <paths...>', 'Inject extensions from specified paths')
     .option('--no-auto-extensions', 'Disable automatic injection of extensions from ./extensions folder')
+    .option('--clear-cache-on-exit', 'Clear cache when browser is closed to reduce disk usage')
     .action(async (profileName, options) => {
         try {
             let result;
@@ -432,8 +433,17 @@ program
                 const cleanup = async () => {
                     console.log(chalk.blue('\nClosing browser...'));
                     try {
-                        await profileLauncher.closeBrowser(result.sessionId);
+                        const closeOptions = { clearCache: options.clearCacheOnExit };
+                        const closeResult = await profileLauncher.closeBrowser(result.sessionId, closeOptions);
                         console.log(chalk.green('✓ Browser closed successfully!'));
+                        
+                        if (closeResult.cacheCleared) {
+                            if (closeResult.cacheCleared.success) {
+                                console.log(chalk.green(`✓ Cache cleared: ${closeResult.cacheCleared.sizeCleared} freed`));
+                            } else {
+                                console.log(chalk.yellow(`⚠️  Could not clear cache: ${closeResult.cacheCleared.error}`));
+                            }
+                        }
                     } catch (error) {
                         console.error(chalk.red('✗ Error closing browser:'), error.message);
                     }
@@ -706,6 +716,122 @@ program
             
         } catch (error) {
             console.error(chalk.red('✗ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+// Clear cache command
+program
+    .command('clear-cache')
+    .description('Clear cache for profiles to reduce disk usage')
+    .option('-a, --all', 'Clear cache for all profiles')
+    .option('-p, --profile <name>', 'Clear cache for specific profile')
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .action(async (options) => {
+        try {
+            if (!options.all && !options.profile) {
+                console.log(chalk.yellow('Please specify either --all to clear cache for all profiles or --profile <name> for a specific profile.'));
+                console.log(chalk.dim('Examples:'));
+                console.log(chalk.dim('  ppm clear-cache --all'));
+                console.log(chalk.dim('  ppm clear-cache --profile "My Profile"'));
+                return;
+            }
+
+            let profilesToClean = [];
+            
+            if (options.all) {
+                profilesToClean = await profileManager.listProfiles();
+                if (profilesToClean.length === 0) {
+                    console.log(chalk.yellow('No profiles found to clear cache for.'));
+                    return;
+                }
+            } else {
+                try {
+                    const profile = await profileManager.getProfile(options.profile);
+                    profilesToClean = [profile];
+                } catch (error) {
+                    console.error(chalk.red(`Profile not found: ${options.profile}`));
+                    return;
+                }
+            }
+
+            // Show what will be cleared
+            console.log(chalk.blue('\n🧹 Cache Clearing Operation'));
+            console.log(`Profiles to clean: ${profilesToClean.length}`);
+            profilesToClean.forEach((profile, index) => {
+                console.log(`  ${index + 1}. ${profile.name} ${profile.description ? `(${profile.description})` : ''}`);
+            });
+            
+            console.log(chalk.dim('\nCache directories that will be cleared:'));
+            console.log(chalk.dim('  • Browser cache (Cache, Code Cache, GPU Cache)'));
+            console.log(chalk.dim('  • Graphics caches (GraphiteDawnCache, ShaderCache)'));
+            console.log(chalk.dim('  • Extension caches (component_crx_cache, extensions_crx_cache)'));
+            console.log(chalk.dim('  • Temporary files and blob storage'));
+            console.log(chalk.dim('  • Various database cache files'));
+
+            // Confirmation prompt unless --yes is specified
+            if (!options.yes) {
+                const confirm = await inquirer.prompt([
+                    {
+                        type: 'confirm',
+                        name: 'proceed',
+                        message: `Are you sure you want to clear cache for ${profilesToClean.length} profile(s)?`,
+                        default: false
+                    }
+                ]);
+
+                if (!confirm.proceed) {
+                    console.log(chalk.yellow('Operation cancelled.'));
+                    return;
+                }
+            }
+
+            // Clear cache for profiles
+            console.log(chalk.blue('\n🚀 Starting cache clearing...'));
+            let totalSizeCleared = 0;
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const profile of profilesToClean) {
+                try {
+                    console.log(`\n🧹 Clearing cache for: ${chalk.cyan(profile.name)}`);
+                    const results = await profileManager.clearCacheDirectories(profile.userDataDir);
+                    
+                    const sizeCleared = profileManager.formatBytes(results.totalSizeCleared);
+                    console.log(`  ✅ Cache cleared: ${chalk.green(sizeCleared)} freed`);
+                    
+                    if (results.directoriesCleared.length > 0) {
+                        console.log(`  📁 Directories: ${results.directoriesCleared.length} cleared`);
+                    }
+                    if (results.filesRemoved.length > 0) {
+                        console.log(`  📄 Files: ${results.filesRemoved.length} removed`);
+                    }
+                    if (results.errors.length > 0) {
+                        console.log(`  ⚠️  Errors: ${results.errors.length} (non-critical)`);
+                    }
+                    
+                    totalSizeCleared += results.totalSizeCleared;
+                    successCount++;
+                } catch (error) {
+                    console.log(`  ❌ Error clearing cache: ${chalk.red(error.message)}`);
+                    errorCount++;
+                }
+            }
+
+            // Summary
+            console.log(chalk.blue('\n📊 Cache Clearing Summary:'));
+            console.log(`✅ Profiles cleared: ${chalk.green(successCount)}`);
+            if (errorCount > 0) {
+                console.log(`❌ Profiles with errors: ${chalk.red(errorCount)}`);
+            }
+            console.log(`💾 Total space freed: ${chalk.green(profileManager.formatBytes(totalSizeCleared))}`);
+            
+            if (successCount > 0) {
+                console.log(chalk.green('\n🎉 Cache clearing completed successfully!'));
+            }
+
+        } catch (error) {
+            console.error(chalk.red(`Error: ${error.message}`));
             process.exit(1);
         }
     });

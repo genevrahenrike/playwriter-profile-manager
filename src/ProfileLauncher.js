@@ -6,6 +6,7 @@ export class ProfileLauncher {
     constructor(profileManager) {
         this.profileManager = profileManager;
         this.activeBrowsers = new Map();
+        this.cleanupInProgress = new Set(); // Track sessions being cleaned up
     }
 
     async launchProfile(nameOrId, options = {}) {
@@ -187,11 +188,15 @@ export class ProfileLauncher {
         }
     }
 
-    async closeBrowser(sessionId) {
+    async closeBrowser(sessionId, options = {}) {
+        const { clearCache = false } = options;
         const browserInfo = this.activeBrowsers.get(sessionId);
         if (!browserInfo) {
             throw new Error(`No active browser found for session: ${sessionId}`);
         }
+
+        // Prevent race condition with disconnect handlers
+        this.cleanupInProgress.add(sessionId);
 
         try {
             // Proactively prepare for clean shutdown
@@ -226,24 +231,49 @@ export class ProfileLauncher {
                 await this.profileManager.deleteProfile(browserInfo.profile.id);
             }
             
+            // Clear cache if requested
+            let cacheCleared = null;
+            if (clearCache && !browserInfo.isTemporary) {
+                try {
+                    console.log(`🧹 Clearing cache for profile: ${browserInfo.profile.name}`);
+                    const cacheResults = await this.profileManager.clearCacheDirectories(browserInfo.profile.userDataDir);
+                    cacheCleared = {
+                        success: true,
+                        sizeCleared: this.profileManager.formatBytes(cacheResults.totalSizeCleared),
+                        details: cacheResults
+                    };
+                    console.log(`✅ Cache cleared: ${cacheCleared.sizeCleared} freed`);
+                } catch (error) {
+                    console.warn(`⚠️  Could not clear cache: ${error.message}`);
+                    cacheCleared = {
+                        success: false,
+                        error: error.message
+                    };
+                }
+            }
+            
             this.activeBrowsers.delete(sessionId);
             
             return {
                 profile: browserInfo.profile,
-                duration: new Date() - browserInfo.startTime
+                duration: new Date() - browserInfo.startTime,
+                cacheCleared
             };
         } catch (error) {
             throw new Error(`Failed to close browser: ${error.message}`);
+        } finally {
+            // Always remove from cleanup tracking
+            this.cleanupInProgress.delete(sessionId);
         }
     }
 
-    async closeAllBrowsers() {
+    async closeAllBrowsers(options = {}) {
         const results = [];
         const sessionIds = Array.from(this.activeBrowsers.keys());
         
         for (const sessionId of sessionIds) {
             try {
-                const result = await this.closeBrowser(sessionId);
+                const result = await this.closeBrowser(sessionId, options);
                 results.push({ sessionId, success: true, ...result });
             } catch (error) {
                 results.push({ sessionId, success: false, error: error.message });
@@ -287,6 +317,19 @@ export class ProfileLauncher {
      * @param {Object} browserInfo - Browser information object
      */
     async handleBrowserDisconnect(sessionId, browserInfo) {
+        // Prevent duplicate cleanup
+        if (this.cleanupInProgress.has(sessionId)) {
+            return;
+        }
+        
+        // Check if session still exists
+        if (!this.activeBrowsers.has(sessionId)) {
+            return;
+        }
+        
+        // Mark cleanup as in progress
+        this.cleanupInProgress.add(sessionId);
+        
         try {
             console.log(`🧹 Cleaning up disconnected browser session: ${sessionId}`);
             
@@ -310,6 +353,9 @@ export class ProfileLauncher {
             
         } catch (error) {
             console.error(`❌ Error cleaning up session ${sessionId}:`, error.message);
+        } finally {
+            // Always remove from cleanup tracking
+            this.cleanupInProgress.delete(sessionId);
         }
     }
 

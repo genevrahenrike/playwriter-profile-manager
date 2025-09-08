@@ -8,6 +8,7 @@ A comprehensive browser profile manager for Playwright automation, similar to bu
 - 📥 **Import from existing Chromium profiles** - Import cookies, extensions, bookmarks, and more
 - 💾 **Save and track sessions** - Maintain profiles like regular browsers
 - 🔄 **Clone, rename, and delete profiles** - Full profile management
+- 🧹 **Cache clearing** - Reduce disk usage by clearing browser cache files
 - 🖥️ **CLI interface** - Easy command-line usage
 - 🔧 **Programmatic API** - Use in your automation scripts
 
@@ -94,6 +95,35 @@ npx ppm rm profile-name --force  # skip confirmation
 npx ppm sessions
 ```
 
+### Clear cache to reduce disk usage
+```bash
+# Clear cache for all profiles
+npx ppm clear-cache --all
+
+# Clear cache for specific profile  
+npx ppm clear-cache --profile "my-profile"
+
+# Skip confirmation prompt
+npx ppm clear-cache --all --yes
+
+# Launch with automatic cache clearing on exit
+npx ppm launch my-profile --clear-cache-on-exit
+```
+
+**Cache clearing features:**
+- **Safe operation**: Only removes cache files, preserves cookies, bookmarks, preferences, and extensions
+- **Space reporting**: Shows exactly how much disk space was freed
+- **Selective clearing**: Clear cache for all profiles or specific ones
+- **Auto-clear on exit**: Optionally clear cache when browser sessions end
+- **Detailed feedback**: Reports which directories and files were cleared
+
+**Cache directories cleared:**
+- Browser caches (Cache, Code Cache, GPU Cache)
+- Graphics caches (GraphiteDawnCache, ShaderCache, GrShaderCache)  
+- Extension caches (component_crx_cache, extensions_crx_cache)
+- Temporary data (blob_storage, Shared Dictionary)
+- Temporary files (SingletonCookie, BrowserMetrics, etc.)
+
 ## Programmatic Usage
 
 ```javascript
@@ -114,8 +144,17 @@ const { browser, page, sessionId } = await system.launchProfile('test-profile');
 // Use the browser
 await page.goto('https://example.com');
 
-// Close when done
-await system.profileLauncher.closeBrowser(sessionId);
+// Close when done (optionally clear cache)
+await system.profileLauncher.closeBrowser(sessionId, { clearCache: true });
+
+// Or clear cache for all profiles
+const results = await system.profileManager.clearAllProfilesCache();
+console.log(`Cleared cache for ${results.length} profiles`);
+
+// Clear cache for specific profile
+const profile = await system.profileManager.clearProfileCache('test-profile');
+console.log(`Cache cleared for: ${profile.name}`);
+
 await system.cleanup();
 ```
 
@@ -171,6 +210,9 @@ profiles/
 - `deleteProfile(nameOrId)` - Delete a profile
 - `cloneProfile(source, newName)` - Clone a profile
 - `renameProfile(nameOrId, newName)` - Rename a profile
+- `clearProfileCache(nameOrId)` - Clear cache for specific profile
+- `clearAllProfilesCache()` - Clear cache for all profiles
+- `formatBytes(bytes)` - Convert bytes to human-readable format
 
 ### ChromiumImporter
 
@@ -181,7 +223,8 @@ profiles/
 
 - `launchProfile(nameOrId, options)` - Launch a profile
 - `launchFreshProfile(name, options)` - Launch temporary profile
-- `closeBrowser(sessionId)` - Close browser session
+- `closeBrowser(sessionId, options)` - Close browser session (supports `clearCache` option)
+- `closeAllBrowsers(options)` - Close all browser sessions (supports `clearCache` option)
 - `getActiveSessions()` - Get active sessions
 
 ## Extension Support

@@ -206,6 +206,142 @@ export class ProfileManager {
         `, [sessionId]);
     }
 
+    async clearProfileCache(nameOrId) {
+        const profile = await this.getProfile(nameOrId);
+        await this.clearCacheDirectories(profile.userDataDir);
+        return profile;
+    }
+
+    async clearAllProfilesCache() {
+        const profiles = await this.listProfiles();
+        const results = [];
+        
+        for (const profile of profiles) {
+            try {
+                await this.clearCacheDirectories(profile.userDataDir);
+                results.push({ 
+                    profileId: profile.id, 
+                    profileName: profile.name, 
+                    success: true 
+                });
+            } catch (error) {
+                results.push({ 
+                    profileId: profile.id, 
+                    profileName: profile.name, 
+                    success: false, 
+                    error: error.message 
+                });
+            }
+        }
+        
+        return results;
+    }
+
+    async clearCacheDirectories(userDataDir) {
+        const cacheDirectories = [
+            // Main browser cache directories
+            'Default/Cache',
+            'Default/Code Cache',
+            'Default/GPUCache',
+            'Default/DawnGraphiteCache',
+            'Default/DawnWebGPUCache',
+            'GraphiteDawnCache',
+            'GrShaderCache',
+            'ShaderCache',
+            
+            // Component and extension caches
+            'component_crx_cache',
+            'extensions_crx_cache',
+            
+            // Temporary and blob storage
+            'Default/blob_storage',
+            'Default/Shared Dictionary',
+            
+            // Database cache files that can be safely removed
+            'Default/heavy_ad_intervention_opt_out.db',
+            'Default/heavy_ad_intervention_opt_out.db-journal'
+        ];
+
+        const filesToRemove = [
+            // Temporary files
+            'BrowserMetrics-spare.pma',
+            'SingletonCookie',
+            'SingletonLock', 
+            'SingletonSocket',
+            'RunningChromeVersion'
+        ];
+
+        let totalSizeCleared = 0;
+        const results = {
+            directoriesCleared: [],
+            filesRemoved: [],
+            errors: [],
+            totalSizeCleared: 0
+        };
+
+        // Clear cache directories
+        for (const cacheDir of cacheDirectories) {
+            const fullPath = path.join(userDataDir, cacheDir);
+            try {
+                if (await fs.pathExists(fullPath)) {
+                    // Calculate size before removal
+                    const size = await this.getDirectorySize(fullPath);
+                    await fs.remove(fullPath);
+                    totalSizeCleared += size;
+                    results.directoriesCleared.push({ path: cacheDir, size });
+                }
+            } catch (error) {
+                results.errors.push({ path: cacheDir, error: error.message });
+            }
+        }
+
+        // Remove temporary files
+        for (const file of filesToRemove) {
+            const fullPath = path.join(userDataDir, file);
+            try {
+                if (await fs.pathExists(fullPath)) {
+                    const stats = await fs.stat(fullPath);
+                    await fs.remove(fullPath);
+                    totalSizeCleared += stats.size;
+                    results.filesRemoved.push({ path: file, size: stats.size });
+                }
+            } catch (error) {
+                results.errors.push({ path: file, error: error.message });
+            }
+        }
+
+        results.totalSizeCleared = totalSizeCleared;
+        return results;
+    }
+
+    async getDirectorySize(dirPath) {
+        let totalSize = 0;
+        try {
+            const items = await fs.readdir(dirPath);
+            for (const item of items) {
+                const itemPath = path.join(dirPath, item);
+                const stats = await fs.stat(itemPath);
+                if (stats.isDirectory()) {
+                    totalSize += await this.getDirectorySize(itemPath);
+                } else {
+                    totalSize += stats.size;
+                }
+            }
+        } catch (error) {
+            // If we can't read the directory, just return 0
+            return 0;
+        }
+        return totalSize;
+    }
+
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
     async close() {
         if (this.db) {
             const close = promisify(this.db.close.bind(this.db));
