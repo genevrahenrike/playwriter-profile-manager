@@ -1075,7 +1075,7 @@ export class ProfileLauncher {
         console.log(`   Title: ${await page.title()}`);
         
         // Wait briefly for page to start loading
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(1500);
         
         // Check for specific elements on the VidIQ install page
         try {
