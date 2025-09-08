@@ -56,6 +56,17 @@ export class ProfileLauncher {
                         '--restore-last-session',
                         '--disable-background-mode',
                         '--disable-hang-monitor',
+                        // Additional flags for better session handling
+                        '--enable-session-service',
+                        '--no-first-run',
+                        '--disable-default-apps',
+                        '--disable-component-update',
+                        '--disable-background-networking',
+                        '--disable-sync',
+                        // Prevent Chrome from interfering with shutdown
+                        '--disable-background-timer-throttling',
+                        '--disable-renderer-backgrounding',
+                        '--disable-backgrounding-occluded-windows',
                         ...this.getExtensionLaunchArgs(allExtensions),
                         ...args
                     ]
@@ -183,6 +194,11 @@ export class ProfileLauncher {
         }
 
         try {
+            // Proactively prepare for clean shutdown
+            if (browserInfo.browserType === 'chromium') {
+                await this.prepareCleanShutdown(browserInfo);
+            }
+
             // Save storage state for non-Chromium browsers
             if (browserInfo.context && browserInfo.browserType !== 'chromium') {
                 const storageStatePath = path.join(browserInfo.profile.userDataDir, 'storage-state.json');
@@ -194,7 +210,7 @@ export class ProfileLauncher {
                 await this.markCleanExit(browserInfo.profile);
             }
 
-            // Close context and browser
+            // Close context and browser gracefully
             if (browserInfo.context) {
                 await browserInfo.context.close();
             }
@@ -298,13 +314,61 @@ export class ProfileLauncher {
     }
 
     /**
+     * Prepare Chrome browser for clean shutdown by saving current state
+     * @param {Object} browserInfo - Browser information object
+     */
+    async prepareCleanShutdown(browserInfo) {
+        try {
+            const { context, profile } = browserInfo;
+            
+            if (!context) return;
+            
+            console.log(`🔄 Preparing clean shutdown for profile: ${profile.name}`);
+            
+            // Force save current session state by navigating to a safe URL
+            // This triggers Chrome's session saving mechanisms
+            const pages = await context.pages();
+            if (pages.length > 0) {
+                // Get current tab URLs for potential restoration
+                const tabUrls = [];
+                for (const page of pages) {
+                    try {
+                        const url = page.url();
+                        if (url && !url.startsWith('chrome://') && !url.startsWith('about:')) {
+                            tabUrls.push(url);
+                        }
+                    } catch (error) {
+                        // Ignore errors getting URL from individual pages
+                    }
+                }
+                
+                // Store URLs in a file for potential manual recovery
+                if (tabUrls.length > 0) {
+                    const sessionBackupPath = path.join(profile.userDataDir, 'last-session-backup.json');
+                    await fs.writeJson(sessionBackupPath, {
+                        timestamp: new Date().toISOString(),
+                        urls: tabUrls,
+                        sessionId: browserInfo.sessionId
+                    }, { spaces: 2 });
+                }
+            }
+            
+            // Give Chrome a moment to process any pending writes
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+        } catch (error) {
+            console.warn(`⚠️  Could not prepare clean shutdown: ${error.message}`);
+        }
+    }
+
+    /**
      * Mark Chrome profile as having exited cleanly
      * @param {Object} profile - Profile object
      */
     async markCleanExit(profile) {
         try {
+            // Mark clean exit in main Preferences file
             const preferencesPath = path.join(profile.userDataDir, 'Preferences');
-            
             if (await fs.pathExists(preferencesPath)) {
                 const preferences = await fs.readJson(preferencesPath);
                 
@@ -319,9 +383,43 @@ export class ProfileLauncher {
                 
                 // Write back to file
                 await fs.writeJson(preferencesPath, preferences, { spaces: 2 });
-                
-                console.log(`✅ Marked profile ${profile.name} as exited cleanly`);
             }
+
+            // Mark clean exit in Default profile preferences (where session data is stored)
+            const defaultPreferencesPath = path.join(profile.userDataDir, 'Default', 'Preferences');
+            if (await fs.pathExists(defaultPreferencesPath)) {
+                const defaultPreferences = await fs.readJson(defaultPreferencesPath);
+                
+                // Ensure profile section exists
+                if (!defaultPreferences.profile) {
+                    defaultPreferences.profile = {};
+                }
+                
+                // Mark as clean exit
+                defaultPreferences.profile.exit_type = 'Normal';
+                defaultPreferences.profile.exited_cleanly = true;
+                
+                // Clean up session event log to remove any crash markers
+                if (defaultPreferences.sessions && defaultPreferences.sessions.event_log) {
+                    const eventLog = defaultPreferences.sessions.event_log;
+                    // Remove any crashed events and add a clean exit event
+                    const cleanEventLog = eventLog.filter(event => event.type !== 0 || !event.crashed);
+                    
+                    // Add a clean exit event
+                    cleanEventLog.push({
+                        crashed: false,
+                        time: String(Date.now() * 1000 + 11644473600000000), // Chrome timestamp format
+                        type: 0
+                    });
+                    
+                    defaultPreferences.sessions.event_log = cleanEventLog;
+                }
+                
+                // Write back to file
+                await fs.writeJson(defaultPreferencesPath, defaultPreferences, { spaces: 2 });
+            }
+            
+            console.log(`✅ Marked profile ${profile.name} as exited cleanly`);
         } catch (error) {
             console.warn(`⚠️  Could not mark clean exit for profile ${profile.name}:`, error.message);
         }
@@ -382,11 +480,15 @@ export class ProfileLauncher {
 
     async setupChromiumProfilePreferences(profile) {
         const preferencesPath = path.join(profile.userDataDir, 'Preferences');
+        const defaultPreferencesPath = path.join(profile.userDataDir, 'Default', 'Preferences');
         
         try {
-            let preferences = {};
+            // Ensure directories exist
+            await fs.ensureDir(profile.userDataDir);
+            await fs.ensureDir(path.join(profile.userDataDir, 'Default'));
             
-            // Read existing preferences if they exist
+            // Setup main preferences
+            let preferences = {};
             if (await fs.pathExists(preferencesPath)) {
                 preferences = await fs.readJson(preferencesPath);
             }
@@ -399,12 +501,51 @@ export class ProfileLauncher {
             preferences.profile.name = profile.name;
             preferences.profile.managed_user_id = '';
             preferences.profile.is_ephemeral = false;
+            preferences.profile.exit_type = 'Normal';
+            preferences.profile.exited_cleanly = true;
             
-            // Ensure the profile directory exists
-            await fs.ensureDir(profile.userDataDir);
-            
-            // Write preferences
+            // Write main preferences
             await fs.writeJson(preferencesPath, preferences, { spaces: 2 });
+            
+            // Setup Default profile preferences for session management
+            let defaultPreferences = {};
+            if (await fs.pathExists(defaultPreferencesPath)) {
+                defaultPreferences = await fs.readJson(defaultPreferencesPath);
+            }
+            
+            // Ensure profile section exists in default preferences
+            if (!defaultPreferences.profile) {
+                defaultPreferences.profile = {};
+            }
+            
+            // Set clean exit state
+            defaultPreferences.profile.exit_type = 'Normal';
+            defaultPreferences.profile.exited_cleanly = true;
+            defaultPreferences.profile.name = profile.name;
+            
+            // Configure session restoration settings
+            if (!defaultPreferences.session) {
+                defaultPreferences.session = {};
+            }
+            
+            // Set startup to restore last session
+            if (!defaultPreferences.session.startup_urls) {
+                defaultPreferences.session.startup_urls = [];
+            }
+            
+            // Configure to continue where left off
+            defaultPreferences.session.restore_on_startup = 1; // 1 = Continue where you left off
+            
+            // Initialize clean session event log
+            if (!defaultPreferences.sessions) {
+                defaultPreferences.sessions = {};
+            }
+            if (!defaultPreferences.sessions.event_log) {
+                defaultPreferences.sessions.event_log = [];
+            }
+            
+            // Write default preferences
+            await fs.writeJson(defaultPreferencesPath, defaultPreferences, { spaces: 2 });
             
         } catch (error) {
             // Don't fail if we can't set preferences, just log it

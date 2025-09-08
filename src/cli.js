@@ -609,6 +609,107 @@ program
         }
     });
 
+// Debug profile command
+program
+    .command('debug-profile')
+    .description('Debug profile session state and preferences')
+    .argument('[profile]', 'Profile name or ID (optional - will show selection if not provided)')
+    .action(async (profileName) => {
+        try {
+            // If no profile name provided, show selector
+            if (!profileName) {
+                profileName = await selectProfile('Select profile to debug:');
+            }
+            
+            const profile = await profileManager.getProfile(profileName);
+            console.log(chalk.blue(`\n🔍 Debugging profile: ${profile.name}\n`));
+            
+            // Check main preferences
+            const preferencesPath = path.join(profile.userDataDir, 'Preferences');
+            if (await fs.pathExists(preferencesPath)) {
+                const preferences = await fs.readJson(preferencesPath);
+                console.log(chalk.green('📄 Main Preferences:'));
+                if (preferences.profile) {
+                    console.log(`  Exit Type: ${preferences.profile.exit_type || 'Not set'}`);
+                    console.log(`  Exited Cleanly: ${preferences.profile.exited_cleanly || false}`);
+                    console.log(`  Profile Name: ${preferences.profile.name || 'Not set'}`);
+                } else {
+                    console.log('  No profile section found');
+                }
+                console.log('');
+            } else {
+                console.log(chalk.yellow('📄 Main Preferences: File not found\n'));
+            }
+            
+            // Check default preferences
+            const defaultPreferencesPath = path.join(profile.userDataDir, 'Default', 'Preferences');
+            if (await fs.pathExists(defaultPreferencesPath)) {
+                const defaultPreferences = await fs.readJson(defaultPreferencesPath);
+                console.log(chalk.green('📋 Default Preferences:'));
+                if (defaultPreferences.profile) {
+                    console.log(`  Exit Type: ${defaultPreferences.profile.exit_type || 'Not set'}`);
+                    console.log(`  Exited Cleanly: ${defaultPreferences.profile.exited_cleanly || false}`);
+                }
+                
+                if (defaultPreferences.session) {
+                    console.log(`  Restore on Startup: ${defaultPreferences.session.restore_on_startup || 'Not set'}`);
+                    console.log(`  Startup URLs: ${defaultPreferences.session.startup_urls ? defaultPreferences.session.startup_urls.length : 0} URL(s)`);
+                }
+                
+                if (defaultPreferences.sessions && defaultPreferences.sessions.event_log) {
+                    const eventLog = defaultPreferences.sessions.event_log;
+                    console.log(`  Session Events: ${eventLog.length} event(s)`);
+                    
+                    // Show last few events
+                    const recentEvents = eventLog.slice(-3);
+                    recentEvents.forEach((event, index) => {
+                        const eventType = event.type === 0 ? 'Exit' : 
+                                         event.type === 1 ? 'Restore' : 
+                                         event.type === 2 ? 'Update' : 
+                                         event.type === 5 ? 'Restore Browser' : 
+                                         `Type ${event.type}`;
+                        const crashed = event.crashed ? ' (CRASHED)' : '';
+                        console.log(`    ${index + 1}. ${eventType}${crashed} - ${new Date(parseInt(event.time) / 1000 - 11644473600).toLocaleString()}`);
+                    });
+                }
+                console.log('');
+            } else {
+                console.log(chalk.yellow('📋 Default Preferences: File not found\n'));
+            }
+            
+            // Check for session backup
+            const sessionBackupPath = path.join(profile.userDataDir, 'last-session-backup.json');
+            if (await fs.pathExists(sessionBackupPath)) {
+                const sessionBackup = await fs.readJson(sessionBackupPath);
+                console.log(chalk.green('💾 Session Backup:'));
+                console.log(`  Timestamp: ${sessionBackup.timestamp}`);
+                console.log(`  URLs: ${sessionBackup.urls ? sessionBackup.urls.length : 0} URL(s)`);
+                if (sessionBackup.urls && sessionBackup.urls.length > 0) {
+                    sessionBackup.urls.slice(0, 3).forEach((url, index) => {
+                        console.log(`    ${index + 1}. ${url}`);
+                    });
+                    if (sessionBackup.urls.length > 3) {
+                        console.log(`    ... and ${sessionBackup.urls.length - 3} more`);
+                    }
+                }
+                console.log('');
+            } else {
+                console.log(chalk.yellow('💾 Session Backup: Not found\n'));
+            }
+            
+            // Show recommendations
+            console.log(chalk.blue('💡 Recommendations:'));
+            console.log('  • Use "Quit" (Cmd+Q) instead of closing individual windows');
+            console.log('  • Ensure Chrome has time to save session data before shutdown');
+            console.log('  • Check that the profile has proper exit state configuration');
+            console.log('  • If issues persist, try clearing the session event log');
+            
+        } catch (error) {
+            console.error(chalk.red('✗ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
 // Handle cleanup on exit
 process.on('SIGINT', async () => {
     console.log(chalk.blue('\nShutting down...'));

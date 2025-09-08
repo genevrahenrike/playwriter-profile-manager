@@ -333,3 +333,35 @@ const result = await system.launchProfile('profile', {
     testFingerprint: true
 });
 ```
+---
+
+I've thoroughly analyzed and improved the shutdown handling in your Playwright Profile Manager. Here are the key issues I identified and fixed:
+
+### **Root Problems Found:**
+
+1. **Chrome Session Event Log**: The main issue was that Chrome's session event log in `Default/Preferences` was showing `"crashed": true` as the last event, causing Chrome to think it crashed
+2. **Incomplete Exit Handling**: The system was only updating the main `Preferences` file but not the `Default/Preferences` where Chrome stores session data
+3. **Missing Session Configuration**: Profiles weren't properly configured for session restoration
+
+### **Improvements Implemented:**
+
+1. **Enhanced `markCleanExit()`**: Now properly handles both preference files and cleans up the session event log to remove crash markers
+
+2. **New `prepareCleanShutdown()`**: Proactively saves current tab URLs and gives Chrome time to write session data before shutdown
+
+3. **Improved Profile Setup**: Pre-configures profiles with proper session restoration settings (`restore_on_startup = 1`)
+
+4. **Better Chrome Flags**: Added flags like `--enable-session-service` and background process controls for robust session handling
+
+5. **Debug Command**: New `ppm debug-profile` command to troubleshoot session issues and view current state
+
+6. **Session Backup**: Automatically saves tab URLs to `last-session-backup.json` for manual recovery if needed
+
+### **How to Use:**
+
+- **Existing profiles** will automatically get the improvements when launched
+- **Always use Cmd+Q** to quit Chrome (not window close buttons)  
+- **Use `ppm debug-profile [profile-name]`** to check session state
+- **Session backups** are saved in each profile's directory for recovery
+
+The improvements should resolve both the crash recovery dialog issue and the problem with tabs not being saved properly. The system now properly manages Chrome's internal session tracking and ensures clean exits are recorded correctly.

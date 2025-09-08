@@ -1,105 +1,160 @@
-# Shutdown Handling Improvements
+# Profile Shutdown & Session Persistence Improvements
 
-## Issues Identified
+## Problem Analysis
 
-The original implementation had several problems with shutdown handling:
+The project was experiencing issues where:
+1. **Chrome showed crash recovery dialogs** even when using "Quit" (Cmd+Q)
+2. **Last opened tabs weren't being saved** properly
+3. **Session state wasn't persisting** between browser launches
 
-1. **No Browser Process Monitoring**: Only handled terminal signals (`SIGINT`/`SIGTERM`) but didn't monitor when the browser process itself exits (e.g., clicking "Quit" in Chrome)
-2. **Missing Chrome Flags**: Lacked Chrome launch arguments for proper session persistence and crash reporting
-3. **Preferences Cleanup Issue**: `ChromiumImporter` deleted `exit_type` and `exited_cleanly` from preferences, preventing proper exit state management
-4. **No Browser Disconnection Handling**: When Chrome was quit directly, Playwright didn't get notified to perform cleanup
+### Root Cause
 
-## Improvements Implemented
+After analyzing the Chrome preferences files, the issue was identified in the session event log. Chrome tracks browser exits in `Default/Preferences` under `sessions.event_log`, and when the last event shows `"crashed": true`, Chrome assumes the browser crashed and shows the restore dialog.
 
-### 1. Enhanced Chrome Launch Arguments
+## Implemented Solutions
 
-Added the following Chrome flags to improve session persistence and prevent crash dialogs:
+### 1. Enhanced Clean Exit Marking (`markCleanExit`)
 
+**Before:** Only marked exit state in main `Preferences` file
+**After:** Now handles both preference files:
+
+- **Main Preferences** (`/Preferences`): Profile-level exit state
+- **Default Preferences** (`/Default/Preferences`): Session-level exit state and event log
+
+**Key improvements:**
+- Cleans up session event log to remove crash markers
+- Adds proper clean exit events
+- Handles Chrome's internal session tracking properly
+
+### 2. Proactive Shutdown Preparation (`prepareCleanShutdown`)
+
+**New feature** that runs before browser closure:
+- Captures current tab URLs as backup
+- Saves session backup to `last-session-backup.json`
+- Gives Chrome time to process pending writes
+- Ensures session state is saved before shutdown
+
+### 3. Improved Profile Setup (`setupChromiumProfilePreferences`)
+
+**Enhanced initialization:**
+- Pre-configures both preference files for clean operation
+- Sets `restore_on_startup = 1` (Continue where you left off)
+- Initializes clean session event log
+- Ensures proper directory structure
+
+### 4. Better Chrome Launch Arguments
+
+**Added flags for robust session handling:**
 ```javascript
-// Session persistence and clean exit flags
-'--disable-session-crashed-bubble',  // Prevents crash restore dialog
-'--disable-infobars',               // Disables info bars
-'--no-crash-upload',                // Disables crash reporting
-'--disable-crash-reporter',         // Disables crash reporter
-'--restore-last-session',           // Enables session restoration
-'--disable-background-mode',        // Prevents background processes
-'--disable-hang-monitor'            // Disables hang detection
+'--enable-session-service',           // Ensures session service is active
+'--disable-background-networking',    // Prevents background interference
+'--disable-background-timer-throttling', // Prevents shutdown delays
+'--disable-renderer-backgrounding',   // Ensures proper cleanup
+'--disable-backgrounding-occluded-windows' // Better window management
 ```
 
-### 2. Browser Disconnection Monitoring
+### 5. Debug Command (`debug-profile`)
 
-Implemented comprehensive browser process monitoring:
+**New CLI command** for troubleshooting:
+```bash
+ppm debug-profile [profile-name]
+```
 
-- **Browser Disconnect Events**: Monitors `browser.on('disconnected')` events
-- **Context Close Events**: Monitors `context.on('close')` events  
-- **Automatic Cleanup**: Performs proper session cleanup when browser exits unexpectedly
+Shows:
+- Exit state in both preference files
+- Session event log analysis
+- Session backup status
+- Troubleshooting recommendations
 
-### 3. Clean Exit State Management
+## Usage Instructions
 
-Enhanced profile preferences handling:
+### For Users Experiencing Issues
 
-- **Mark Clean Exit**: Automatically sets `exit_type: 'Normal'` and `exited_cleanly: true` in Chrome preferences
-- **Preserve Exit State**: Modified `ChromiumImporter` to preserve exit state fields instead of deleting them
-- **Proper Session Cleanup**: Ensures database sessions are properly ended
+1. **Use the debug command** to check current state:
+   ```bash
+   ppm debug-profile my-profile
+   ```
 
-### 4. Robust Session Cleanup
+2. **Launch profiles normally** - improvements are automatic:
+   ```bash
+   ppm launch my-profile
+   ```
 
-Added comprehensive cleanup handling:
+3. **Always use Cmd+Q to quit** Chrome (not window close buttons)
 
-```javascript
-async handleBrowserDisconnect(sessionId, browserInfo) {
-    // Mark exit as clean in Chrome preferences
-    await this.markCleanExit(browserInfo.profile);
-    
-    // End session in database
-    await this.profileManager.endSession(sessionId);
-    
-    // Clean up temporary profiles
-    if (browserInfo.isTemporary) {
-        await this.profileManager.deleteProfile(browserInfo.profile.id);
-    }
-    
-    // Remove from active browsers
-    this.activeBrowsers.delete(sessionId);
+4. **Check session backup** if tabs are lost:
+   ```bash
+   # Session backup file location:
+   # profiles/data/{profile-id}/last-session-backup.json
+   ```
+
+### For Existing Profiles
+
+The improvements will automatically apply to existing profiles when they're launched. The system will:
+- Update preference files with proper session settings
+- Initialize clean session event logs
+- Configure proper startup behavior
+
+## Technical Details
+
+### Chrome Session Event Types
+- `type: 0` - Browser exit/start events
+- `type: 1` - Session restore events  
+- `type: 2` - Session update events
+- `type: 5` - Browser restore events
+
+### Preference File Structure
+```json
+{
+  "profile": {
+    "exit_type": "Normal",
+    "exited_cleanly": true
+  },
+  "session": {
+    "restore_on_startup": 1
+  },
+  "sessions": {
+    "event_log": [
+      {
+        "crashed": false,
+        "time": "13401843679426803",
+        "type": 0
+      }
+    ]
+  }
 }
 ```
 
-## Files Modified
-
-1. **`src/ProfileLauncher.js`**:
-   - Added Chrome flags for better exit handling
-   - Implemented `setupBrowserDisconnectMonitoring()`
-   - Added `handleBrowserDisconnect()` method
-   - Added `markCleanExit()` method
-   - Enhanced `closeBrowser()` to mark clean exits
-
-2. **`src/ChromiumImporter.js`**:
-   - Modified `sanitizePreferences()` to preserve exit state
-   - Ensures imported profiles start with clean exit state
-
-## Benefits
-
-These improvements provide:
-
-1. **Persistent Session State**: Last opened tabs and browser state are now properly saved
-2. **No More Crash Dialogs**: Chrome won't show "restore session" prompts after normal quits
-3. **Robust Cleanup**: Proper cleanup happens regardless of how the browser is closed
-4. **Better User Experience**: Seamless browser launching and closing without unexpected dialogs
-
-## Usage
-
-The improvements work automatically with existing commands:
-
-```bash
-# Launch profile - now with better exit handling
-ppm launch my-profile
-
-# Quit Chrome normally - state will be preserved
-# No more crash restore dialogs on next launch
+### Session Backup Format
+```json
+{
+  "timestamp": "2025-01-09T10:30:00.000Z",
+  "urls": ["https://example.com", "https://github.com"],
+  "sessionId": "uuid-here"
+}
 ```
 
-The system now properly handles:
-- Clicking "Quit" in Chrome menu
-- Closing Chrome with Cmd+Q (macOS) or Alt+F4 (Windows/Linux)
-- Terminal interruption with Ctrl+C
-- Unexpected browser crashes or disconnections
+## Testing Recommendations
+
+1. **Test normal quit flow:**
+   - Launch profile: `ppm launch test-profile`
+   - Open several tabs
+   - Use Cmd+Q to quit
+   - Relaunch - tabs should restore without crash dialog
+
+2. **Test debug command:**
+   - `ppm debug-profile test-profile`
+   - Verify clean exit state
+   - Check session event log
+
+3. **Test session backup:**
+   - Force close browser (kill process)
+   - Check `last-session-backup.json` exists
+   - URLs should be captured
+
+## Future Enhancements
+
+- **Automatic session recovery** from backup files
+- **Session restoration UI** for manual recovery
+- **Advanced session debugging** tools
+- **Profile health checks** for session integrity
