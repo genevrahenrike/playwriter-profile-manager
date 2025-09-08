@@ -7,6 +7,7 @@ import { ProfileManager } from './ProfileManager.js';
 import { ProfileLauncher } from './ProfileLauncher.js';
 import { StealthManager } from './StealthManager.js';
 import { FingerprintTester } from './FingerprintTester.js';
+import { AuthenticityAnalyzer } from './AuthenticityAnalyzer.js';
 import fs from 'fs-extra';
 import path from 'path';
 
@@ -15,6 +16,7 @@ const profileManager = new ProfileManager();
 const profileLauncher = new ProfileLauncher(profileManager);
 const stealthManager = new StealthManager();
 const fingerprintTester = new FingerprintTester();
+const authenticityAnalyzer = new AuthenticityAnalyzer();
 
 // Stealth Launch Command
 program
@@ -357,6 +359,176 @@ program
         }
     });
 
+// Authenticity Testing Commands
+program
+    .command('test-authenticity')
+    .description('Test authenticity and bot detection risk of active sessions')
+    .option('-s, --session <sessionId>', 'Test specific session ID')
+    .option('-a, --all', 'Test all active sessions')
+    .option('--comprehensive', 'Run comprehensive analysis including multi-site tests')
+    .option('--save', 'Save results to file')
+    .action(async (options) => {
+        try {
+            const sessions = profileLauncher.getActiveSessions();
+            
+            if (sessions.length === 0) {
+                console.log(chalk.yellow('⚠️  No active browser sessions found.'));
+                console.log(chalk.dim('Launch a profile first with: ppm-stealth stealth-launch <profile>'));
+                return;
+            }
+
+            let sessionsToTest = [];
+            
+            if (options.session) {
+                const session = sessions.find(s => s.sessionId === options.session);
+                if (!session) {
+                    console.error(chalk.red('❌ Session not found:'), options.session);
+                    return;
+                }
+                sessionsToTest = [session];
+            } else if (options.all) {
+                sessionsToTest = sessions;
+            } else {
+                // Interactive selection
+                const choices = sessions.map(s => ({
+                    name: `${s.profileName} (${s.browserType}) - ${s.sessionId}`,
+                    value: s.sessionId,
+                    short: s.sessionId
+                }));
+                
+                const answer = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'sessionId',
+                        message: 'Select session to test authenticity:',
+                        choices
+                    }
+                ]);
+                
+                sessionsToTest = [sessions.find(s => s.sessionId === answer.sessionId)];
+            }
+
+            for (const session of sessionsToTest) {
+                console.log(chalk.blue(`\n🔍 Testing authenticity for session: ${session.sessionId}`));
+                console.log(chalk.dim(`Profile: ${session.profileName} (${session.browserType})`));
+                
+                const testOptions = {
+                    includeMultipleSites: options.comprehensive || false,
+                    includeBehavioralAnalysis: true,
+                    includeConsistencyCheck: true,
+                    saveResults: options.save || false
+                };
+                
+                try {
+                    const results = await profileLauncher.testAuthenticity(session.sessionId, testOptions);
+                    
+                    const score = results.scores.overall;
+                    const riskLevel = profileLauncher.calculateRiskLevel(score);
+                    const riskEmoji = riskLevel === 'LOW' ? '🟢' : 
+                                     riskLevel === 'MEDIUM' ? '🟡' : 
+                                     riskLevel === 'HIGH' ? '🟠' : '🔴';
+                    
+                    console.log(chalk.green('✅ Authenticity test completed'));
+                    console.log(`${riskEmoji} Overall Score: ${(score * 100).toFixed(1)}% (${riskLevel} RISK)`);
+                    
+                    if (results.scores.suspicion_flags.length > 0) {
+                        console.log(chalk.red(`⚠️  ${results.scores.suspicion_flags.length} suspicion flag(s) detected`));
+                    }
+                    
+                } catch (error) {
+                    console.error(chalk.red('❌ Authenticity test failed:'), error.message);
+                }
+            }
+            
+        } catch (error) {
+            console.error(chalk.red('❌ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+program
+    .command('preflight-check <profile>')
+    .description('Run preflight authenticity check before launching profile')
+    .option('-p, --preset <preset>', 'Stealth preset to test', 'balanced')
+    .option('--comprehensive', 'Run comprehensive analysis')
+    .action(async (profileName, options) => {
+        try {
+            console.log(chalk.blue(`🚀 Running preflight authenticity check for: ${profileName}`));
+            console.log(chalk.dim(`Testing with preset: ${options.preset}`));
+            
+            const stealthConfig = stealthManager.createPreset(options.preset);
+            const results = await profileLauncher.runPreflightAuthenticityCheck(profileName, stealthConfig);
+            
+            if (results.error) {
+                console.error(chalk.red('❌ Preflight check failed:'), results.error);
+                return;
+            }
+            
+            const score = results.authenticityAnalysis.scores.overall;
+            const passed = results.passed;
+            const riskLevel = results.riskLevel;
+            
+            console.log(chalk.green('✅ Preflight check completed'));
+            console.log(`📊 Authenticity Score: ${(score * 100).toFixed(1)}%`);
+            console.log(`🎯 Test Result: ${passed ? chalk.green('PASSED') : chalk.red('FAILED')}`);
+            console.log(`⚠️  Risk Level: ${riskLevel}`);
+            
+            if (results.recommendations.length > 0) {
+                console.log(chalk.yellow('\n💡 Recommendations:'));
+                results.recommendations.forEach(rec => {
+                    const emoji = rec.priority === 'CRITICAL' ? '🔥' : 
+                                 rec.priority === 'HIGH' ? '⚠️' : 
+                                 rec.priority === 'MEDIUM' ? 'ℹ️' : '💭';
+                    console.log(`   ${emoji} ${rec.priority}: ${rec.message}`);
+                    console.log(`      Action: ${rec.action}`);
+                });
+            }
+            
+        } catch (error) {
+            console.error(chalk.red('❌ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+program
+    .command('compare-authenticity <profile>')
+    .description('Compare authenticity across different stealth presets')
+    .option('--presets <presets...>', 'Presets to compare', ['minimal', 'balanced', 'maximum'])
+    .action(async (profileName, options) => {
+        try {
+            console.log(chalk.blue(`🔬 Comparing authenticity for profile: ${profileName}`));
+            
+            const results = await profileLauncher.compareStealthAuthenticity(profileName, options.presets);
+            
+            console.log(chalk.green('✅ Authenticity comparison completed'));
+            console.log(`🏆 Best Preset: ${results.recommendations.best_preset} (${(results.recommendations.best_score * 100).toFixed(1)}%)`);
+            
+            console.log(chalk.blue('\n📊 Detailed Results:'));
+            results.comparisons.forEach(comp => {
+                const emoji = comp.passed ? '✅' : '❌';
+                const riskEmoji = comp.risk_level === 'LOW' ? '🟢' : 
+                                 comp.risk_level === 'MEDIUM' ? '🟡' : 
+                                 comp.risk_level === 'HIGH' ? '🟠' : '🔴';
+                
+                console.log(`   ${emoji} ${comp.preset}: ${(comp.overall_score * 100).toFixed(1)}% ${riskEmoji}`);
+                if (comp.suspicion_flags.length > 0) {
+                    console.log(`      ⚠️  ${comp.suspicion_flags.length} suspicion flag(s)`);
+                }
+            });
+            
+            if (results.recommendations.analysis.length > 0) {
+                console.log(chalk.yellow('\n💡 Analysis:'));
+                results.recommendations.analysis.forEach(insight => {
+                    console.log(`   ${insight}`);
+                });
+            }
+            
+        } catch (error) {
+            console.error(chalk.red('❌ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
 // Help Command
 program
     .command('help-stealth')
@@ -367,6 +539,9 @@ program
         console.log(chalk.bold('Available Commands:'));
         console.log('  stealth-launch <profile>    Launch profile with stealth features');
         console.log('  test-fingerprint            Test browser fingerprint');
+        console.log('  test-authenticity           Test authenticity and bot detection risk');
+        console.log('  preflight-check <profile>   Run preflight authenticity check');
+        console.log('  compare-authenticity <profile> Compare authenticity across presets');
         console.log('  compare-fingerprints        Compare two fingerprint results');
         console.log('  stealth-config              Manage stealth configurations');
         console.log('  sessions                     View active sessions with stealth info');
@@ -393,11 +568,21 @@ program
         console.log('  • Custom fingerprint analysis');
         console.log('  • Fingerprint comparison tools');
         
+        console.log(chalk.bold('\nAuthenticity Testing:'));
+        console.log('  • Professional bot detection via iphey.com (40% weight)');
+        console.log('  • Comprehensive analysis via Pixelscan (30% weight)');
+        console.log('  • Multi-site fingerprint consistency checks');
+        console.log('  • Behavioral pattern analysis (15% weight)');
+        console.log('  • Preflight authenticity validation');
+        console.log('  • AmIUnique data for validation (data only)');
+
         console.log(chalk.bold('\nExamples:'));
-        console.log('  ppm stealth-launch my-profile --preset maximum --test-fingerprint');
-        console.log('  ppm test-fingerprint --comprehensive --save');
-        console.log('  ppm stealth-config --profile my-profile --save balanced');
-        console.log('  ppm compare-fingerprints --session1 abc123 --session2 def456');
+        console.log('  ppm-stealth stealth-launch my-profile --preset maximum --test-fingerprint');
+        console.log('  ppm-stealth preflight-check my-profile --preset balanced');
+        console.log('  ppm-stealth compare-authenticity my-profile');
+        console.log('  ppm-stealth test-authenticity --comprehensive --save');
+        console.log('  ppm-stealth test-fingerprint --comprehensive --save');
+        console.log('  ppm-stealth stealth-config --profile my-profile --save balanced');
     });
 
 program.parse();

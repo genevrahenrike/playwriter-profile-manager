@@ -283,6 +283,35 @@ ppm-stealth test-fingerprint --comprehensive --save
 ppm-stealth compare-fingerprints --session1 normal --session2 stealth
 ```
 
+### Authenticity Analysis & Bot Detection Risk Assessment
+
+Advanced authenticity testing with comprehensive bot detection analysis:
+
+```bash
+# Run preflight authenticity check before launching
+ppm-stealth preflight-check my-profile --preset balanced
+
+# Compare authenticity across different stealth presets
+ppm-stealth compare-authenticity my-profile
+
+# Test authenticity of active sessions
+ppm-stealth test-authenticity --comprehensive --save
+```
+
+**Authenticity Scoring System:**
+- **🟢 80-100%**: LOW RISK - Excellent authenticity, low bot detection probability
+- **🟡 60-79%**: MEDIUM RISK - Good authenticity, acceptable for most use cases
+- **🟠 40-59%**: HIGH RISK - Suspicious patterns detected, review configuration
+- **🔴 0-39%**: CRITICAL RISK - High bot detection probability, requires immediate attention
+
+**Analysis Features:**
+- **Professional Bot Detection**: Primary scoring via iphey.com (40% weight) and Pixelscan (30% weight)
+- **Multi-site Validation**: Tests consistency across specialized detection frameworks
+- **Behavioral Analysis**: Analyzes automation indicators and performance patterns (15% weight)
+- **Preflight Validation**: Test configurations before launching production sessions
+- **Risk Assessment**: Comprehensive scoring with actionable recommendations
+- **Data Validation**: AmIUnique provides additional uniqueness data for context
+
 ### Programmatic Usage with Stealth
 
 ```javascript
@@ -312,6 +341,22 @@ const result = await system.launchProfile('my-profile', {
 // Test fingerprint
 const fingerprint = await system.profileLauncher.testFingerprint(result.sessionId);
 console.log(fingerprint.tests.mixvisit.fingerprintHash);
+
+// NEW: Authenticity testing and validation
+// Run preflight authenticity check
+const preflightResults = await system.profileLauncher.runPreflightAuthenticityCheck('my-profile');
+console.log(`Authenticity Score: ${(preflightResults.authenticityAnalysis.scores.overall * 100).toFixed(1)}%`);
+console.log(`Risk Level: ${preflightResults.riskLevel}`);
+console.log(`Passed: ${preflightResults.passed}`);
+
+// Compare authenticity across presets
+const comparison = await system.profileLauncher.compareStealthAuthenticity('my-profile');
+console.log(`Best Preset: ${comparison.recommendations.best_preset}`);
+
+// Test authenticity of active session
+const authenticityResults = await system.profileLauncher.testAuthenticity(result.sessionId);
+console.log(`Authenticity Score: ${(authenticityResults.scores.overall * 100).toFixed(1)}%`);
+console.log(`Suspicion Flags: ${authenticityResults.scores.suspicion_flags.length}`);
 ```
 
 ## Future Features

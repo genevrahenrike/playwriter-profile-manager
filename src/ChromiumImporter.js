@@ -287,9 +287,14 @@ export class ChromiumImporter {
     sanitizePreferences(preferences) {
         // Remove potentially problematic settings for Playwright
         if (preferences.profile) {
-            delete preferences.profile.exit_type;
-            delete preferences.profile.exited_cleanly;
+            // Keep exit_type and exited_cleanly for proper session management
+            // delete preferences.profile.exit_type;
+            // delete preferences.profile.exited_cleanly;
             delete preferences.profile.last_engagement_time;
+            
+            // Ensure clean exit state for imported profiles
+            preferences.profile.exit_type = 'Normal';
+            preferences.profile.exited_cleanly = true;
         }
         
         // Remove session data that might cause conflicts

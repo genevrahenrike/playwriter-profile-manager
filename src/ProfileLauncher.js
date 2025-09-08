@@ -1,15 +1,11 @@
 import { chromium, firefox, webkit } from 'playwright';
 import path from 'path';
 import fs from 'fs-extra';
-import { StealthManager } from './StealthManager.js';
-import { FingerprintTester } from './FingerprintTester.js';
 
 export class ProfileLauncher {
     constructor(profileManager) {
         this.profileManager = profileManager;
         this.activeBrowsers = new Map();
-        this.stealthManager = new StealthManager();
-        this.fingerprintTester = new FingerprintTester();
     }
 
     async launchProfile(nameOrId, options = {}) {
@@ -20,11 +16,7 @@ export class ProfileLauncher {
             viewport = { width: 1280, height: 720 },
             args = [],
             loadExtensions = [],
-            autoLoadExtensions = true,
-            stealth = true,
-            stealthPreset = 'balanced',
-            stealthConfig = null,
-            testFingerprint = false
+            autoLoadExtensions = true
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
@@ -33,17 +25,6 @@ export class ProfileLauncher {
         let browser, context;
         
         try {
-            // Determine stealth configuration
-            let finalStealthConfig = null;
-            if (stealth) {
-                if (stealthConfig) {
-                    finalStealthConfig = stealthConfig;
-                } else {
-                    finalStealthConfig = this.stealthManager.createPreset(stealthPreset);
-                }
-                console.log(`🛡️  Using stealth preset: ${stealthPreset}`);
-            }
-
             if (browserType === 'chromium') {
                 // Set up profile preferences before launching
                 await this.setupChromiumProfilePreferences(profile);
@@ -57,41 +38,28 @@ export class ProfileLauncher {
                     const autoExtensions = await this.findAutoLoadExtensions();
                     allExtensions = [...allExtensions, ...autoExtensions];
                 }
-
-                if (stealth && finalStealthConfig) {
-                    // Use stealth manager for enhanced protection
-                    const stealthOptions = {
-                        browserType,
-                        userDataDir: profile.userDataDir,
-                        headless,
-                        devtools,
-                        viewport,
-                        args: [...this.getExtensionLaunchArgs(allExtensions), ...args]
-                    };
-                    
-                    const stealthResult = await this.stealthManager.launchStealthBrowser(stealthOptions, finalStealthConfig);
-                    browser = stealthResult.browser;
-                    context = stealthResult.context;
-                    
-                    console.log('🛡️  Stealth features activated');
-                } else {
-                    // Fallback to regular playwright launch
-                    const launchOptions = {
-                        headless,
-                        devtools,
-                        viewport,
-                        channel: 'chromium',
-                        args: [
-                            '--disable-blink-features=AutomationControlled',
-                            '--disable-features=VizDisplayCompositor',
-                            ...this.getExtensionLaunchArgs(allExtensions),
-                            ...args
-                        ]
-                    };
-                    
-                    context = await chromium.launchPersistentContext(profile.userDataDir, launchOptions);
-                    browser = context.browser();
-                }
+                
+                // Prepare launch options
+                const launchOptions = {
+                    headless,
+                    devtools,
+                    viewport,
+                    channel: 'chromium', // Required for extension loading
+                    args: [
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-features=VizDisplayCompositor',
+                        // Session persistence and clean exit flags
+                        '--disable-session-crashed-bubble',
+                        '--disable-infobars',
+                        '--no-crash-upload',
+                        '--disable-crash-reporter',
+                        '--restore-last-session',
+                        '--disable-background-mode',
+                        '--disable-hang-monitor',
+                        ...this.getExtensionLaunchArgs(allExtensions),
+                        ...args
+                    ]
+                };
                 
                 // Add extensions if available - for persistent context, extensions should be in user data dir
                 if (importedData.extensions && importedData.extensions.length > 0) {
@@ -99,6 +67,10 @@ export class ProfileLauncher {
                     // Extensions are already copied to the profile directory during import
                     // Persistent context will load them automatically
                 }
+                
+                // For Chromium, use persistent context
+                context = await chromium.launchPersistentContext(profile.userDataDir, launchOptions);
+                browser = context.browser();
                 
                 // Load cookies if available
                 if (importedData.cookies && importedData.cookies.length > 0) {
@@ -164,40 +136,19 @@ export class ProfileLauncher {
 
             this.activeBrowsers.set(sessionId, browserInfo);
 
+            // Monitor browser disconnection for proper cleanup
+            this.setupBrowserDisconnectMonitoring(sessionId, browserInfo);
+
             // For Chromium persistent context, use the existing page; for others, create new page
             const page = browserType === 'chromium' ? context.pages()[0] : await context.newPage();
             
-            const result = {
+            return {
                 browser,
                 context,
                 profile,
                 sessionId,
-                page,
-                stealthEnabled: stealth,
-                stealthConfig: finalStealthConfig
+                page
             };
-
-            // Run fingerprint test if requested
-            if (testFingerprint && page) {
-                console.log('🧪 Running fingerprint test...');
-                try {
-                    const fingerprintResults = await this.fingerprintTester.runComprehensiveTest(page, {
-                        includeMixVisit: true,
-                        includeMultipleSites: false, // Skip multiple sites for faster testing
-                        saveResults: true,
-                        outputPath: path.join(profile.userDataDir, 'fingerprint-test.json')
-                    });
-                    
-                    result.fingerprintTest = fingerprintResults;
-                    console.log('✅ Fingerprint test completed');
-                    console.log(this.fingerprintTester.generateSummaryReport(fingerprintResults));
-                } catch (error) {
-                    console.warn('⚠️  Fingerprint test failed:', error.message);
-                    result.fingerprintTestError = error.message;
-                }
-            }
-            
-            return result;
         } catch (error) {
             await this.profileManager.endSession(sessionId);
             throw new Error(`Failed to launch profile: ${error.message}`);
@@ -236,6 +187,11 @@ export class ProfileLauncher {
             if (browserInfo.context && browserInfo.browserType !== 'chromium') {
                 const storageStatePath = path.join(browserInfo.profile.userDataDir, 'storage-state.json');
                 await browserInfo.context.storageState({ path: storageStatePath });
+            }
+
+            // Mark clean exit for Chromium browsers
+            if (browserInfo.browserType === 'chromium') {
+                await this.markCleanExit(browserInfo.profile);
             }
 
             // Close context and browser
@@ -279,6 +235,96 @@ export class ProfileLauncher {
         }
         
         return results;
+    }
+
+    /**
+     * Set up monitoring for browser disconnection to handle unexpected exits
+     * @param {string} sessionId - Session ID
+     * @param {Object} browserInfo - Browser information object
+     */
+    setupBrowserDisconnectMonitoring(sessionId, browserInfo) {
+        const { browser, context, profile, browserType } = browserInfo;
+        
+        // Monitor browser disconnection
+        if (browser) {
+            browser.on('disconnected', async () => {
+                console.log(`🔌 Browser disconnected for session: ${sessionId}`);
+                await this.handleBrowserDisconnect(sessionId, browserInfo);
+            });
+        }
+        
+        // Monitor context close for additional safety
+        if (context) {
+            context.on('close', async () => {
+                console.log(`📋 Context closed for session: ${sessionId}`);
+                // Only handle if browser is still in active sessions (not already cleaned up)
+                if (this.activeBrowsers.has(sessionId)) {
+                    await this.handleBrowserDisconnect(sessionId, browserInfo);
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle browser disconnection and perform cleanup
+     * @param {string} sessionId - Session ID
+     * @param {Object} browserInfo - Browser information object
+     */
+    async handleBrowserDisconnect(sessionId, browserInfo) {
+        try {
+            console.log(`🧹 Cleaning up disconnected browser session: ${sessionId}`);
+            
+            // Mark exit as clean in Chrome preferences
+            if (browserInfo.browserType === 'chromium') {
+                await this.markCleanExit(browserInfo.profile);
+            }
+            
+            // End session in database
+            await this.profileManager.endSession(sessionId);
+            
+            // Clean up temporary profiles
+            if (browserInfo.isTemporary) {
+                await this.profileManager.deleteProfile(browserInfo.profile.id);
+            }
+            
+            // Remove from active browsers
+            this.activeBrowsers.delete(sessionId);
+            
+            console.log(`✅ Session ${sessionId} cleaned up successfully`);
+            
+        } catch (error) {
+            console.error(`❌ Error cleaning up session ${sessionId}:`, error.message);
+        }
+    }
+
+    /**
+     * Mark Chrome profile as having exited cleanly
+     * @param {Object} profile - Profile object
+     */
+    async markCleanExit(profile) {
+        try {
+            const preferencesPath = path.join(profile.userDataDir, 'Preferences');
+            
+            if (await fs.pathExists(preferencesPath)) {
+                const preferences = await fs.readJson(preferencesPath);
+                
+                // Ensure profile section exists
+                if (!preferences.profile) {
+                    preferences.profile = {};
+                }
+                
+                // Mark as clean exit
+                preferences.profile.exit_type = 'Normal';
+                preferences.profile.exited_cleanly = true;
+                
+                // Write back to file
+                await fs.writeJson(preferencesPath, preferences, { spaces: 2 });
+                
+                console.log(`✅ Marked profile ${profile.name} as exited cleanly`);
+            }
+        } catch (error) {
+            console.warn(`⚠️  Could not mark clean exit for profile ${profile.name}:`, error.message);
+        }
     }
 
     getActiveSessions() {
@@ -523,123 +569,5 @@ export class ProfileLauncher {
             console.warn(`⚠️  Could not verify extensions: ${error.message}`);
             return [];
         }
-    }
-
-    /**
-     * Test fingerprint of an active browser session
-     * @param {string} sessionId - Session ID
-     * @param {Object} options - Test options
-     * @returns {Object} Fingerprint test results
-     */
-    async testFingerprint(sessionId, options = {}) {
-        const browserInfo = this.activeBrowsers.get(sessionId);
-        if (!browserInfo) {
-            throw new Error(`No active browser found for session: ${sessionId}`);
-        }
-
-        const page = browserInfo.context.pages()[0] || await browserInfo.context.newPage();
-        
-        console.log('🧪 Testing fingerprint for active session...');
-        const results = await this.fingerprintTester.runComprehensiveTest(page, {
-            saveResults: true,
-            outputPath: path.join(browserInfo.profile.userDataDir, `fingerprint-test-${Date.now()}.json`),
-            ...options
-        });
-
-        console.log(this.fingerprintTester.generateSummaryReport(results));
-        return results;
-    }
-
-    /**
-     * Update stealth configuration for an active session
-     * @param {string} sessionId - Session ID
-     * @param {Object} stealthConfig - New stealth configuration
-     * @returns {boolean} Success status
-     */
-    async updateStealthConfig(sessionId, stealthConfig) {
-        const browserInfo = this.activeBrowsers.get(sessionId);
-        if (!browserInfo) {
-            throw new Error(`No active browser found for session: ${sessionId}`);
-        }
-
-        try {
-            console.log('🔄 Updating stealth configuration...');
-            await this.stealthManager.applyStealthScripts(browserInfo.context, stealthConfig);
-            console.log('✅ Stealth configuration updated');
-            return true;
-        } catch (error) {
-            console.error('❌ Failed to update stealth configuration:', error.message);
-            return false;
-        }
-    }
-
-    /**
-     * Save stealth configuration to profile
-     * @param {string} profileId - Profile ID
-     * @param {Object} stealthConfig - Stealth configuration to save
-     */
-    async saveStealthConfig(profileId, stealthConfig) {
-        const profile = await this.profileManager.getProfile(profileId);
-        const configPath = path.join(profile.userDataDir, 'stealth-config.json');
-        await this.stealthManager.saveConfig(stealthConfig, configPath);
-        console.log(`💾 Stealth config saved to: ${configPath}`);
-    }
-
-    /**
-     * Load stealth configuration from profile
-     * @param {string} profileId - Profile ID
-     * @returns {Object} Stealth configuration
-     */
-    async loadStealthConfig(profileId) {
-        const profile = await this.profileManager.getProfile(profileId);
-        const configPath = path.join(profile.userDataDir, 'stealth-config.json');
-        return await this.stealthManager.loadConfig(configPath);
-    }
-
-    /**
-     * Compare fingerprints between two sessions or saved results
-     * @param {string|Object} source1 - Session ID or fingerprint results
-     * @param {string|Object} source2 - Session ID or fingerprint results
-     * @returns {Object} Comparison results
-     */
-    async compareFingerprints(source1, source2) {
-        let results1, results2;
-
-        // Get results for source1
-        if (typeof source1 === 'string') {
-            results1 = await this.testFingerprint(source1, { saveResults: false });
-        } else {
-            results1 = source1;
-        }
-
-        // Get results for source2
-        if (typeof source2 === 'string') {
-            results2 = await this.testFingerprint(source2, { saveResults: false });
-        } else {
-            results2 = source2;
-        }
-
-        return this.fingerprintTester.compareResults(results1, results2);
-    }
-
-    /**
-     * Get available stealth presets
-     * @returns {Array} Available presets
-     */
-    getStealthPresets() {
-        return [
-            {
-                name: 'minimal',
-                description: 'Essential anti-bot protection only (WebGL spoofing, keeps everything else authentic)'
-            },
-            {
-                name: 'balanced',
-                description: 'Conservative protection (WebGL + minimal audio/canvas noise, keeps user agent and other info authentic)'
-            },
-            {
-                name: 'maximum',
-                description: 'Aggressive protection (all features enabled, may break some sites or look suspicious)'
-            }
-        ];
     }
 }
