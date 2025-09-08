@@ -386,6 +386,9 @@ program
     .option('--load-extensions <paths...>', 'Inject extensions from specified paths')
     .option('--no-auto-extensions', 'Disable automatic injection of extensions from ./extensions folder')
     .option('--clear-cache-on-exit', 'Clear cache when browser is closed to reduce disk usage')
+    .option('--no-automation', 'Disable automation capabilities (enabled by default)')
+    .option('--no-max-stealth', 'Disable maximum stealth mode (enabled by default)')
+    .option('--automation-tasks <tasks...>', 'Specify custom automation tasks')
     .action(async (profileName, options) => {
         try {
             let result;
@@ -401,7 +404,10 @@ program
                 headless: options.headless,
                 devtools: options.devtools,
                 loadExtensions: options.loadExtensions || [],
-                autoLoadExtensions: options.autoExtensions !== false // True by default, disable with --no-auto-extensions
+                autoLoadExtensions: options.autoExtensions !== false, // True by default, disable with --no-auto-extensions
+                enableAutomation: options.automation !== false, // True by default, disable with --no-automation
+                maxStealth: options.maxStealth !== false, // True by default, disable with --no-max-stealth
+                automationTasks: options.automationTasks || []
             };
 
             // Show extension-related info
@@ -411,6 +417,19 @@ program
 
             if (launchOptions.autoLoadExtensions) {
                 console.log(chalk.blue('🔍 Scanning ./extensions folder for extensions to auto-inject...'));
+            }
+
+            // Show automation and stealth status
+            if (launchOptions.enableAutomation) {
+                console.log(chalk.green('🤖 Automation enabled - Browser will be connected to automation API'));
+            } else {
+                console.log(chalk.yellow('⚠️  Automation disabled - Running in manual mode only'));
+            }
+
+            if (launchOptions.maxStealth) {
+                console.log(chalk.green('🛡️  Maximum stealth mode enabled - Full anti-detection active'));
+            } else {
+                console.log(chalk.yellow('⚠️  Standard stealth mode - Some detection vectors may be exposed'));
             }
 
             if (options.fresh) {
@@ -425,6 +444,11 @@ program
             console.log(chalk.blue(`  Profile: ${result.profile.name}`));
             console.log(chalk.blue(`  Session ID: ${result.sessionId}`));
             console.log(chalk.blue(`  Browser: ${options.browser}`));
+            if (result.automationEnabled) {
+                console.log(chalk.green(`  🤖 Automation: Active (monitoring for VidIQ tabs)`));
+            } else {
+                console.log(chalk.gray(`  🤖 Automation: Disabled`));
+            }
             
             if (!options.headless) {
                 console.log(chalk.yellow('\nPress Ctrl+C to close the browser and end the session.'));

@@ -7,6 +7,8 @@ export class ProfileLauncher {
         this.profileManager = profileManager;
         this.activeBrowsers = new Map();
         this.cleanupInProgress = new Set(); // Track sessions being cleaned up
+        this.automationTasks = new Map(); // Track automation tasks per session
+        this.processedPages = new Map(); // Track processed pages to avoid duplicates
     }
 
     async launchProfile(nameOrId, options = {}) {
@@ -17,7 +19,10 @@ export class ProfileLauncher {
             viewport = { width: 1280, height: 720 },
             args = [],
             loadExtensions = [],
-            autoLoadExtensions = true
+            autoLoadExtensions = true,
+            enableAutomation = true, // Enable automation by default
+            maxStealth = true, // Enable maximum stealth by default
+            automationTasks = [] // Array of automation tasks to run
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
@@ -40,15 +45,28 @@ export class ProfileLauncher {
                     allExtensions = [...allExtensions, ...autoExtensions];
                 }
                 
-                // Prepare launch options
+                // Prepare launch options with maximum stealth
+                const stealthArgs = maxStealth ? this.getMaxStealthArgs() : [];
                 const launchOptions = {
                     headless,
                     devtools,
                     viewport,
                     channel: 'chromium', // Required for extension loading
                     args: [
+                        // Core stealth flags
                         '--disable-blink-features=AutomationControlled',
                         '--disable-features=VizDisplayCompositor',
+                        '--exclude-switches=enable-automation',
+                        '--disable-dev-shm-usage',
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-web-security',
+                        '--allow-running-insecure-content',
+                        '--disable-features=TranslateUI',
+                        '--disable-extensions-file-access-check',
+                        '--disable-extensions-http-throttling',
+                        '--disable-ipc-flooding-protection',
+                        
                         // Session persistence and clean exit flags
                         '--disable-session-crashed-bubble',
                         '--disable-infobars',
@@ -57,6 +75,7 @@ export class ProfileLauncher {
                         '--restore-last-session',
                         '--disable-background-mode',
                         '--disable-hang-monitor',
+                        
                         // Additional flags for better session handling
                         '--enable-session-service',
                         '--no-first-run',
@@ -64,10 +83,14 @@ export class ProfileLauncher {
                         '--disable-component-update',
                         '--disable-background-networking',
                         '--disable-sync',
+                        
                         // Prevent Chrome from interfering with shutdown
                         '--disable-background-timer-throttling',
                         '--disable-renderer-backgrounding',
                         '--disable-backgrounding-occluded-windows',
+                        
+                        // Maximum stealth flags
+                        ...stealthArgs,
                         ...this.getExtensionLaunchArgs(allExtensions),
                         ...args
                     ]
@@ -154,12 +177,18 @@ export class ProfileLauncher {
             // For Chromium persistent context, use the existing page; for others, create new page
             const page = browserType === 'chromium' ? context.pages()[0] : await context.newPage();
             
+            // Setup automation if enabled
+            if (enableAutomation) {
+                await this.setupAutomation(sessionId, { browser, context, profile, page }, automationTasks);
+            }
+            
             return {
                 browser,
                 context,
                 profile,
                 sessionId,
-                page
+                page,
+                automationEnabled: enableAutomation
             };
         } catch (error) {
             await this.profileManager.endSession(sessionId);
@@ -253,6 +282,7 @@ export class ProfileLauncher {
             }
             
             this.activeBrowsers.delete(sessionId);
+            this.cleanupProcessedPages(sessionId);
             
             return {
                 profile: browserInfo.profile,
@@ -756,5 +786,426 @@ export class ProfileLauncher {
             console.warn(`⚠️  Could not verify extensions: ${error.message}`);
             return [];
         }
+    }
+
+    /**
+     * Get maximum stealth Chrome arguments
+     * @returns {Array<string>} Array of Chrome arguments for maximum stealth
+     */
+    getMaxStealthArgs() {
+        return [
+            // WebDriver detection prevention
+            '--disable-blink-features=AutomationControlled',
+            '--exclude-switches=enable-automation',
+            '--disable-dev-shm-usage',
+            
+            // Bot detection evasion
+            '--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees',
+            '--disable-ipc-flooding-protection',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding',
+            '--disable-field-trial-config',
+            '--disable-back-forward-cache',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding',
+            '--disable-features=TranslateUI',
+            '--disable-default-apps',
+            '--no-default-browser-check',
+            '--no-first-run',
+            
+            // WebGL and canvas fingerprinting
+            '--disable-gpu-sandbox',
+            '--ignore-gpu-blacklist',
+            '--enable-gpu-rasterization',
+            '--disable-accelerated-2d-canvas',
+            
+            // Audio fingerprinting
+            '--disable-background-media-suspend',
+            '--autoplay-policy=no-user-gesture-required',
+            
+            // Network fingerprinting
+            '--disable-features=NetworkService',
+            '--disable-extensions-http-throttling',
+            '--disable-extensions-file-access-check',
+            
+            // Additional stealth flags
+            '--disable-component-extensions-with-background-pages',
+            '--disable-component-update',
+            '--no-pings',
+            '--no-crash-upload',
+            '--disable-crash-reporter',
+            '--disable-breakpad',
+            '--disable-domain-reliability',
+            '--disable-background-networking',
+            '--disable-sync',
+            '--metrics-recording-only',
+            '--no-report-upload',
+            '--disable-logging',
+            '--silent-debugger-extension-api',
+        ];
+    }
+
+    /**
+     * Setup automation capabilities for a browser session
+     * @param {string} sessionId - Session ID
+     * @param {Object} browserInfo - Browser information object
+     * @param {Array} automationTasks - Array of automation tasks to run
+     */
+    async setupAutomation(sessionId, browserInfo, automationTasks = []) {
+        const { browser, context, profile, page } = browserInfo;
+        
+        console.log(`🤖 Setting up automation for session: ${sessionId}`);
+        
+        // Add stealth scripts to prevent detection
+        await this.addStealthScripts(context);
+        
+        // Setup default automation tasks
+        const defaultTasks = [
+            {
+                name: 'vidiq-tab-detection',
+                description: 'Detect VidIQ extension install tab',
+                enabled: true,
+                targetUrl: 'https://app.vidiq.com/extension_install'
+            }
+        ];
+        
+        const allTasks = [...defaultTasks, ...automationTasks];
+        this.automationTasks.set(sessionId, allTasks);
+        
+        // Start monitoring for automation tasks
+        await this.startAutomationMonitoring(sessionId, browserInfo);
+        
+        console.log(`✅ Automation setup complete for ${profile.name}`);
+        console.log(`🎯 Active automation tasks: ${allTasks.length}`);
+        allTasks.forEach(task => {
+            if (task.enabled) {
+                console.log(`   • ${task.name}: ${task.description}`);
+            }
+        });
+    }
+
+    /**
+     * Add stealth scripts to prevent automation detection
+     * @param {Object} context - Browser context
+     */
+    async addStealthScripts(context) {
+        // Remove webdriver property and other automation indicators
+        await context.addInitScript(() => {
+            // Remove webdriver property
+            delete Object.getPrototypeOf(navigator).webdriver;
+            delete navigator.webdriver;
+            
+            // Override permissions API
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
+            
+            // Override plugins
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [
+                    {
+                        0: {type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format", enabledPlugin: Plugin},
+                        description: "Portable Document Format",
+                        filename: "internal-pdf-viewer",
+                        length: 1,
+                        name: "Chrome PDF Plugin"
+                    },
+                    {
+                        0: {type: "application/pdf", suffixes: "pdf", description: "", enabledPlugin: Plugin},
+                        description: "",
+                        filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+                        length: 1,
+                        name: "Chrome PDF Viewer"
+                    },
+                    {
+                        0: {type: "application/x-nacl", suffixes: "", description: "Native Client Executable", enabledPlugin: Plugin},
+                        1: {type: "application/x-pnacl", suffixes: "", description: "Portable Native Client Executable", enabledPlugin: Plugin},
+                        description: "",
+                        filename: "internal-nacl-plugin",
+                        length: 2,
+                        name: "Native Client"
+                    }
+                ],
+            });
+            
+            // Override languages
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en'],
+            });
+            
+            // Override webgl vendor/renderer
+            const getParameter = WebGLRenderingContext.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                if (parameter === 37445) {
+                    return 'Intel Inc.';
+                }
+                if (parameter === 37446) {
+                    return 'Intel Iris OpenGL Engine';
+                }
+                return getParameter(parameter);
+            };
+        });
+    }
+
+    /**
+     * Start monitoring for automation tasks
+     * @param {string} sessionId - Session ID
+     * @param {Object} browserInfo - Browser information object
+     */
+    async startAutomationMonitoring(sessionId, browserInfo) {
+        const { context } = browserInfo;
+        const tasks = this.automationTasks.get(sessionId) || [];
+        
+        // Monitor for new pages/tabs
+        context.on('page', async (page) => {
+            console.log(`📄 New tab detected in session: ${sessionId}`);
+            
+            // Wait for page to load
+            try {
+                await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+                const url = page.url();
+                console.log(`🔗 Tab URL: ${url}`);
+                
+                // Check against automation tasks
+                for (const task of tasks) {
+                    if (task.enabled && this.urlMatches(url, task.targetUrl)) {
+                        console.log(`🎯 AUTOMATION MATCH: ${task.name}`);
+                        console.log(`   Task: ${task.description}`);
+                        console.log(`   Target URL: ${task.targetUrl}`);
+                        console.log(`   Actual URL: ${url}`);
+                        console.log(`   Session: ${sessionId}`);
+                        
+                        // Execute task-specific actions
+                        await this.executeAutomationTask(task, page, sessionId);
+                    }
+                }
+            } catch (error) {
+                console.log(`⚠️  Could not process new tab: ${error.message}`);
+            }
+        });
+        
+        // Also check existing pages
+        const existingPages = context.pages();
+        for (const page of existingPages) {
+            try {
+                const url = page.url();
+                if (url && url !== 'about:blank') {
+                    console.log(`🔍 Checking existing tab: ${url}`);
+                    
+                    for (const task of tasks) {
+                        if (task.enabled && this.urlMatches(url, task.targetUrl)) {
+                            console.log(`🎯 AUTOMATION MATCH (existing): ${task.name}`);
+                            console.log(`   Task: ${task.description}`);
+                            console.log(`   Target URL: ${task.targetUrl}`);
+                            console.log(`   Actual URL: ${url}`);
+                            console.log(`   Session: ${sessionId}`);
+                            
+                            await this.executeAutomationTask(task, page, sessionId);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log(`⚠️  Could not check existing tab: ${error.message}`);
+            }
+        }
+    }
+
+    /**
+     * Check if URL matches target URL pattern
+     * @param {string} url - Current URL
+     * @param {string} targetUrl - Target URL pattern
+     * @returns {boolean} Whether URL matches
+     */
+    urlMatches(url, targetUrl) {
+        if (!url || !targetUrl) return false;
+        
+        // Simple starts-with matching for now
+        return url.startsWith(targetUrl);
+    }
+
+    /**
+     * Execute automation task
+     * @param {Object} task - Automation task
+     * @param {Object} page - Playwright page
+     * @param {string} sessionId - Session ID
+     */
+    async executeAutomationTask(task, page, sessionId) {
+        // Create a unique key for this page and task combination
+        const pageKey = `${sessionId}-${page.url()}-${task.name}`;
+        
+        // Check if we've already processed this page for this task
+        if (this.processedPages.has(pageKey)) {
+            console.log(`⏭️  Skipping ${task.name} - already processed for this page`);
+            return;
+        }
+        
+        // Mark this page as processed
+        this.processedPages.set(pageKey, true);
+        
+        console.log(`🚀 Executing automation task: ${task.name}`);
+        
+        try {
+            switch (task.name) {
+                case 'vidiq-tab-detection':
+                    await this.handleVidIQTabDetection(page, sessionId);
+                    break;
+                default:
+                    console.log(`   No specific handler for task: ${task.name}`);
+            }
+        } catch (error) {
+            console.error(`❌ Error executing automation task ${task.name}:`, error.message);
+            // Remove from processed pages on error so it can be retried
+            this.processedPages.delete(pageKey);
+        }
+    }
+
+    /**
+     * Handle VidIQ tab detection
+     * @param {Object} page - Playwright page
+     * @param {string} sessionId - Session ID
+     */
+    async handleVidIQTabDetection(page, sessionId) {
+        console.log(`🔍 VidIQ Extension Install page detected!`);
+        console.log(`   Session: ${sessionId}`);
+        console.log(`   URL: ${page.url()}`);
+        console.log(`   Title: ${await page.title()}`);
+        
+        // Wait briefly for page to start loading
+        await page.waitForTimeout(2000);
+        
+        // Check for specific elements on the VidIQ install page
+        try {
+            const pageContent = await page.textContent('body');
+            if (pageContent && pageContent.includes('extension')) {
+                console.log(`✅ Confirmed: VidIQ extension install page loaded successfully`);
+                console.log(`📊 Page contains extension-related content`);
+            }
+            
+            // Check for extension install button or similar elements
+            const installButton = await page.locator('text=/install|add to chrome|get extension/i').first();
+            if (await installButton.count() > 0) {
+                console.log(`🎯 Found extension install button on page`);
+            }
+            
+        } catch (error) {
+            console.log(`⚠️  Could not analyze page content: ${error.message}`);
+        }
+        
+        // Look for and autofill form fields
+        await this.handleVidIQFormAutofill(page, sessionId);
+        
+        console.log(`🤖 Automation task completed for VidIQ tab detection`);
+    }
+
+    /**
+     * Handle VidIQ form autofill
+     * @param {Object} page - Playwright page
+     * @param {string} sessionId - Session ID
+     */
+    async handleVidIQFormAutofill(page, sessionId) {
+        console.log(`📝 Checking for VidIQ forms to autofill...`);
+        
+        try {
+            // Test credentials for automation testing
+            const testEmail = 'test.automation@example.com';
+            const testPassword = 'TestPass123!';
+            
+            // Periodic check for form fields with smart polling
+            console.log(`⏳ Polling for form fields to appear...`);
+            
+            const maxAttempts = 5; // Check up to 5 times
+            const pollInterval = 1000; // Check every 1 second
+            let attempt = 0;
+            let fieldsFound = false;
+            
+            while (attempt < maxAttempts && !fieldsFound) {
+                attempt++;
+                
+                // Check if form fields exist
+                const emailExists = await page.locator('input[data-testid="form-input-email"]').count() > 0;
+                const passwordExists = await page.locator('input[data-testid="form-input-password"]').count() > 0;
+                
+                if (emailExists || passwordExists) {
+                    fieldsFound = true;
+                    console.log(`✅ Form fields found on attempt ${attempt}! Proceeding with autofill...`);
+                    break;
+                } else {
+                    console.log(`🔍 Attempt ${attempt}/${maxAttempts}: No form fields yet, waiting 1s...`);
+                    await page.waitForTimeout(pollInterval);
+                }
+            }
+            
+            if (!fieldsFound) {
+                console.log(`⏰ Polling complete: No form fields found after ${maxAttempts} attempts (5 seconds)`);
+            }
+            
+            // Small buffer to ensure fields are fully interactive
+            await page.waitForTimeout(200);
+            
+            // Look for email input field
+            const emailField = page.locator('input[data-testid="form-input-email"]');
+            if (await emailField.count() > 0) {
+                console.log(`📧 Found email field, filling with test data...`);
+                await emailField.clear();
+                await emailField.fill(testEmail);
+                console.log(`✅ Email field filled: ${testEmail}`);
+            } else {
+                console.log(`📧 Email field not found (may not be on this page)`);
+            }
+            
+            // Look for password input field
+            const passwordField = page.locator('input[data-testid="form-input-password"]');
+            if (await passwordField.count() > 0) {
+                console.log(`🔒 Found password field, filling with test data...`);
+                await passwordField.clear();
+                await passwordField.fill(testPassword);
+                console.log(`✅ Password field filled: ${'*'.repeat(testPassword.length)}`);
+            } else {
+                console.log(`🔒 Password field not found (may not be on this page)`);
+            }
+            
+            // Additional form fields detection
+            const allInputs = await page.locator('input').count();
+            console.log(`🔍 Total input fields found on page: ${allInputs}`);
+            
+            // Check if both fields were found and filled
+            const emailFilled = await emailField.count() > 0;
+            const passwordFilled = await passwordField.count() > 0;
+            
+            if (emailFilled && passwordFilled) {
+                console.log(`🎉 SUCCESS: Both email and password fields autofilled!`);
+                
+                // Optional: Look for submit button (but don't click it automatically)
+                const submitButton = page.locator('button[type="submit"], button:has-text("Sign up"), button:has-text("Register"), button:has-text("Create account")');
+                if (await submitButton.count() > 0) {
+                    console.log(`🔘 Found submit button (not clicking automatically for safety)`);
+                }
+            } else if (emailFilled || passwordFilled) {
+                console.log(`⚠️  Partial success: Only some fields were found and filled`);
+            } else {
+                console.log(`ℹ️  No target form fields found on this page`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ Error during form autofill: ${error.message}`);
+        }
+    }
+
+    /**
+     * Clean up processed pages for a session
+     * @param {string} sessionId - Session ID
+     */
+    cleanupProcessedPages(sessionId) {
+        const keysToDelete = [];
+        for (const [key] of this.processedPages) {
+            if (key.startsWith(`${sessionId}-`)) {
+                keysToDelete.push(key);
+            }
+        }
+        keysToDelete.forEach(key => this.processedPages.delete(key));
     }
 }
