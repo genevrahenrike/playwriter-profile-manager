@@ -1,0 +1,42 @@
+{
+  "name": "playwright-profile-manager",
+  "version": "1.0.0",
+  "description": "A comprehensive browser profile manager for Playwright automation",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "ppm": "./src/cli.js",
+    "ppm-stealth": "./src/StealthCLI.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "dev": "node --watch src/cli.js",
+    "test": "node test/test.js"
+  },
+  "keywords": [
+    "playwright",
+    "browser",
+    "profile",
+    "automation",
+    "chromium"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@mix-visit/lite": "^1.0.14",
+    "axios": "^1.11.0",
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^9.2.0",
+    "inquirer-autocomplete-prompt": "^3.0.1",
+    "playwright": "^1.40.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
