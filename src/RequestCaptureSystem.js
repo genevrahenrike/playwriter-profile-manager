@@ -167,15 +167,11 @@ export class RequestCaptureSystem {
         
         context.on('page', newPageHandler);
         
-        // NEW: Setup extension traffic monitoring using Chrome DevTools Protocol
-        let cdpSession = null;
+        // NEW: Setup extension/service worker traffic monitoring using Chrome DevTools Protocol
+        let cdpMonitor = null;
         try {
-            // Only for Chromium-based browsers
-            const browser = context.browser();
-            if (browser && browser._initializer && browser._initializer.name === 'chromium') {
-                console.log(`🔧 Setting up extension traffic monitoring via CDP...`);
-                cdpSession = await this.setupExtensionMonitoring(sessionId, context);
-            }
+            console.log(`🔧 Setting up extension/service-worker traffic monitoring via CDP...`);
+            cdpMonitor = await this.setupExtensionMonitoring(sessionId, context);
         } catch (error) {
             console.warn(`⚠️  Could not setup extension monitoring: ${error.message}`);
         }
@@ -185,7 +181,7 @@ export class RequestCaptureSystem {
             context, 
             newPageHandler,
             pageHandlers,
-            cdpSession  // Store CDP session for cleanup
+            cdpMonitor  // Store CDP monitor bundle for cleanup
         });
     }
 
@@ -198,39 +194,142 @@ export class RequestCaptureSystem {
      */
     async setupExtensionMonitoring(sessionId, context) {
         try {
-            // Get the browser instance to create a global CDP session
             const browser = context.browser();
-            if (!browser) {
-                throw new Error('No browser available for CDP session');
+            if (!browser || typeof browser.newBrowserCDPSession !== 'function') {
+                throw new Error('CDP is not available for this browser');
             }
-            
-            // Create a CDP session connected to the browser target (not just a page)
-            // This allows us to monitor ALL network activity from all contexts
+
             const cdpSession = await browser.newBrowserCDPSession();
-            
-            // Enable Network domain globally - this captures EVERYTHING
-            await cdpSession.send('Network.enable');
-            
-            console.log(`🌐 CDP Global network monitoring enabled - capturing ALL traffic`);
-            console.log(`🔍 Will filter for api.vidiq.com endpoints from any source`);
-            
-            // Listen for ALL request events globally
-            cdpSession.on('Network.requestWillBeSent', (params) => {
-                this.handleGlobalCDPRequest(params, sessionId);
-            });
-            
-            // Listen for ALL response events globally
-            cdpSession.on('Network.responseReceived', (params) => {
-                this.handleGlobalCDPResponse(params, sessionId, cdpSession);
-            });
-            
-            // Listen for WebSocket events
-            cdpSession.on('Network.webSocketCreated', (params) => {
-                this.handleCDPWebSocket(params, sessionId);
-            });
-            
-            return cdpSession;
-            
+
+            // Routing and RPC plumbing for flattened Target sessions (service workers, background pages)
+            let rpcIdCounter = 1;
+            const pendingRPC = new Map(); // key: `${sessionId}:${id}` -> { resolve, reject }
+            const targetSessions = new Map(); // sessionId -> { targetInfo }
+            const pendingByRequestId = new Map(); // key: `${sessionId}:${requestId}` -> response params
+
+            const sendToTarget = (targetSessionId, method, params = {}) => {
+                const messageId = rpcIdCounter++;
+                const key = `${targetSessionId}:${messageId}`;
+                const message = JSON.stringify({ id: messageId, method, params });
+                return new Promise((resolve, reject) => {
+                    pendingRPC.set(key, { resolve, reject });
+                    cdpSession.send('Target.sendMessageToTarget', { sessionId: targetSessionId, message })
+                        .catch((error) => {
+                            pendingRPC.delete(key);
+                            reject(error);
+                        });
+                    setTimeout(() => {
+                        if (pendingRPC.has(key)) {
+                            pendingRPC.delete(key);
+                            reject(new Error(`CDP RPC timeout for ${method}`));
+                        }
+                    }, 8000);
+                });
+            };
+
+            // Enable discovery and auto-attach to all targets including service workers
+            await cdpSession.send('Target.setDiscoverTargets', { discover: true }).catch(() => {});
+            await cdpSession.send('Target.setAutoAttach', {
+                autoAttach: true,
+                waitForDebuggerOnStart: false,
+                flatten: true
+            }).catch(() => {});
+
+            // Attach to existing targets proactively
+            try {
+                const targets = await cdpSession.send('Target.getTargets', {});
+                for (const info of targets.targetInfos || []) {
+                    if (['service_worker', 'background_page', 'page', 'worker', 'shared_worker'].includes(info.type)) {
+                        try {
+                            const { sessionId: childSessionId } = await cdpSession.send('Target.attachToTarget', { targetId: info.targetId, flatten: true });
+                            targetSessions.set(childSessionId, { targetInfo: info });
+                            // Enable Network on the child
+                            await sendToTarget(childSessionId, 'Network.enable');
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+                }
+            } catch (_) {}
+
+            // Handle attach/detach
+            const onAttached = async (event) => {
+                const { sessionId: childSessionId, targetInfo } = event;
+                targetSessions.set(childSessionId, { targetInfo });
+                try {
+                    await sendToTarget(childSessionId, 'Network.enable');
+                } catch (_) {}
+            };
+
+            const onDetached = (event) => {
+                const { sessionId: childSessionId } = event;
+                targetSessions.delete(childSessionId);
+                // Clean buffered responses for this session
+                for (const key of Array.from(pendingByRequestId.keys())) {
+                    if (key.startsWith(`${childSessionId}:`)) pendingByRequestId.delete(key);
+                }
+                // Clean pending RPCs for this session
+                for (const key of Array.from(pendingRPC.keys())) {
+                    if (key.startsWith(`${childSessionId}:`)) pendingRPC.delete(key);
+                }
+            };
+
+            // Route messages from sub-targets
+            const onMessageFromTarget = async (event) => {
+                const { sessionId: childSessionId, message } = event;
+                let payload;
+                try {
+                    payload = JSON.parse(message);
+                } catch (_) {
+                    return;
+                }
+                // RPC response
+                if (payload && typeof payload.id === 'number') {
+                    const key = `${childSessionId}:${payload.id}`;
+                    const pending = pendingRPC.get(key);
+                    if (pending) {
+                        pendingRPC.delete(key);
+                        if (payload.error) pending.reject(new Error(payload.error.message || 'CDP error'));
+                        else pending.resolve(payload.result);
+                    }
+                    return;
+                }
+                // Events
+                if (!payload || !payload.method) return;
+                const p = payload.params || {};
+                if (payload.method === 'Network.requestWillBeSent') {
+                    this.handleGlobalCDPRequest(p, sessionId);
+                } else if (payload.method === 'Network.responseReceived') {
+                    pendingByRequestId.set(`${childSessionId}:${p.requestId}`, p);
+                } else if (payload.method === 'Network.loadingFinished') {
+                    const meta = pendingByRequestId.get(`${childSessionId}:${p.requestId}`);
+                    if (meta) {
+                        pendingByRequestId.delete(`${childSessionId}:${p.requestId}`);
+                        const childSessionShim = { send: (method, params) => sendToTarget(childSessionId, method, params) };
+                        await this.handleGlobalCDPResponse(meta, sessionId, childSessionShim);
+                    }
+                } else if (payload.method === 'Network.webSocketCreated') {
+                    this.handleCDPWebSocket(p, sessionId);
+                }
+            };
+
+            cdpSession.on('Target.attachedToTarget', onAttached);
+            cdpSession.on('Target.detachedFromTarget', onDetached);
+            cdpSession.on('Target.receivedMessageFromTarget', onMessageFromTarget);
+
+            console.log(`🌐 CDP target auto-attach enabled. Monitoring pages, workers, service workers, and background pages.`);
+
+            return {
+                session: cdpSession,
+                handlers: {
+                    onAttached,
+                    onDetached,
+                    onMessageFromTarget
+                },
+                targetSessions,
+                pendingByRequestId,
+                pendingRPC
+            };
         } catch (error) {
             console.warn(`⚠️  Failed to setup global network monitoring: ${error.message}`);
             return null;
@@ -1038,10 +1137,19 @@ export class RequestCaptureSystem {
                 }
             }
             
-            // Clean up CDP session if exists
-            if (monitor.cdpSession) {
+            // Clean up CDP monitor if exists
+            if (monitor.cdpMonitor && monitor.cdpMonitor.session) {
+                const { session, handlers } = monitor.cdpMonitor;
                 try {
-                    await monitor.cdpSession.detach();
+                    if (handlers) {
+                        if (handlers.onRequest) session.off('Network.requestWillBeSent', handlers.onRequest);
+                        if (handlers.onResponse) session.off('Network.responseReceived', handlers.onResponse);
+                        if (handlers.onLoadingFinished) session.off('Network.loadingFinished', handlers.onLoadingFinished);
+                        if (handlers.onWebSocket) session.off('Network.webSocketCreated', handlers.onWebSocket);
+                    }
+                } catch (_) {}
+                try {
+                    await session.detach();
                     console.log(`🔧 CDP session detached for session: ${sessionId}`);
                 } catch (error) {
                     console.warn(`⚠️  Error detaching CDP session: ${error.message}`);
