@@ -11,8 +11,13 @@ export class ProfileLauncher {
         this.automationTasks = new Map(); // Track automation tasks per session
         this.processedPages = new Map(); // Track processed pages to avoid duplicates
         
-        // Initialize the autofill hook system
-        this.autofillSystem = new AutofillHookSystem();
+        // Initialize the autofill hook system with tracking enabled
+        this.autofillSystem = new AutofillHookSystem({
+            enableTracking: true,
+            trackingDbPath: './profiles/data/generated_names.db',
+            usePrefix: false,
+            usePostfix: true
+        });
         this.initializeAutofillSystem();
     }
 

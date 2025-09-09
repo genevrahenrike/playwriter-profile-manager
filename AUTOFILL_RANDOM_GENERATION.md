@@ -432,11 +432,46 @@ The new system is backward compatible. Existing hooks will continue to work with
 3. Add `generationOptions` if needed
 4. Test thoroughly before deployment
 
+## Race Condition Handling
+
+The autofill system includes comprehensive race condition protection to handle dynamic forms and timing issues:
+
+### Features
+
+- **Multi-attempt field filling** with exponential backoff (3 attempts per field)
+- **Field state verification** (visible, enabled, editable) before filling
+- **Multiple clearing methods** (clear, select+delete, keyboard shortcuts)
+- **Alternative filling methods** (fill, pressSequentially) for stubborn fields
+- **Post-fill verification** with automatic retry for failed fields
+- **Configurable timing parameters** for different site requirements
+- **Focus management** to ensure fields are active before operations
+
+### Configuration
+
+```javascript
+execution: {
+    maxAttempts: 8,           // Form detection attempts
+    pollInterval: 1500,       // Polling interval (ms)
+    waitAfterFill: 600,       // Stabilization time (ms)
+    fieldRetries: 3,          // Retries per field
+    fieldRetryDelay: 150,     // Delay between retries (ms)
+    verifyFill: true          // Enable post-fill verification
+}
+```
+
+### Troubleshooting Race Conditions
+
+1. **Increase timing**: Raise `waitAfterFill` and `pollInterval` for slow forms
+2. **Enable verification**: Set `verifyFill: true` to catch failed fills
+3. **Monitor logs**: Check for "Field verification failed" messages
+4. **Adjust retries**: Increase `fieldRetries` for unstable elements
+
 ## Performance Considerations
 
 - **Name generation**: ~1ms per generation
 - **Database operations**: ~5ms per insert/lookup
 - **Memory usage**: ~50MB for full name lists
+- **Field filling**: ~100-500ms per field (with race condition protection)
 - **Concurrent generation**: Thread-safe with minimal contention
 
 ## Security Notes

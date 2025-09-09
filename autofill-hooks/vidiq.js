@@ -83,12 +83,15 @@ export default {
         }
     },
     
-    // Execution settings
+    // Execution settings optimized for race condition handling
     execution: {
-        maxAttempts: 5,
-        pollInterval: 1000,
-        waitAfterFill: 200,
-        autoSubmit: false
+        maxAttempts: 8,           // More attempts for dynamic forms
+        pollInterval: 1500,       // Longer polling interval
+        waitAfterFill: 600,       // More time for fields to stabilize
+        fieldRetries: 3,          // Retries per field
+        fieldRetryDelay: 150,     // Delay between field retries
+        verifyFill: true,         // Verify field values after filling
+        autoSubmit: false         // Never auto-submit for safety
     },
     
     // Custom execution logic (optional)

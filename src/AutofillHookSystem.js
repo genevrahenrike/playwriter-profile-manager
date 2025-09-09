@@ -230,9 +230,10 @@ export class AutofillHookSystem {
      * Generate dynamic field values for a hook
      * @param {Object} hook - Hook configuration
      * @param {string} sessionId - Session ID
+     * @param {string} siteUrl - Current site URL (optional)
      * @returns {Object} Generated user data
      */
-    generateFieldValues(hook, sessionId) {
+    generateFieldValues(hook, sessionId, siteUrl = null) {
         // Check if hook supports dynamic generation
         if (!hook.useDynamicGeneration) {
             return null;
@@ -242,7 +243,10 @@ export class AutofillHookSystem {
             usePrefix: hook.generationOptions?.usePrefix,
             usePostfix: hook.generationOptions?.usePostfix,
             currentIndex: this.getSessionIndex(sessionId),
-            password: hook.generationOptions?.password
+            password: hook.generationOptions?.password,
+            sessionId: sessionId,
+            siteUrl: siteUrl,
+            hookName: hook.name
         };
         
         const userData = this.dataGenerator.generateUserData(options);
@@ -296,6 +300,183 @@ export class AutofillHookSystem {
     }
 
     /**
+     * Fill a field safely with race condition protection
+     * @param {Object} page - Playwright page
+     * @param {string} selector - Field selector
+     * @param {string} value - Value to fill
+     * @param {Object} fieldConfig - Field configuration
+     * @param {Object} settings - Execution settings
+     * @returns {boolean} Success status
+     */
+    async fillFieldSafely(page, selector, value, fieldConfig, settings) {
+        const maxRetries = 3;
+        const retryDelay = 100;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const field = page.locator(selector);
+                const count = await field.count();
+                
+                if (count === 0) {
+                    if (attempt === maxRetries) {
+                        console.log(`⚠️  Field not found after ${maxRetries} attempts: ${selector}`);
+                    }
+                    continue;
+                }
+                
+                const firstField = field.first();
+                
+                // Wait for field to be visible and enabled
+                await firstField.waitFor({ 
+                    state: 'visible', 
+                    timeout: 2000 
+                }).catch(() => {
+                    console.log(`⚠️  Field not visible: ${selector}`);
+                });
+                
+                // Check if field is enabled and editable
+                const isEnabled = await firstField.isEnabled().catch(() => false);
+                const isEditable = await firstField.isEditable().catch(() => false);
+                
+                if (!isEnabled || !isEditable) {
+                    console.log(`⚠️  Field not interactive (enabled: ${isEnabled}, editable: ${isEditable}): ${selector}`);
+                    if (attempt < maxRetries) {
+                        await page.waitForTimeout(retryDelay * attempt);
+                        continue;
+                    }
+                    return false;
+                }
+                
+                console.log(`📝 Filling field (attempt ${attempt}): ${fieldConfig.description || selector}`);
+                
+                // Focus the field first to ensure it's active
+                await firstField.focus();
+                await page.waitForTimeout(50); // Small delay after focus
+                
+                // Clear field with multiple methods for better reliability
+                await this.clearFieldSafely(firstField);
+                
+                // Fill the value
+                await firstField.fill(value);
+                
+                // Verify the value was actually set
+                const actualValue = await firstField.inputValue().catch(() => '');
+                
+                if (actualValue === value) {
+                    console.log(`✅ Field filled successfully: ${value.length > 50 ? value.substring(0, 47) + '...' : value}`);
+                    return true;
+                } else {
+                    console.log(`⚠️  Value mismatch (attempt ${attempt}). Expected: "${value}", Got: "${actualValue}"`);
+                    
+                    if (attempt < maxRetries) {
+                        // Try alternative filling method
+                        await firstField.focus();
+                        await this.clearFieldSafely(firstField);
+                        await firstField.pressSequentially(value, { delay: 10 });
+                        
+                        const retryValue = await firstField.inputValue().catch(() => '');
+                        if (retryValue === value) {
+                            console.log(`✅ Field filled with pressSequentially: ${value.length > 50 ? value.substring(0, 47) + '...' : value}`);
+                            return true;
+                        }
+                        
+                        await page.waitForTimeout(retryDelay * attempt);
+                    }
+                }
+                
+            } catch (error) {
+                console.log(`⚠️  Error filling field ${selector} (attempt ${attempt}): ${error.message}`);
+                if (attempt < maxRetries) {
+                    await page.waitForTimeout(retryDelay * attempt);
+                }
+            }
+        }
+        
+        console.log(`❌ Failed to fill field after ${maxRetries} attempts: ${selector}`);
+        return false;
+    }
+
+    /**
+     * Clear a field safely using multiple methods
+     * @param {Object} field - Playwright locator
+     */
+    async clearFieldSafely(field) {
+        try {
+            // Method 1: Standard clear
+            await field.clear();
+            
+            // Verify it's actually clear
+            const value = await field.inputValue().catch(() => '');
+            if (value === '') {
+                return;
+            }
+            
+            // Method 2: Select all and delete
+            await field.focus();
+            await field.press('Control+a'); // Select all (Cmd+a on Mac is handled by Playwright)
+            await field.press('Delete');
+            
+            // Method 3: If still not clear, use keyboard shortcuts
+            const remainingValue = await field.inputValue().catch(() => '');
+            if (remainingValue !== '') {
+                await field.focus();
+                await field.press('Home'); // Go to start
+                await field.press('Shift+End'); // Select to end
+                await field.press('Delete');
+            }
+            
+        } catch (error) {
+            console.log(`⚠️  Error clearing field: ${error.message}`);
+        }
+    }
+
+    /**
+     * Verify that filled fields contain the expected values
+     * @param {Object} page - Playwright page
+     * @param {Object} fields - Field configuration object
+     * @param {Object} userData - Generated user data
+     * @returns {Object} Verification results
+     */
+    async verifyFilledFields(page, fields, userData) {
+        const results = {
+            verified: 0,
+            failed: 0,
+            failedFields: []
+        };
+        
+        for (const [selector, fieldConfig] of Object.entries(fields)) {
+            try {
+                const field = page.locator(selector);
+                const count = await field.count();
+                
+                if (count > 0) {
+                    const expectedValue = this.resolveFieldValue(fieldConfig, userData);
+                    const actualValue = await field.first().inputValue().catch(() => '');
+                    
+                    if (actualValue === expectedValue) {
+                        results.verified++;
+                    } else {
+                        results.failed++;
+                        results.failedFields.push({
+                            selector,
+                            config: fieldConfig,
+                            expectedValue,
+                            actualValue
+                        });
+                        console.log(`❌ Field verification failed: ${selector}`);
+                        console.log(`   Expected: "${expectedValue}"`);
+                        console.log(`   Actual: "${actualValue}"`);
+                    }
+                }
+            } catch (error) {
+                console.log(`⚠️  Error verifying field ${selector}: ${error.message}`);
+            }
+        }
+        
+        return results;
+    }
+
+    /**
      * Execute autofill for a specific hook and page
      * @param {Object} hook - Hook configuration
      * @param {Object} page - Playwright page
@@ -308,7 +489,7 @@ export class AutofillHookSystem {
             // Generate dynamic data if needed
             let userData = null;
             if (hook.useDynamicGeneration) {
-                userData = this.generateFieldValues(hook, sessionId);
+                userData = this.generateFieldValues(hook, sessionId, page.url());
             }
             
             // Execute custom logic first if available
@@ -316,11 +497,14 @@ export class AutofillHookSystem {
                 await hook.customLogic(page, sessionId, this, userData);
             }
             
-            // Get execution settings
+            // Get execution settings with improved defaults for race condition handling
             const settings = {
-                maxAttempts: 5,
-                pollInterval: 1000,
-                waitAfterFill: 200,
+                maxAttempts: 8,           // More attempts for better reliability
+                pollInterval: 1500,       // Longer polling for dynamic forms
+                waitAfterFill: 500,       // More time for fields to stabilize
+                fieldRetries: 3,          // Retries per field
+                fieldRetryDelay: 100,     // Delay between field retries
+                verifyFill: true,         // Verify field values after filling
                 autoSubmit: false,
                 ...hook.execution
             };
@@ -363,20 +547,14 @@ export class AutofillHookSystem {
             // Wait a bit more to ensure fields are interactive
             await page.waitForTimeout(settings.waitAfterFill);
             
-            // Fill fields
+            // Fill fields with improved race condition handling
             let filledCount = 0;
             for (const [selector, fieldConfig] of Object.entries(hook.fields)) {
                 try {
-                    const field = page.locator(selector);
-                    const count = await field.count();
-                    
-                    if (count > 0) {
-                        const fieldValue = this.resolveFieldValue(fieldConfig, userData);
-                        console.log(`📝 Filling field: ${fieldConfig.description || selector}`);
-                        await field.first().clear();
-                        await field.first().fill(fieldValue);
+                    const fieldValue = this.resolveFieldValue(fieldConfig, userData);
+                    const success = await this.fillFieldSafely(page, selector, fieldValue, fieldConfig, settings);
+                    if (success) {
                         filledCount++;
-                        console.log(`✅ Field filled: ${fieldValue.length > 50 ? fieldValue.substring(0, 47) + '...' : fieldValue}`);
                     }
                 } catch (error) {
                     console.log(`⚠️  Could not fill field ${selector}: ${error.message}`);
@@ -384,6 +562,23 @@ export class AutofillHookSystem {
             }
             
             console.log(`🎉 Autofill completed: ${filledCount} fields filled`);
+            
+            // Verify filled fields if verification is enabled
+            if (settings.verifyFill && filledCount > 0) {
+                console.log(`🔍 Verifying filled fields...`);
+                const verificationResults = await this.verifyFilledFields(page, hook.fields, userData);
+                if (verificationResults.failed > 0) {
+                    console.log(`⚠️  Field verification: ${verificationResults.verified} verified, ${verificationResults.failed} failed`);
+                    
+                    // Retry failed fields once more
+                    for (const failedField of verificationResults.failedFields) {
+                        console.log(`🔄 Retrying failed field: ${failedField.selector}`);
+                        await this.fillFieldSafely(page, failedField.selector, failedField.expectedValue, failedField.config, settings);
+                    }
+                } else {
+                    console.log(`✅ All ${verificationResults.verified} fields verified successfully`);
+                }
+            }
             
             // Detect submit buttons (but don't click unless autoSubmit is enabled)
             const submitSelectors = [
@@ -503,6 +698,49 @@ export class AutofillHookSystem {
         console.log(`🔄 Reloading autofill hooks...`);
         this.hooks.clear();
         await this.loadHooks(configDir);
+    }
+    
+    /**
+     * Export generated user data to CSV format
+     * @param {string} format - Export format ('csv', 'chrome', 'apple', '1password')
+     * @param {string} outputPath - Output file path (optional)
+     */
+    async exportUserData(format = 'csv', outputPath = null) {
+        try {
+            let result;
+            
+            switch (format.toLowerCase()) {
+                case 'csv':
+                case 'chrome':
+                    result = await this.dataGenerator.exportToCSV(outputPath);
+                    break;
+                    
+                case 'apple':
+                case 'keychain':
+                    result = await this.dataGenerator.exportToAppleKeychain(outputPath);
+                    break;
+                    
+                case '1password':
+                case '1p':
+                    result = await this.dataGenerator.exportTo1Password(outputPath);
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported export format: ${format}. Use 'csv', 'apple', or '1password'`);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error(`❌ Error exporting user data (${format}):`, error.message);
+            throw error;
+        }
+    }
+    
+    /**
+     * Get all generated user data records
+     */
+    getUserDataRecords() {
+        return this.dataGenerator.getAllUserDataRecords();
     }
     
     /**
