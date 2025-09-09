@@ -2,6 +2,8 @@
 export { ProfileManager } from './ProfileManager.js';
 export { ChromiumImporter } from './ChromiumImporter.js';
 export { ProfileLauncher } from './ProfileLauncher.js';
+export { RequestCaptureSystem } from './RequestCaptureSystem.js';
+export { AutofillHookSystem } from './AutofillHookSystem.js';
 
 // Re-export for programmatic usage
 import { ProfileManager } from './ProfileManager.js';

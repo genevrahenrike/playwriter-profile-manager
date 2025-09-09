@@ -2,6 +2,7 @@ import { chromium, firefox, webkit } from 'playwright';
 import path from 'path';
 import fs from 'fs-extra';
 import { AutofillHookSystem } from './AutofillHookSystem.js';
+import { RequestCaptureSystem } from './RequestCaptureSystem.js';
 
 export class ProfileLauncher {
     constructor(profileManager) {
@@ -18,7 +19,16 @@ export class ProfileLauncher {
             usePrefix: false,
             usePostfix: true
         });
+        
+        // Initialize the request capture system
+        this.requestCaptureSystem = new RequestCaptureSystem({
+            outputFormat: 'jsonl',
+            outputDirectory: './captured-requests',
+            maxCaptureSize: 1000
+        });
+        
         this.initializeAutofillSystem();
+        this.initializeRequestCaptureSystem();
     }
 
     /**
@@ -33,6 +43,18 @@ export class ProfileLauncher {
         }
     }
 
+    /**
+     * Initialize the request capture system
+     */
+    async initializeRequestCaptureSystem() {
+        try {
+            await this.requestCaptureSystem.loadHooks('./capture-hooks');
+            console.log(`🕸️  Request capture system initialized with ${this.requestCaptureSystem.getStatus().totalHooks} hooks`);
+        } catch (error) {
+            console.warn(`⚠️  Could not initialize request capture system: ${error.message}`);
+        }
+    }
+
     async launchProfile(nameOrId, options = {}) {
         const {
             browserType = 'chromium',
@@ -43,6 +65,7 @@ export class ProfileLauncher {
             loadExtensions = [],
             autoLoadExtensions = true,
             enableAutomation = true, // Enable automation by default
+            enableRequestCapture = true, // Enable request capture by default
             maxStealth = true, // Enable maximum stealth by default
             automationTasks = [] // Array of automation tasks to run
         } = options;
@@ -207,13 +230,21 @@ export class ProfileLauncher {
             // Start autofill monitoring
             await this.autofillSystem.startMonitoring(sessionId, context);
             
+            // Start request capture monitoring if enabled
+            if (enableRequestCapture) {
+                await this.requestCaptureSystem.startMonitoring(sessionId, context, {
+                    profileName: profile.name
+                });
+            }
+            
             return {
                 browser,
                 context,
                 profile,
                 sessionId,
                 page,
-                automationEnabled: enableAutomation
+                automationEnabled: enableAutomation,
+                requestCaptureEnabled: enableRequestCapture
             };
         } catch (error) {
             await this.profileManager.endSession(sessionId);
@@ -312,6 +343,12 @@ export class ProfileLauncher {
             // Stop autofill monitoring
             this.autofillSystem.stopMonitoring(sessionId);
             
+            // Stop request capture monitoring and export data
+            await this.requestCaptureSystem.cleanup(sessionId, {
+                exportBeforeCleanup: true,
+                exportFormat: 'jsonl'
+            });
+            
             return {
                 profile: browserInfo.profile,
                 duration: new Date() - browserInfo.startTime,
@@ -409,6 +446,12 @@ export class ProfileLauncher {
             
             // Stop autofill monitoring
             this.autofillSystem.stopMonitoring(sessionId);
+            
+            // Stop request capture monitoring
+            await this.requestCaptureSystem.cleanup(sessionId, {
+                exportBeforeCleanup: true,
+                exportFormat: 'jsonl'
+            });
             
             console.log(`✅ Session ${sessionId} cleaned up successfully`);
             
@@ -979,6 +1022,41 @@ export class ProfileLauncher {
     async reloadAutofillHooks() {
         await this.autofillSystem.reloadHooks('./autofill-hooks');
         console.log(`🔄 Autofill hooks reloaded`);
+    }
+
+    /**
+     * Get request capture system status
+     * @returns {Object} Request capture system status
+     */
+    getRequestCaptureStatus() {
+        return this.requestCaptureSystem.getStatus();
+    }
+
+    /**
+     * Reload request capture hooks from configuration
+     */
+    async reloadRequestCaptureHooks() {
+        await this.requestCaptureSystem.reloadHooks('./capture-hooks');
+        console.log(`🔄 Request capture hooks reloaded`);
+    }
+
+    /**
+     * Export captured requests for a session
+     * @param {string} sessionId - Session ID
+     * @param {string} format - Export format ('json', 'jsonl', 'csv')
+     * @param {string} outputPath - Output file path (optional)
+     */
+    async exportCapturedRequests(sessionId, format = 'jsonl', outputPath = null) {
+        return await this.requestCaptureSystem.exportCapturedRequests(sessionId, format, outputPath);
+    }
+
+    /**
+     * Get captured requests for a session
+     * @param {string} sessionId - Session ID
+     * @returns {Array} Array of captured requests
+     */
+    getCapturedRequests(sessionId) {
+        return this.requestCaptureSystem.getCapturedRequests(sessionId);
     }
 
     /**

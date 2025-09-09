@@ -389,6 +389,9 @@ program
     .option('--no-automation', 'Disable automation capabilities (enabled by default)')
     .option('--no-max-stealth', 'Disable maximum stealth mode (enabled by default)')
     .option('--automation-tasks <tasks...>', 'Specify custom automation tasks')
+    .option('--no-capture', 'Disable request capture (enabled by default)')
+    .option('--capture-format <format>', 'Request capture output format (jsonl, json, csv)', 'jsonl')
+    .option('--capture-dir <dir>', 'Request capture output directory', './captured-requests')
     .action(async (profileName, options) => {
         try {
             let result;
@@ -398,6 +401,13 @@ program
                 profileName = await selectProfile('Select profile to launch:');
             }
             
+            // Configure request capture system if needed
+            if (options.captureDir !== './captured-requests' || options.captureFormat !== 'jsonl') {
+                profileLauncher.requestCaptureSystem.outputDirectory = options.captureDir;
+                profileLauncher.requestCaptureSystem.outputFormat = options.captureFormat;
+                await profileLauncher.requestCaptureSystem.ensureOutputDirectory();
+            }
+
             // Prepare launch options
             const launchOptions = {
                 browserType: options.browser,
@@ -406,6 +416,7 @@ program
                 loadExtensions: options.loadExtensions || [],
                 autoLoadExtensions: options.autoExtensions !== false, // True by default, disable with --no-auto-extensions
                 enableAutomation: options.automation !== false, // True by default, disable with --no-automation
+                enableRequestCapture: options.capture !== false, // True by default, disable with --no-capture
                 maxStealth: options.maxStealth !== false, // True by default, disable with --no-max-stealth
                 automationTasks: options.automationTasks || []
             };
@@ -448,6 +459,15 @@ program
                 console.log(chalk.green(`  🤖 Automation: Active (monitoring for VidIQ tabs)`));
             } else {
                 console.log(chalk.gray(`  🤖 Automation: Disabled`));
+            }
+            
+            if (result.requestCaptureEnabled) {
+                console.log(chalk.green(`  🕸️  Request Capture: Active`));
+                const captureStatus = profileLauncher.getRequestCaptureStatus();
+                console.log(chalk.dim(`    Output: ${captureStatus.outputDirectory} (${captureStatus.outputFormat})`));
+                console.log(chalk.dim(`    Hooks: ${captureStatus.totalHooks} loaded`));
+            } else {
+                console.log(chalk.gray(`  🕸️  Request Capture: Disabled`));
             }
             
             if (!options.headless) {
@@ -871,5 +891,151 @@ process.on('SIGINT', async () => {
     }
     process.exit(0);
 });
+
+// Request capture management commands
+program
+    .command('capture')
+    .description('Request capture management commands')
+    .option('-s, --status', 'Show request capture system status')
+    .option('-l, --list <sessionId>', 'List captured requests for a session')
+    .option('-e, --export <sessionId>', 'Export captured requests for a session')
+    .option('--format <format>', 'Export format (json, jsonl, csv)', 'jsonl')
+    .option('--output <path>', 'Output file path for export')
+    .option('--reload', 'Reload request capture hooks')
+    .option('--cleanup [sessionId]', 'Clean up captured data (optionally for specific session)')
+    .action(async (options) => {
+        try {
+            if (options.status) {
+                const captureStatus = profileLauncher.getRequestCaptureStatus();
+                
+                console.log(chalk.blue('🕸️  Request Capture System Status'));
+                console.log(chalk.blue('===================================\n'));
+                
+                console.log(`Total hooks loaded: ${chalk.green(captureStatus.totalHooks)}`);
+                console.log(`Active sessions: ${chalk.green(captureStatus.activeSessions)}`);
+                console.log(`Total captured: ${chalk.green(captureStatus.totalCaptured)}`);
+                console.log(`Output format: ${chalk.cyan(captureStatus.outputFormat)}`);
+                console.log(`Output directory: ${chalk.cyan(captureStatus.outputDirectory)}`);
+                
+                if (captureStatus.hooks.length > 0) {
+                    console.log(chalk.blue('\n📋 Loaded Hooks:'));
+                    captureStatus.hooks.forEach(hook => {
+                        console.log(`  ${chalk.green('•')} ${chalk.bold(hook.name)}`);
+                        console.log(`    ${chalk.dim(hook.description)}`);
+                        console.log(`    Patterns: ${chalk.cyan(hook.patterns.length)}`);
+                        console.log(`    Status: ${hook.enabled ? chalk.green('ENABLED') : chalk.red('DISABLED')}`);
+                        console.log('');
+                    });
+                }
+                
+                if (captureStatus.sessionStats.length > 0) {
+                    console.log(chalk.blue('📊 Session Statistics:'));
+                    captureStatus.sessionStats.forEach(stat => {
+                        console.log(`  ${chalk.green('•')} Session ${stat.sessionId}: ${chalk.cyan(stat.capturedCount)} requests`);
+                    });
+                }
+                return;
+            }
+            
+            if (options.list) {
+                const capturedRequests = profileLauncher.getCapturedRequests(options.list);
+                
+                if (capturedRequests.length === 0) {
+                    console.log(chalk.yellow('⚠️  No captured requests found for this session'));
+                    return;
+                }
+                
+                console.log(chalk.blue(`🕸️  Captured Requests for Session: ${options.list}`));
+                console.log(chalk.blue('='.repeat(50)));
+                console.log(chalk.dim(`Total: ${capturedRequests.length}\n`));
+                
+                capturedRequests.slice(0, 10).forEach((req, index) => {
+                    const typeColor = req.type === 'request' ? 'cyan' : req.type === 'response' ? 'green' : 'yellow';
+                    console.log(`${chalk.bold(`${index + 1}.`)} [${chalk[typeColor](req.type.toUpperCase())}] ${chalk.dim(req.timestamp)}`);
+                    console.log(`   URL: ${req.url}`);
+                    console.log(`   Hook: ${chalk.blue(req.hookName)}`);
+                    
+                    if (req.custom && req.custom.tokens) {
+                        const tokenCount = Object.keys(req.custom.tokens).length;
+                        if (tokenCount > 0) {
+                            console.log(`   🔑 Tokens: ${chalk.green(tokenCount)} found`);
+                        }
+                    }
+                    console.log('');
+                });
+                
+                if (capturedRequests.length > 10) {
+                    console.log(chalk.dim(`... and ${capturedRequests.length - 10} more requests`));
+                }
+                return;
+            }
+            
+            if (options.export) {
+                const capturedRequests = profileLauncher.getCapturedRequests(options.export);
+                if (capturedRequests.length === 0) {
+                    console.log(chalk.yellow('⚠️  No captured requests found for this session'));
+                    return;
+                }
+                
+                console.log(chalk.blue('💾 Exporting captured requests...'));
+                const exportResult = await profileLauncher.exportCapturedRequests(
+                    options.export, 
+                    options.format, 
+                    options.output
+                );
+                
+                if (exportResult) {
+                    console.log(chalk.green('✅ Export completed!'));
+                    console.log(chalk.dim(`File: ${exportResult.filePath}`));
+                    console.log(chalk.dim(`Format: ${exportResult.format}`));
+                    console.log(chalk.dim(`Requests: ${exportResult.count}`));
+                    console.log(chalk.dim(`Size: ${Math.round(exportResult.size / 1024)}KB`));
+                }
+                return;
+            }
+            
+            if (options.reload) {
+                console.log(chalk.blue('🔄 Reloading request capture hooks...'));
+                await profileLauncher.reloadRequestCaptureHooks();
+                
+                const captureStatus = profileLauncher.getRequestCaptureStatus();
+                console.log(chalk.green(`✅ Reloaded ${captureStatus.totalHooks} hooks`));
+                return;
+            }
+            
+            if (options.cleanup !== undefined) {
+                console.log(chalk.blue('🧹 Cleaning up captured request data...'));
+                
+                if (options.cleanup) {
+                    // Clean up specific session
+                    await profileLauncher.requestCaptureSystem.cleanup(options.cleanup, {
+                        exportBeforeCleanup: true,
+                        exportFormat: 'jsonl'
+                    });
+                    console.log(chalk.green(`✅ Cleaned up session: ${options.cleanup}`));
+                } else {
+                    // Clean up all sessions
+                    await profileLauncher.requestCaptureSystem.cleanupAll();
+                    console.log(chalk.green('✅ Cleaned up all captured request data'));
+                }
+                return;
+            }
+            
+            // If no specific option, show help
+            console.log(chalk.blue('🕸️  Request Capture Management'));
+            console.log(chalk.blue('==============================\n'));
+            console.log('Available options:');
+            console.log('  --status           Show system status');
+            console.log('  --list <sessionId> List captured requests');
+            console.log('  --export <sessionId> Export captured requests');
+            console.log('  --reload           Reload capture hooks');
+            console.log('  --cleanup [sessionId] Clean up data');
+            console.log('\nExample: ppm capture --status');
+            
+        } catch (error) {
+            console.error(chalk.red('❌ Error:'), error.message);
+            process.exit(1);
+        }
+    });
 
 program.parse();

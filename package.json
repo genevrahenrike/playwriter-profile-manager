@@ -7,7 +7,8 @@
   "bin": {
     "ppm": "./src/cli.js",
     "ppm-stealth": "./src/StealthCLI.js",
-    "ppm-export": "./src/ExportCLI.js"
+    "ppm-export": "./src/ExportCLI.js",
+    "ppm-capture": "./src/RequestCaptureCLI.js"
   },
   "scripts": {
     "start": "node src/cli.js",
@@ -19,7 +20,11 @@
     "browser",
     "profile",
     "automation",
-    "chromium"
+    "chromium",
+    "request-capture",
+    "api-sniffing",
+    "token-extraction",
+    "vidiq"
   ],
   "author": "Your Name",
   "license": "MIT",

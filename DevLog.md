@@ -481,3 +481,180 @@ $ ppm launch personal-profile --clear-cache-on-exit
 - **Preserved functionality**: All important profile data remains intact
 - **Flexible usage**: Can clear cache on-demand or automatically on exit
 - **User-friendly**: Clear feedback on space savings and operations performed
+
+---
+
+I've successfully extended the autofill feature with a comprehensive random name and password generator system:
+
+### ✅ **Completed Features:**
+
+1. **📝 RandomDataGenerator Class** - Extensive international name lists with 1000+ names from multiple cultures (Nordic, Germanic, Romance, Slavic, Celtic, etc.)
+
+2. **🌐 Configurable Email Providers** - 15+ popular email providers with weighted distribution including privacy-focused options like ProtonMail and Tutanota
+
+3. **🔐 Secure Password Generation** - Customizable complexity rules, length ranges, and character requirements
+
+4. **📊 Optional SQLite Tracking** - Prevents duplicate name combinations and provides usage statistics
+
+5. **⚙️ AutofillHookSystem Integration** - Dynamic field population with placeholder syntax (`{{email}}`, `{{password}}`, `{{fullName}}`)
+
+6. **🎛️ Flexible Configuration** - Prefix/postfix options, custom generation rules per hook
+
+7. **🔄 Updated VidIQ Hook** - Now uses dynamic generation instead of static values
+
+8. **📚 Comprehensive Documentation** - Complete usage guide with examples
+
+9. **🔧 Fixed Dependencies** - Added missing `better-sqlite3` package
+
+### **Key Features:**
+
+- **Rare but real names**: International names using Latin/ASCII characters
+- **Guaranteed uniqueness**: 4-digit postfix ensures no duplicates
+- **Configurable providers**: Can enable/disable specific email domains
+- **SQLite tracking**: Optional database to track generated pairs
+- **Dynamic placeholders**: Use `{{email}}`, `{{password}}`, `{{fullName}}` in hook configs
+- **Function-based values**: Complex dynamic generation with custom logic
+
+### **Usage Example:**
+
+```javascript
+// Enable dynamic generation in any hook
+export default {
+    name: 'example-hook',
+    useDynamicGeneration: true,
+    generationOptions: {
+        usePrefix: false,
+        usePostfix: true,
+        password: { minLength: 14, maxLength: 18 }
+    },
+    fields: {
+        'input[type="email"]': { value: '{{email}}' },
+        'input[type="password"]': { value: '{{password}}' }
+    }
+};
+```
+
+The system now generates realistic user profiles like:
+- **Name**: `erik.bergstrom2847`
+- **Email**: `erik.bergstrom2847@protonmail.com`
+- **Password**: `Kx9#mP2vQ8@nR5zL` (secure, randomized)
+
+----
+
+I've successfully extended your current system to support **sniffing and request capturing** with a powerful, hook-based architecture similar to your autofill system. Here's what's been implemented:
+
+### 🏗️ **Core Architecture**
+
+1. **RequestCaptureSystem** (`src/RequestCaptureSystem.js`)
+   - Hook-based architecture matching your autofill system
+   - Supports URL pattern matching and custom capture rules
+   - Real-time request/response interception
+   - Multiple output formats (JSONL, JSON, CSV)
+   - Automatic cleanup and export
+
+2. **VidIQ Capture Hook** (`capture-hooks/vidiq.js`)
+   - Pre-configured for VidIQ API monitoring
+   - Extracts JWT tokens from headers, cookies, and response bodies
+   - Monitors localStorage/sessionStorage for auth data
+   - Detects VidIQ extension interactions
+   - Captures YouTube page interactions that trigger API calls
+
+3. **ProfileLauncher Integration**
+   - Seamlessly integrated with existing profile management
+   - Automatic capture system initialization
+   - Session-based request tracking
+   - Auto-export on session cleanup
+
+### 🚀 **Usage Examples**
+
+#### **Launch with Request Capture (Default Enabled)**
+```bash
+# Basic launch - capture enabled by default
+npx ppm launch vpn-fresh
+
+# Custom capture settings
+npx ppm launch vpn-fresh --capture-format jsonl --capture-dir ./my-captures
+
+# Disable capture if needed
+npx ppm launch vpn-fresh --no-capture
+```
+
+#### **Monitor Captured Requests**
+```bash
+# Check system status
+npx ppm capture --status
+
+# List captured requests for a session
+npx ppm capture --list <session-id>
+
+# Export captured data
+npx ppm capture --export <session-id> --format jsonl
+```
+
+#### **Run the Demo**
+```bash
+# Comprehensive demonstration
+node examples/request-capture-example.js
+```
+
+### 🎯 **Perfect for Your VidIQ Workflow**
+
+Since you mentioned the test profile through `npx ppm launch vpn-fresh` is already logged in:
+
+1. **Launch your existing profile**: `npx ppm launch vpn-fresh`
+2. **Navigate to VidIQ/YouTube** - the system automatically captures:
+   - All VidIQ API requests and responses
+   - Authentication tokens from headers/cookies/storage
+   - Extension interactions and page-level data
+   - JWT tokens and user credentials
+3. **Data is saved in real-time** to `./captured-requests/capture-<session-id>.jsonl`
+4. **On browser close**, data is automatically exported
+
+### 📊 **What Gets Captured**
+
+The VidIQ hook captures:
+- **API Requests**: All calls to `api.vidiq.com` and related endpoints
+- **Authentication Tokens**: JWT tokens, API keys, session cookies
+- **Browser Storage**: localStorage and sessionStorage tokens
+- **Extension Data**: VidIQ extension interactions and presence detection
+- **User Information**: Profile data, email addresses, account details
+- **Page Context**: YouTube interactions that trigger VidIQ API calls
+
+### 💾 **Output Format (JSONL)**
+
+Each line in the output file is a JSON object:
+```jsonl
+{"timestamp":"2024-01-01T12:00:00.000Z","type":"request","hookName":"vidiq-capture","url":"https://api.vidiq.com/users/me","method":"GET","headers":{"authorization":"Bearer eyJ..."},"custom":{"tokens":{"authorization":"Bearer eyJ..."},"isAuthenticated":true}}
+{"timestamp":"2024-01-01T12:00:01.000Z","type":"response","hookName":"vidiq-capture","url":"https://api.vidiq.com/users/me","status":200,"custom":{"userInfo":{"email":"user@example.com"},"tokens":{"access_token":"eyJ..."}}}
+```
+
+### 🔧 **Extensible Architecture**
+
+Just like your autofill hooks, you can easily create new capture hooks for other sites:
+
+1. **Create** `capture-hooks/newsite.js`
+2. **Define** URL patterns and capture rules
+3. **Implement** custom token extraction logic
+4. **Reload** hooks with `npx ppm capture --reload`
+
+### 📚 **Documentation**
+
+Complete documentation is available in `REQUEST_CAPTURE_SYSTEM.md` covering:
+- Architecture details
+- Hook development guide
+- CLI commands
+- Output formats
+- Security considerations
+- Troubleshooting
+
+### 🎉 **Ready to Use**
+
+The system is fully integrated and ready to use with your existing workflow. When you run `npx ppm launch vpn-fresh`, request capture will be automatically enabled and start monitoring VidIQ interactions immediately!
+
+**Next Steps:**
+1. Try launching your profile: `npx ppm launch vpn-fresh`
+2. Navigate to VidIQ or YouTube
+3. Check captured data: `npx ppm capture --status`
+4. Export results when done
+
+The system handles the extension install popup and post-signin flows you mentioned - it will capture all the API calls that happen during authentication and extension activation! 🚀
