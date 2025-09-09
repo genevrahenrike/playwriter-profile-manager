@@ -190,214 +190,222 @@ export class RequestCaptureSystem {
     }
 
     /**
-     * Setup extension traffic monitoring using Chrome DevTools Protocol
+     * Setup global network monitoring using Chrome DevTools Protocol
+     * This listens to ALL network traffic globally and filters for our target domains
      * @param {string} sessionId - Session ID
      * @param {Object} context - Browser context
      * @returns {Object} CDP session for cleanup
      */
     async setupExtensionMonitoring(sessionId, context) {
         try {
-            // Get the browser page to create CDP session
-            const pages = context.pages();
-            if (pages.length === 0) {
-                throw new Error('No pages available for CDP session');
+            // Get the browser instance to create a global CDP session
+            const browser = context.browser();
+            if (!browser) {
+                throw new Error('No browser available for CDP session');
             }
             
-            const page = pages[0];
-            const cdpSession = await page.context().newCDPSession(page);
+            // Create a CDP session connected to the browser target (not just a page)
+            // This allows us to monitor ALL network activity from all contexts
+            const cdpSession = await browser.newBrowserCDPSession();
             
-            // Enable Network domain to monitor all network activity
+            // Enable Network domain globally - this captures EVERYTHING
             await cdpSession.send('Network.enable');
             
-            console.log(`🔧 CDP Network monitoring enabled for extensions`);
+            console.log(`🌐 CDP Global network monitoring enabled - capturing ALL traffic`);
+            console.log(`🔍 Will filter for api.vidiq.com endpoints from any source`);
             
-            // Listen for request events (including extension requests)
+            // Listen for ALL request events globally
             cdpSession.on('Network.requestWillBeSent', (params) => {
-                this.handleCDPRequest(params, sessionId);
+                this.handleGlobalCDPRequest(params, sessionId);
             });
             
-            // Listen for response events (including extension responses)
+            // Listen for ALL response events globally
             cdpSession.on('Network.responseReceived', (params) => {
-                this.handleCDPResponse(params, sessionId, cdpSession);
+                this.handleGlobalCDPResponse(params, sessionId, cdpSession);
             });
             
-            // Listen for WebSocket events (extensions might use WebSockets)
+            // Listen for WebSocket events
             cdpSession.on('Network.webSocketCreated', (params) => {
                 this.handleCDPWebSocket(params, sessionId);
             });
             
-            // Listen for service worker network events
-            try {
-                await cdpSession.send('ServiceWorker.enable');
-                console.log(`🔧 CDP ServiceWorker monitoring enabled`);
-            } catch (error) {
-                console.log(`⚠️  ServiceWorker monitoring not available: ${error.message}`);
-            }
-            
             return cdpSession;
             
         } catch (error) {
-            console.warn(`⚠️  Failed to setup extension monitoring: ${error.message}`);
+            console.warn(`⚠️  Failed to setup global network monitoring: ${error.message}`);
             return null;
         }
     }
 
     /**
-     * Handle CDP request events (captures extension requests)
+     * Handle global CDP request events (captures ALL requests, filters for our domains)
      * @param {Object} params - CDP request parameters
      * @param {string} sessionId - Session ID
      */
-    async handleCDPRequest(params, sessionId) {
+    async handleGlobalCDPRequest(params, sessionId) {
         try {
             const { requestId, request, initiator, timestamp } = params;
             const url = request.url;
             
-            // Check if this matches any of our hooks
+            // First filter: Only process URLs that match our hooks
             const matchingHooks = this.findMatchingHooks(url);
+            if (matchingHooks.length === 0) {
+                return; // Skip if not matching our target domains
+            }
             
-            if (matchingHooks.length > 0) {
-                // Log extension requests
-                const isExtensionRequest = initiator && (
-                    initiator.type === 'other' || 
-                    (initiator.url && initiator.url.startsWith('chrome-extension://'))
-                );
-                
-                if (isExtensionRequest) {
-                    console.log(`🧩 EXTENSION REQUEST: ${request.method} ${url}`);
-                    console.log(`   Initiator: ${initiator.type} ${initiator.url || 'unknown'}`);
-                }
-                
-                for (const hook of matchingHooks) {
-                    if (!hook.enabled) continue;
-                    
-                    const captureData = {
-                        timestamp: new Date(timestamp * 1000).toISOString(),
-                        type: 'request',
-                        source: 'extension', // Mark as extension traffic
-                        requestId: requestId,
-                        hookName: hook.name,
-                        sessionId: sessionId,
-                        url: url,
-                        method: request.method,
-                        headers: request.headers || {},
-                        postData: request.postData,
-                        initiator: {
-                            type: initiator?.type || 'unknown',
-                            url: initiator?.url || null,
-                            stack: initiator?.stack || null
-                        },
-                        isExtensionRequest: isExtensionRequest
-                    };
-                    
-                    // Execute custom request capture logic if available
-                    if (hook.customRequestCapture && typeof hook.customRequestCapture === 'function') {
-                        // Create a mock request object for compatibility
-                        const mockRequest = {
-                            url: () => url,
-                            method: () => request.method,
-                            headers: () => request.headers || {},
-                            postData: () => request.postData || null,
-                            resourceType: () => 'xhr', // Default for extension requests
-                            isNavigationRequest: () => false
-                        };
-                        
-                        const customData = await hook.customRequestCapture(mockRequest, sessionId);
-                        if (customData) {
-                            captureData.custom = customData;
-                        }
-                    }
-                    
-                    this.storeCapturedData(sessionId, captureData);
+            // Determine the source of this request
+            let source = 'page'; // default
+            let sourceDescription = 'Page';
+            
+            if (initiator) {
+                if (initiator.url && initiator.url.startsWith('chrome-extension://')) {
+                    source = 'extension';
+                    sourceDescription = 'Extension';
+                } else if (initiator.type === 'other') {
+                    // 'other' type often indicates service worker or background script
+                    source = 'service_worker';
+                    sourceDescription = 'Service Worker';
+                } else if (initiator.type === 'script') {
+                    source = 'script';
+                    sourceDescription = 'Script';
                 }
             }
+            
+            console.log(`🌐 ${sourceDescription.toUpperCase()} REQUEST: ${request.method} ${url}`);
+            if (initiator?.url) {
+                console.log(`   Initiator: ${initiator.type} ${initiator.url}`);
+            }
+            
+            for (const hook of matchingHooks) {
+                if (!hook.enabled) continue;
+                
+                const captureData = {
+                    timestamp: new Date(timestamp * 1000).toISOString(),
+                    type: 'request',
+                    source: source, // Mark source type based on initiator
+                    requestId: requestId,
+                    hookName: hook.name,
+                    sessionId: sessionId,
+                    url: url,
+                    method: request.method,
+                    headers: request.headers || {},
+                    postData: request.postData,
+                    initiator: {
+                        type: initiator?.type || 'unknown',
+                        url: initiator?.url || null,
+                        stack: initiator?.stack || null
+                    }
+                };
+                
+                // Execute custom request capture logic if available
+                if (hook.customRequestCapture && typeof hook.customRequestCapture === 'function') {
+                    // Create a mock request object for compatibility
+                    const mockRequest = {
+                        url: () => url,
+                        method: () => request.method,
+                        headers: () => request.headers || {},
+                        postData: () => request.postData || null,
+                        resourceType: () => 'xhr', // Default for CDP requests
+                        isNavigationRequest: () => false
+                    };
+                    
+                    const customData = await hook.customRequestCapture(mockRequest, sessionId);
+                    if (customData) {
+                        captureData.custom = customData;
+                    }
+                }
+                
+                this.storeCapturedData(sessionId, captureData);
+            }
         } catch (error) {
-            console.log(`⚠️  Error handling CDP request: ${error.message}`);
+            console.log(`⚠️  Error handling global CDP request: ${error.message}`);
         }
     }
 
     /**
-     * Handle CDP response events (captures extension responses)
+     * Handle global CDP response events (captures ALL responses, filters for our domains)
      * @param {Object} params - CDP response parameters
      * @param {string} sessionId - Session ID
      * @param {Object} cdpSession - CDP session for getting response body
      */
-    async handleCDPResponse(params, sessionId, cdpSession) {
+    async handleGlobalCDPResponse(params, sessionId, cdpSession) {
         try {
             const { requestId, response, timestamp } = params;
             const url = response.url;
             
-            // Check if this matches any of our hooks
+            // First filter: Only process URLs that match our hooks
             const matchingHooks = this.findMatchingHooks(url);
+            if (matchingHooks.length === 0) {
+                return; // Skip if not matching our target domains
+            }
             
-            if (matchingHooks.length > 0) {
-                console.log(`🧩 EXTENSION RESPONSE: ${response.status} ${url}`);
+            // We can't easily determine source from response alone, so we'll mark as 'global'
+            console.log(`🌐 GLOBAL RESPONSE: ${response.status} ${url}`);
+            
+            for (const hook of matchingHooks) {
+                if (!hook.enabled) continue;
                 
-                for (const hook of matchingHooks) {
-                    if (!hook.enabled) continue;
-                    
-                    const captureData = {
-                        timestamp: new Date(timestamp * 1000).toISOString(),
-                        type: 'response',
-                        source: 'extension', // Mark as extension traffic
-                        requestId: requestId,
-                        hookName: hook.name,
-                        sessionId: sessionId,
-                        url: url,
-                        status: response.status,
-                        statusText: response.statusText,
-                        headers: response.headers || {},
-                        mimeType: response.mimeType,
-                        isExtensionResponse: true
+                const captureData = {
+                    timestamp: new Date(timestamp * 1000).toISOString(),
+                    type: 'response',
+                    source: 'global', // Mark as global since we can't determine exact source from response
+                    requestId: requestId,
+                    hookName: hook.name,
+                    sessionId: sessionId,
+                    url: url,
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers || {},
+                    mimeType: response.mimeType
+                };
+                
+                // Capture response body if configured and possible
+                if (hook.captureRules.captureResponseBody !== false) {
+                    try {
+                        const responseBody = await cdpSession.send('Network.getResponseBody', { requestId });
+                        if (responseBody.body) {
+                            const bodyText = responseBody.base64Encoded 
+                                ? Buffer.from(responseBody.body, 'base64').toString('utf8')
+                                : responseBody.body;
+                            
+                            if (bodyText.length < 100000) { // Limit body size
+                                captureData.body = bodyText;
+                            } else {
+                                captureData.bodySize = bodyText.length;
+                                captureData.bodyTruncated = true;
+                                captureData.bodyPreview = bodyText.substring(0, 1000);
+                            }
+                        }
+                    } catch (error) {
+                        captureData.bodyError = error.message;
+                    }
+                }
+                
+                // Execute custom response capture logic if available
+                if (hook.customResponseCapture && typeof hook.customResponseCapture === 'function') {
+                    // Create a mock response object for compatibility
+                    const mockResponse = {
+                        url: () => url,
+                        status: () => response.status,
+                        statusText: () => response.statusText,
+                        headers: () => response.headers || {},
+                        text: async () => captureData.body || '',
+                        request: () => ({
+                            method: () => 'GET', // Default since we don't have original request
+                            headers: () => ({})
+                        })
                     };
                     
-                    // Capture response body if configured and possible
-                    if (hook.captureRules.captureResponseBody !== false) {
-                        try {
-                            const responseBody = await cdpSession.send('Network.getResponseBody', { requestId });
-                            if (responseBody.body) {
-                                const bodyText = responseBody.base64Encoded 
-                                    ? Buffer.from(responseBody.body, 'base64').toString('utf8')
-                                    : responseBody.body;
-                                
-                                if (bodyText.length < 100000) { // Limit body size
-                                    captureData.body = bodyText;
-                                } else {
-                                    captureData.bodySize = bodyText.length;
-                                    captureData.bodyTruncated = true;
-                                    captureData.bodyPreview = bodyText.substring(0, 1000);
-                                }
-                            }
-                        } catch (error) {
-                            captureData.bodyError = error.message;
-                        }
+                    const customData = await hook.customResponseCapture(mockResponse, sessionId);
+                    if (customData) {
+                        captureData.custom = customData;
                     }
-                    
-                    // Execute custom response capture logic if available
-                    if (hook.customResponseCapture && typeof hook.customResponseCapture === 'function') {
-                        // Create a mock response object for compatibility
-                        const mockResponse = {
-                            url: () => url,
-                            status: () => response.status,
-                            statusText: () => response.statusText,
-                            headers: () => response.headers || {},
-                            text: async () => captureData.body || '',
-                            request: () => ({
-                                method: () => 'GET', // Default since we don't have original request
-                                headers: () => ({})
-                            })
-                        };
-                        
-                        const customData = await hook.customResponseCapture(mockResponse, sessionId);
-                        if (customData) {
-                            captureData.custom = customData;
-                        }
-                    }
-                    
-                    this.storeCapturedData(sessionId, captureData);
                 }
+                
+                this.storeCapturedData(sessionId, captureData);
             }
         } catch (error) {
-            console.log(`⚠️  Error handling CDP response: ${error.message}`);
+            console.log(`⚠️  Error handling global CDP response: ${error.message}`);
         }
     }
 
