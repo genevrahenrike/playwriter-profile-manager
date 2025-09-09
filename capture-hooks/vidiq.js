@@ -1,7 +1,7 @@
-// VidIQ Request Capture Hook Configuration
+// VidIQ Request Capture Hook Configuration - Enhanced for Extension Traffic
 export default {
     name: 'vidiq-capture',
-    description: 'Capture api.vidiq.com requests per endpoint',
+    description: 'Capture VidIQ API requests from both web pages and extension background workers',
     enabled: true,
     
     // URL patterns to monitor - only api.vidiq.com
