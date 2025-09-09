@@ -499,7 +499,7 @@ export class AutofillHookSystem {
             
             // Get execution settings with improved defaults for race condition handling
             const settings = {
-                maxAttempts: 8,           // More attempts for better reliability
+                maxAttempts: 3,           // More attempts for better reliability
                 pollInterval: 1500,       // Longer polling for dynamic forms
                 waitAfterFill: 500,       // More time for fields to stabilize
                 fieldRetries: 3,          // Retries per field
