@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { RandomDataGenerator } from './RandomDataGenerator.js';
 
 /**
  * AutofillHookSystem - A generalized system for handling form autofill based on URL patterns
@@ -7,10 +8,25 @@ import path from 'path';
  * autofill configurations can be loaded dynamically.
  */
 export class AutofillHookSystem {
-    constructor() {
+    constructor(options = {}) {
         this.hooks = new Map(); // URL pattern -> hook configuration
         this.processedPages = new Map(); // Track processed pages to avoid duplicates
         this.activeMonitors = new Map(); // Track active page monitors per session
+        
+        // Initialize random data generator
+        this.dataGenerator = new RandomDataGenerator({
+            usePrefix: options.usePrefix || false,
+            usePostfix: options.usePostfix !== false, // default true
+            postfixDigits: options.postfixDigits || 4,
+            emailProviders: options.emailProviders,
+            customEmailProviders: options.customEmailProviders,
+            enableTracking: options.enableTracking || false,
+            trackingDbPath: options.trackingDbPath || './profiles/data/generated_names.db',
+            passwordLength: options.passwordLength,
+            passwordComplexity: options.passwordComplexity
+        });
+        
+        console.log(`🎲 RandomDataGenerator initialized with tracking: ${this.dataGenerator.config.enableTracking}`);
     }
 
     /**
@@ -211,6 +227,75 @@ export class AutofillHookSystem {
     }
 
     /**
+     * Generate dynamic field values for a hook
+     * @param {Object} hook - Hook configuration
+     * @param {string} sessionId - Session ID
+     * @returns {Object} Generated user data
+     */
+    generateFieldValues(hook, sessionId) {
+        // Check if hook supports dynamic generation
+        if (!hook.useDynamicGeneration) {
+            return null;
+        }
+        
+        const options = {
+            usePrefix: hook.generationOptions?.usePrefix,
+            usePostfix: hook.generationOptions?.usePostfix,
+            currentIndex: this.getSessionIndex(sessionId),
+            password: hook.generationOptions?.password
+        };
+        
+        const userData = this.dataGenerator.generateUserData(options);
+        console.log(`🎲 Generated dynamic data for ${hook.name}: ${userData.fullName}`);
+        
+        return userData;
+    }
+    
+    /**
+     * Get session-specific index for naming
+     * @param {string} sessionId - Session ID
+     * @returns {number} Session index
+     */
+    getSessionIndex(sessionId) {
+        // Simple implementation - could be enhanced with persistent tracking
+        return Math.abs(sessionId.split('').reduce((a, b) => {
+            a = ((a << 5) - a) + b.charCodeAt(0);
+            return a & a;
+        }, 0)) % 100 + 1;
+    }
+    
+    /**
+     * Resolve field value (static or dynamic)
+     * @param {Object} fieldConfig - Field configuration
+     * @param {Object} userData - Generated user data (if available)
+     * @returns {string} Field value
+     */
+    resolveFieldValue(fieldConfig, userData = null) {
+        // Handle dynamic value placeholders
+        if (typeof fieldConfig.value === 'string' && fieldConfig.value.includes('{{')) {
+            if (!userData) {
+                console.warn('⚠️  Dynamic placeholder found but no user data available');
+                return fieldConfig.value;
+            }
+            
+            return fieldConfig.value
+                .replace(/\{\{firstName\}\}/g, userData.firstName)
+                .replace(/\{\{lastName\}\}/g, userData.lastName)
+                .replace(/\{\{fullName\}\}/g, userData.fullName)
+                .replace(/\{\{email\}\}/g, userData.email)
+                .replace(/\{\{password\}\}/g, userData.password);
+        }
+        
+        // Handle function-based dynamic values
+        if (typeof fieldConfig.value === 'function') {
+            return fieldConfig.value(userData);
+        }
+        
+        // Return static value
+        return fieldConfig.value;
+    }
+
+    /**
      * Execute autofill for a specific hook and page
      * @param {Object} hook - Hook configuration
      * @param {Object} page - Playwright page
@@ -220,9 +305,15 @@ export class AutofillHookSystem {
         console.log(`🚀 Executing autofill: ${hook.name}`);
         
         try {
+            // Generate dynamic data if needed
+            let userData = null;
+            if (hook.useDynamicGeneration) {
+                userData = this.generateFieldValues(hook, sessionId);
+            }
+            
             // Execute custom logic first if available
             if (hook.customLogic && typeof hook.customLogic === 'function') {
-                await hook.customLogic(page, sessionId, this);
+                await hook.customLogic(page, sessionId, this, userData);
             }
             
             // Get execution settings
@@ -280,11 +371,12 @@ export class AutofillHookSystem {
                     const count = await field.count();
                     
                     if (count > 0) {
+                        const fieldValue = this.resolveFieldValue(fieldConfig, userData);
                         console.log(`📝 Filling field: ${fieldConfig.description || selector}`);
                         await field.first().clear();
-                        await field.first().fill(fieldConfig.value);
+                        await field.first().fill(fieldValue);
                         filledCount++;
-                        console.log(`✅ Field filled: ${fieldConfig.value}`);
+                        console.log(`✅ Field filled: ${fieldValue.length > 50 ? fieldValue.substring(0, 47) + '...' : fieldValue}`);
                     }
                 } catch (error) {
                     console.log(`⚠️  Could not fill field ${selector}: ${error.message}`);
@@ -381,18 +473,25 @@ export class AutofillHookSystem {
                     name: hook.name,
                     description: hook.description,
                     enabled: hook.enabled,
+                    useDynamicGeneration: hook.useDynamicGeneration || false,
                     patterns: []
                 });
             }
             hooksByName.get(hook.name).patterns.push(pattern);
         }
         
+        const generatorStats = this.dataGenerator.getStatistics();
+        
         return {
             totalHooks: hooksByName.size,
             totalPatterns: this.hooks.size,
             activeSessions: this.activeMonitors.size,
             processedPages: this.processedPages.size,
-            hooks: Array.from(hooksByName.values())
+            hooks: Array.from(hooksByName.values()),
+            dataGenerator: {
+                trackingEnabled: generatorStats.trackingEnabled,
+                ...generatorStats
+            }
         };
     }
 
@@ -404,5 +503,22 @@ export class AutofillHookSystem {
         console.log(`🔄 Reloading autofill hooks...`);
         this.hooks.clear();
         await this.loadHooks(configDir);
+    }
+    
+    /**
+     * Clean up resources and close connections
+     */
+    cleanup() {
+        // Stop all monitoring
+        for (const sessionId of this.activeMonitors.keys()) {
+            this.stopMonitoring(sessionId);
+        }
+        
+        // Close data generator resources
+        if (this.dataGenerator) {
+            this.dataGenerator.close();
+        }
+        
+        console.log(`🧹 AutofillHookSystem cleanup completed`);
     }
 }
