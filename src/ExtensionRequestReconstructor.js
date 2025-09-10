@@ -553,16 +553,38 @@ export class ExtensionRequestReconstructor {
             try {
                 const headerResult = await this.generateHeadersObject(profile.sessionId, opts);
                 
-                // Clean up headers - remove content-type and user-agent for cleaner output
-                const cleanHeaders = { ...headerResult.extensionHeaders };
-                delete cleanHeaders['content-type'];
-                delete cleanHeaders['user-agent'];
-                delete cleanHeaders['x-client-location'];
+                // Create headers in the exact order requested, with accept-language first, then authorization
+                const orderedHeaders = {};
+                
+                // First: accept-language
+                orderedHeaders['accept-language'] = headerResult.extensionHeaders['accept-language'];
+                
+                // Second: authorization (immediately after accept-language)
+                if (headerResult.extensionHeaders['authorization']) {
+                    orderedHeaders['authorization'] = headerResult.extensionHeaders['authorization'];
+                }
+                
+                // Then add the rest in a consistent order
+                const remainingHeadersOrder = [
+                    'accept',
+                    'priority', 
+                    'sec-fetch-dest',
+                    'sec-fetch-mode',
+                    'sec-fetch-site',
+                    'x-vidiq-client',
+                    'x-amplitude-device-id'
+                ];
+                
+                remainingHeadersOrder.forEach(key => {
+                    if (headerResult.extensionHeaders[key] && !orderedHeaders[key]) {
+                        orderedHeaders[key] = headerResult.extensionHeaders[key];
+                    }
+                });
                 
                 results.push({
                     name: profile.profileName,
                     extension: {
-                        headers: cleanHeaders
+                        headers: orderedHeaders
                     }
                 });
             } catch (error) {
