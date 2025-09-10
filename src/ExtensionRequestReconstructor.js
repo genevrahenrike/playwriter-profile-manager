@@ -71,6 +71,47 @@ export class ExtensionRequestReconstructor {
     }
 
     /**
+     * Find all profiles matching a prefix
+     * @param {string} prefix - Profile name prefix
+     * @returns {Promise<Array>} Array of profile objects with latest sessions
+     */
+    async findProfilesWithPrefix(prefix) {
+        try {
+            const files = fs.readdirSync(this.capturedRequestsDir);
+            const profileMap = new Map();
+            
+            // Group files by profile name and find latest session for each
+            files
+                .filter(file => file.endsWith('.jsonl') && file.includes('export'))
+                .forEach(file => {
+                    const match = file.match(/^([^-]+(?:-[^-]+)*)-export-([\w-]+)-(.+)\.jsonl$/);
+                    if (match) {
+                        const [, profileName, sessionId, timestamp] = match;
+                        if (profileName.startsWith(prefix)) {
+                            const stats = fs.statSync(path.join(this.capturedRequestsDir, file));
+                            const existing = profileMap.get(profileName);
+                            
+                            if (!existing || stats.mtime > existing.mtime) {
+                                profileMap.set(profileName, {
+                                    profileName,
+                                    sessionId,
+                                    timestamp,
+                                    file,
+                                    mtime: stats.mtime
+                                });
+                            }
+                        }
+                    }
+                });
+            
+            return Array.from(profileMap.values()).sort((a, b) => a.profileName.localeCompare(b.profileName));
+        } catch (error) {
+            if (!this.quiet) console.error('Error finding profiles with prefix:', error.message);
+            return [];
+        }
+    }
+
+    /**
      * Find the latest session for a profile
      * @param {string} profileName - Profile name
      * @returns {Promise<string|null>} Latest session ID or null
@@ -495,6 +536,43 @@ export class ExtensionRequestReconstructor {
         } catch (error) {
             throw new Error(`Reconstruction failed: ${error.message}`);
         }
+    }
+
+    /**
+     * Generate extension headers for multiple profiles with a given prefix
+     * @param {string} prefix - Profile name prefix
+     * @param {Object} options - Generation options
+     * @returns {Promise<Array>} Array of profile objects with extension headers
+     */
+    async generateHeadersForProfiles(prefix, options = {}) {
+        const opts = { randomizeDeviceId: true, includeContentType: false, quiet: true, ...options };
+        const profiles = await this.findProfilesWithPrefix(prefix);
+        const results = [];
+        
+        for (const profile of profiles) {
+            try {
+                const headerResult = await this.generateHeadersObject(profile.sessionId, opts);
+                
+                // Clean up headers - remove content-type and user-agent for cleaner output
+                const cleanHeaders = { ...headerResult.extensionHeaders };
+                delete cleanHeaders['content-type'];
+                delete cleanHeaders['user-agent'];
+                delete cleanHeaders['x-client-location'];
+                
+                results.push({
+                    name: profile.profileName,
+                    extension: {
+                        headers: cleanHeaders
+                    }
+                });
+            } catch (error) {
+                if (!opts.quiet) {
+                    console.error(`Failed to generate headers for profile ${profile.profileName}:`, error.message);
+                }
+            }
+        }
+        
+        return results;
     }
 
     /**

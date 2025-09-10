@@ -136,6 +136,33 @@ program
         }
     });
 
+// Bulk headers command: outputs array of profile objects with extension headers
+program
+    .command('bulk-headers')
+    .description('Output extension headers for all profiles matching a prefix')
+    .argument('<prefix>', 'Profile name prefix (e.g., "viq" for viq1, viq2, etc.)')
+    .option('--no-randomize', 'Do not randomize x-amplitude-device-id, use captured values')
+    .action(async (prefix, options) => {
+        try {
+            const reconstructor = new ExtensionRequestReconstructor({ quiet: true });
+            const results = await reconstructor.generateHeadersForProfiles(prefix, {
+                randomizeDeviceId: options.randomize !== false,
+                includeContentType: false,
+                quiet: true
+            });
+            
+            if (results.length === 0) {
+                console.error(chalk.red(`❌ No profiles found with prefix: ${prefix}`));
+                process.exit(1);
+            }
+            
+            process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+        } catch (error) {
+            console.error(chalk.red('❌ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
 // Analysis command
 program
     .command('analyze')
