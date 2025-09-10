@@ -135,6 +135,8 @@ program
     .alias('ls')
     .description('List all browser profiles')
     .option('-v, --verbose', 'Show detailed information')
+    .option('-s, --sort <field>', 'Sort by field (name, created, used, sessions)', 'name')
+    .option('--desc', 'Sort in descending order (default: ascending)')
     .action(async (options) => {
         try {
             const profiles = await profileManager.listProfiles();
@@ -143,32 +145,110 @@ program
                 console.log(chalk.yellow('No profiles found. Create one with: ppm create'));
                 return;
             }
+
+            // Sort profiles based on options
+            const sortField = options.sort.toLowerCase();
+            const isDescending = options.desc;
             
-            console.log(chalk.blue(`Found ${profiles.length} profile(s):\n`));
+            profiles.sort((a, b) => {
+                let comparison = 0;
+                
+                switch (sortField) {
+                    case 'name':
+                    case 'n':
+                        comparison = a.name.localeCompare(b.name);
+                        break;
+                    case 'created':
+                    case 'c':
+                        comparison = new Date(a.createdAt) - new Date(b.createdAt);
+                        break;
+                    case 'used':
+                    case 'u':
+                    case 'last':
+                        // Handle null/undefined lastUsed (never used profiles go to end)
+                        if (!a.lastUsed && !b.lastUsed) comparison = 0;
+                        else if (!a.lastUsed) comparison = 1;
+                        else if (!b.lastUsed) comparison = -1;
+                        else comparison = new Date(a.lastUsed) - new Date(b.lastUsed);
+                        break;
+                    case 'sessions':
+                    case 's':
+                        comparison = (a.sessionCount || 0) - (b.sessionCount || 0);
+                        break;
+                    default:
+                        console.log(chalk.yellow(`Warning: Unknown sort field '${options.sort}', using 'name' instead`));
+                        comparison = a.name.localeCompare(b.name);
+                }
+                
+                return isDescending ? -comparison : comparison;
+            });
+
+            const sortDisplay = {
+                name: 'name',
+                created: 'creation date', 
+                used: 'last used',
+                sessions: 'session count'
+            };
+            
+            const sortFieldDisplay = sortDisplay[sortField] || sortField;
+            const orderDisplay = isDescending ? 'descending' : 'ascending';
+            
+            console.log(chalk.blue(`Found ${profiles.length} profile(s) (sorted by ${sortFieldDisplay}, ${orderDisplay}):\n`));
             
             for (const profile of profiles) {
-                console.log(chalk.green(`● ${profile.name}`));
-                console.log(`  ID: ${chalk.dim(profile.id)}`);
-                console.log(`  Browser: ${profile.browserType}`);
-                console.log(`  Created: ${new Date(profile.createdAt).toLocaleString()}`);
-                
-                if (profile.lastUsed) {
-                    console.log(`  Last used: ${new Date(profile.lastUsed).toLocaleString()}`);
+                if (options.verbose) {
+                    // Verbose mode: detailed multi-line format
+                    console.log(chalk.green(`● ${profile.name}`));
+                    console.log(`  ID: ${chalk.dim(profile.id)}`);
+                    console.log(`  Browser: ${profile.browserType}`);
+                    console.log(`  Created: ${new Date(profile.createdAt).toLocaleString()}`);
+                    
+                    if (profile.lastUsed) {
+                        console.log(`  Last used: ${new Date(profile.lastUsed).toLocaleString()}`);
+                    }
+                    
+                    if (profile.sessionCount > 0) {
+                        console.log(`  Sessions: ${profile.sessionCount}`);
+                    }
+                    
+                    if (profile.importedFrom) {
+                        console.log(`  Imported from: ${profile.importedFrom}`);
+                    }
+                    
+                    if (profile.description) {
+                        console.log(`  Description: ${profile.description}`);
+                    }
+                    
+                    console.log('');
+                } else {
+                    // Compact mode: clean single-line format with proper spacing + ID line
+                    const lastUsedText = profile.lastUsed 
+                        ? new Date(profile.lastUsed).toLocaleDateString()
+                        : chalk.dim('never');
+                    
+                    const sessionsText = profile.sessionCount > 0 
+                        ? chalk.yellow(`${profile.sessionCount} sessions`)
+                        : chalk.dim('0 sessions');
+                    
+                    const statusIndicators = [];
+                    if (profile.importedFrom) statusIndicators.push(chalk.cyan('[imported]'));
+                    if (profile.description && profile.description.includes('Template instance:')) {
+                        // Extract template name from description like "Template instance: test-permanent (from vidiq-clean)"
+                        const templateMatch = profile.description.match(/Template instance: .+ \(from (.+)\)/);
+                        const templateName = templateMatch ? templateMatch[1] : 'unknown';
+                        statusIndicators.push(chalk.magenta(`[template: ${templateName}]`));
+                    }
+                    
+                    // Clean, consistent single-line format
+                    const name = chalk.green(`● ${profile.name}`);
+                    const browser = chalk.dim(profile.browserType);
+                    const lastUsed = `${chalk.dim('last:')} ${lastUsedText}`;
+                    const sessions = `${chalk.dim('sessions:')} ${sessionsText}`;
+                    const status = statusIndicators.length > 0 ? statusIndicators.join(' ') : '';
+                    
+                    console.log(`${name.padEnd(35)} ${browser.padEnd(12)} ${lastUsed.padEnd(20)} ${sessions.padEnd(18)} ${status}`);
+                    console.log(chalk.dim(`  ID: ${profile.id}`));
                 }
-                
-                if (profile.sessionCount > 0) {
-                    console.log(`  Sessions: ${profile.sessionCount}`);
-                }
-                
-                if (profile.importedFrom) {
-                    console.log(`  Imported from: ${profile.importedFrom}`);
-                }
-                
-                if (options.verbose && profile.description) {
-                    console.log(`  Description: ${profile.description}`);
-                }
-                
-                console.log('');
             }
         } catch (error) {
             console.error(chalk.red('✗ Error:'), error.message);
