@@ -2,6 +2,8 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import fs from 'fs';
+import path from 'path';
 import { ExtensionRequestReconstructor } from './src/ExtensionRequestReconstructor.js';
 
 const program = new Command();
@@ -156,7 +158,26 @@ program
                 process.exit(1);
             }
             
-            process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+            const jsonOutput = JSON.stringify(results, null, 2);
+            
+            // Ensure output directory exists
+            const outputDir = './output';
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+            
+            const filename = `${prefix}.profiles.json`;
+            const filepath = path.join(outputDir, filename);
+            
+            // Write to file
+            fs.writeFileSync(filepath, jsonOutput + '\n');
+            
+            // Also output to stdout
+            process.stdout.write(jsonOutput + '\n');
+            
+            // Log success message to stderr so it doesn't interfere with stdout
+            console.error(chalk.green(`✅ Saved ${results.length} profiles to ${filepath}`));
+            
         } catch (error) {
             console.error(chalk.red('❌ Error:'), error.message);
             process.exit(1);

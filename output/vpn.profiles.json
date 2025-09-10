@@ -1,0 +1,18 @@
+[
+  {
+    "name": "vpn-fresh",
+    "extension": {
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!0f440685-bf51-4a2d-bd5d-fc99d10d4af9!99a2d874-5813-4c5a-8b52-b86d85da14db",
+        "accept": "*/*",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-vidiq-client": "ext vch/3.151.0",
+        "x-amplitude-device-id": "4e64ac7a-9eb5-45aa-b270-901da3716504"
+      }
+    }
+  }
+]
