@@ -507,6 +507,80 @@ program
         }
     });
 
+// Template launch command
+program
+    .command('launch-template')
+    .description('Launch from template profile with randomized fingerprint')
+    .argument('<template>', 'Template profile name or ID')
+    .argument('<instance-name>', 'Name for this instance')
+    .option('-b, --browser <type>', 'Browser type (chromium, firefox, webkit)', 'chromium')
+    .option('--headless', 'Run in headless mode')
+    .option('--devtools', 'Open devtools')
+    .option('--no-randomize-fingerprint', 'Disable fingerprint randomization')
+    .option('--vary-screen-resolution', 'Enable Mac-authentic screen resolution variation')
+    .option('--stealth-preset <preset>', 'Stealth preset (minimal, balanced, maximum)', 'balanced')
+    .option('--load-extensions <paths...>', 'Load additional extensions')
+    .option('--no-auto-extensions', 'Disable automatic extension loading')
+    .option('--no-automation', 'Disable automation features')
+    .option('--no-capture', 'Disable request capture')
+    .action(async (template, instanceName, options) => {
+        try {
+            console.log(chalk.blue(`🎭 Launching template instance: ${instanceName}`));
+            console.log(chalk.dim(`Template: ${template}`));
+            console.log(chalk.dim(`Fingerprint randomization: ${options.randomizeFingerprint !== false ? 'ENABLED' : 'DISABLED'}`));
+            if (options.varyScreenResolution) {
+                console.log(chalk.dim(`Screen resolution variation: ENABLED (Mac-authentic)`));
+            }
+            
+            const launchOptions = {
+                browserType: options.browser,
+                headless: options.headless,
+                devtools: options.devtools,
+                randomizeFingerprint: options.randomizeFingerprint !== false,
+                varyScreenResolution: options.varyScreenResolution || false,
+                stealthPreset: options.stealthPreset,
+                loadExtensions: options.loadExtensions || [],
+                autoLoadExtensions: options.autoExtensions !== false,
+                enableAutomation: options.automation !== false,
+                enableRequestCapture: options.capture !== false
+            };
+
+            const result = await profileLauncher.launchFromTemplate(template, instanceName, launchOptions);
+            
+            console.log(chalk.green('✅ Template instance launched successfully!'));
+            console.log(chalk.dim(`Session ID: ${result.sessionId}`));
+            console.log(chalk.dim(`Template: ${result.templateProfile}`));
+            console.log(chalk.dim(`Instance: ${result.instanceName}`));
+            
+            if (result.fingerprintRandomized) {
+                console.log(chalk.blue('🎲 Fingerprint randomized for uniqueness'));
+            }
+            
+            console.log(chalk.yellow('\n⚠️  Browser will remain open. Use Ctrl+C to close.'));
+            
+            // Cleanup temp profile when browser closes
+            process.on('SIGINT', async () => {
+                console.log(chalk.yellow('\n🧹 Cleaning up template instance...'));
+                try {
+                    if (result.isTemplateInstance) {
+                        await profileLauncher.closeBrowser(result.sessionId);
+                        console.log(chalk.green('✅ Template instance cleaned up'));
+                    }
+                } catch (error) {
+                    console.warn(chalk.yellow('⚠️  Warning during cleanup:'), error.message);
+                }
+                process.exit(0);
+            });
+            
+            // Keep process alive
+            await new Promise(() => {});
+            
+        } catch (error) {
+            console.error(chalk.red('✗ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
 // Clone profile command
 program
     .command('clone')

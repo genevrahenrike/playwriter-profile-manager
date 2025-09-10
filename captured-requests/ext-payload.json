@@ -1,0 +1,40 @@
+{
+    "timestamp": "2025-09-10T07:14:53.480Z",
+    "type": "response",
+    "requestId": "req_1_1757488493088",
+    "hookName": "vidiq-capture",
+    "sessionId": "dad1651b-a8a8-4313-a13d-3d5ed5859aac",
+    "url": "https://api.vidiq.com/auth/login",
+    "status": 200,
+    "statusText": "",
+    "headers": {
+        "cf-ray": "97cd218a3eab69a0-SJC",
+        "x-request-id": "bb65ad87-5988-49a6-858e-0488429b21a1",
+        "content-encoding": "gzip",
+        "cf-cache-status": "DYNAMIC",
+        "date": "Wed, 10 Sep 2025 07:14:53 GMT",
+        "content-type": "application/json",
+        "server": "cloudflare"
+    },
+    "request": {
+        "method": "POST",
+        "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "https://app.vidiq.com/",
+            "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+            "x-timezone": "America/Los_Angeles",
+            "x-vidiq-device-id": "2ea4752a-6972-4bf1-9376-9d75f62354c7",
+            "sec-ch-ua-mobile": "?0",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "x-vidiq-client": "ext vch/3.151.0"
+        }
+    },
+    "body": "{\"token\":\"UKP!fa527378-8f02-42eb-a218-684451da6e82!6777d813-642b-4d5e-b724-6c217be5242f\",\"jwt\":{\"refresh\":\"zx8SLv2Tn3f9TX8vWSlMHFylSk6MhtqcMJi828tA8wJh3WXpbobsWLpir7mdArP0QGP1s1Lb.ubAKXOpR\",\"access\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiZmE1MjczNzgtOGYwMi00MmViLWEyMTgtNjg0NDUxZGE2ZTgyIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDg5MDkzLCJpYXQiOjE3NTc0ODg0OTMsImp0aSI6ImVhOTZjMDc4LWRkNTYtNGRkNC04ODU3LWRjZWI2NmY4MWU0NSIsInVzZXIiOnsiaWQiOiJmYTUyNzM3OC04ZjAyLTQyZWItYTIxOC02ODQ0NTFkYTZlODIiLCJtaWQiOiI2OGMxMjU2Y2MwYjE5NDI3NDRjNzM0MzkiLCJlbWFpbCI6Im5pa29sYXphamFjMTQ4NkBtYWlsLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6ImVhOTZjMDc4LWRkNTYtNGRkNC04ODU3LWRjZWI2NmY4MWU0NSJ9fQ.Q38KQ2JQ6_tbTp-ZeY7bhHh4rm9e3iO6WEI7CJIvBNx-OZA_ezOAZfH0uaAK9gyhmLTPs_FV7i2VF0fu_Vh4JpJsUHEH92e24kyPVYMPuhbVysRo0IJlqKBqGuFRVPDFWUwMgXMbQNb0zjbBOgjULtJYbBTW3-hu1b-ebGdu9hq9hSO6r2dvQRHn4VrJdByXWEaSBc2wzJo6QOLGZVTHZiTcJDe_FlfIlGWOmk06HdKNrHaIhuYkMdnFnm2zdp77g26EUb7mxCckFK9WJFGvwVFc9dDk173D-m6brBMFVEJsI-Mby2bNPI_30c49dPpT5yKeGdu9DVb-cWchTYa5FA\"},\"completed\":true,\"account_id\":\"fa527378-8f02-42eb-a218-684451da6e82\",\"new_user\":false,\"session_id\":\"6777d813-642b-4d5e-b724-6c217be5242f\",\"session_token\":\"UKP!fa527378-8f02-42eb-a218-684451da6e82!6777d813-642b-4d5e-b724-6c217be5242f\",\"subscription_source\":null,\"pro\":false,\"pro_plus\":false,\"boost_lite\":false,\"boost_plus\":false,\"ultimate\":false,\"max\":false,\"max-3\":false,\"max-5\":false,\"boost_coach\":false,\"scalelab_affiliate\":false,\"yoola_affiliate\":false,\"studio71_affiliate\":false,\"mediacube_affiliate\":false,\"email_confirmed\":false,\"force_password_reset\":false,\"coupon_used\":false,\"compare_views_quota\":0,\"premium\":false,\"channels\":[],\"video_optimizer\":null,\"state\":\"authenticated\"}",
+    "custom": {
+        "endpoint": "auth/login",
+        "status": 200,
+        "fullUrl": "https://api.vidiq.com/auth/login"
+    }
+}

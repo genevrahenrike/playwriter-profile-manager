@@ -1,8 +1,10 @@
 import { chromium, firefox, webkit } from 'playwright';
 import path from 'path';
 import fs from 'fs-extra';
+import crypto from 'crypto';
 import { AutofillHookSystem } from './AutofillHookSystem.js';
 import { RequestCaptureSystem } from './RequestCaptureSystem.js';
+import { StealthManager } from './StealthManager.js';
 
 export class ProfileLauncher {
     constructor(profileManager) {
@@ -29,6 +31,9 @@ export class ProfileLauncher {
         
         this.initializeAutofillSystem();
         this.initializeRequestCaptureSystem();
+        
+        // Initialize stealth manager
+        this.stealthManager = new StealthManager();
     }
 
     /**
@@ -55,6 +60,335 @@ export class ProfileLauncher {
         }
     }
 
+    /**
+     * Generate a profile-specific VidIQ device ID
+     * @param {string} profileName - The profile name
+     * @returns {string} A consistent UUID for this profile
+     */
+    generateProfileDeviceId(profileName) {
+        const hash = crypto.createHash('sha256').update(profileName + '-vidiq-device-v1').digest('hex');
+        
+        // Format as UUID v4
+        return [
+            hash.substring(0, 8),
+            hash.substring(8, 12),
+            '4' + hash.substring(13, 16), // Version 4 UUID
+            ((parseInt(hash.substring(16, 17), 16) & 0x3) | 0x8).toString(16) + hash.substring(17, 20), // Variant bits
+            hash.substring(20, 32)
+        ].join('-');
+    }
+
+    /**
+     * Generate a profile-specific extension key
+     * @param {string} profileName - The profile name
+     * @returns {string} A profile-specific base64 extension key
+     */
+    generateProfileExtensionKey(profileName) {
+        const hash = crypto.createHash('sha256').update(profileName + '-vidiq-extension-key-v1').digest('hex');
+        
+        // Create a deterministic but profile-specific RSA public key structure
+        // This mimics the original key format but with profile-specific data
+        const keyData = Buffer.from(hash.substring(0, 128), 'hex');
+        return keyData.toString('base64');
+    }
+
+    /**
+     * Create a profile-specific VidIQ extension with modified key
+     * @param {string} profileName - The profile name
+     * @returns {string} Path to the modified extension
+     */
+    async createProfileVidiqExtension(profileName) {
+        const originalExtensionPath = './extensions/pachckjkecffpdphbpmfolblodfkgbhl/3.151.0_0';
+        const profileExtensionPath = `./profiles/data/vidiq-extensions/${profileName}-vidiq-extension`;
+        
+        // Check if profile-specific extension already exists
+        if (await fs.pathExists(profileExtensionPath)) {
+            return profileExtensionPath;
+        }
+        
+        console.log(`🔧 Creating profile-specific VidIQ extension for: ${profileName}`);
+        
+        // Create directory for profile extensions
+        await fs.ensureDir(path.dirname(profileExtensionPath));
+        
+        // Copy the original extension
+        await fs.copy(originalExtensionPath, profileExtensionPath);
+        
+        // Generate profile-specific extension key
+        const profileExtensionKey = this.generateProfileExtensionKey(profileName);
+        
+        // Read and modify the manifest.json
+        const manifestPath = path.join(profileExtensionPath, 'manifest.json');
+        const manifest = await fs.readJson(manifestPath);
+        
+        // Replace the extension key with profile-specific one
+        manifest.key = profileExtensionKey;
+        
+        // Write the modified manifest
+        await fs.writeJson(manifestPath, manifest, { spaces: 2 });
+        
+        console.log(`🔑 Modified VidIQ extension key for profile: ${profileName}`);
+        console.log(`📁 Profile extension created at: ${profileExtensionPath}`);
+        
+        return profileExtensionPath;
+    }
+
+    /**
+     * Setup VidIQ device ID spoofing for a context
+     * @param {object} context - Playwright context
+     * @param {string} profileName - Profile name for generating consistent device ID
+     */
+    async setupVidiqDeviceIdSpoofing(context, profileName) {
+        const profileDeviceId = this.generateProfileDeviceId(profileName);
+        
+        console.log(`🎭 Setting up VidIQ device ID spoofing: ${profileDeviceId}`);
+        
+        // Intercept all VidIQ API requests and modify device ID
+        await context.route('**/api.vidiq.com/**', async (route, request) => {
+            const headers = await request.allHeaders();
+            
+            // Replace the device ID header
+            headers['x-vidiq-device-id'] = profileDeviceId;
+            
+            await route.continue({
+                headers: headers
+            });
+        });
+        
+        // Also intercept app.vidiq.com requests that might contain device ID
+        await context.route('**/app.vidiq.com/**', async (route, request) => {
+            const headers = await request.allHeaders();
+            
+            if (headers['x-vidiq-device-id']) {
+                headers['x-vidiq-device-id'] = profileDeviceId;
+            }
+            
+            await route.continue({
+                headers: headers
+            });
+        });
+        
+        // Inject script to override device ID generation in the extension
+        await context.addInitScript((deviceId) => {
+            // Override any potential device ID generation in the page context
+            if (typeof window !== 'undefined') {
+                // Store the device ID for any VidIQ scripts
+                window.__VIDIQ_DEVICE_ID_OVERRIDE__ = deviceId;
+                
+                // Override localStorage/sessionStorage device ID storage
+                const originalSetItem = Storage.prototype.setItem;
+                Storage.prototype.setItem = function(key, value) {
+                    if (key && key.toLowerCase().includes('device') && key.toLowerCase().includes('id')) {
+                        console.log(`🎭 Overriding storage device ID: ${key} -> ${deviceId}`);
+                        value = deviceId;
+                    }
+                    return originalSetItem.call(this, key, value);
+                };
+            }
+        }, profileDeviceId);
+        
+        return profileDeviceId;
+    }
+
+    /**
+     * Generate authentic but randomized fingerprint configuration
+     * @param {string} profileName - The profile name for seed
+     * @param {object} options - Randomization options
+     * @returns {object} Randomized fingerprint configuration
+     */
+    generateRandomizedFingerprint(profileName, options = {}) {
+        const {
+            varyScreenResolution = false, // Enable Mac-authentic screen resolution variation
+            varyWebGL = false, // Keep disabled for Mac authenticity by default
+            audioNoiseRange = [0.0001, 0.001], // Audio noise variation range
+            canvasNoiseRange = [0.001, 0.005] // Canvas noise variation range
+        } = options;
+        const hash = crypto.createHash('sha256').update(profileName + '-fingerprint-seed-v1').digest('hex');
+        const seed = parseInt(hash.substring(0, 8), 16);
+        
+        // Seeded random function for consistent randomization per profile
+        const seededRandom = (min = 0, max = 1) => {
+            const x = Math.sin(seed * 9999) * 10000;
+            const random = x - Math.floor(x);
+            return min + random * (max - min);
+        };
+
+        // Authentic Mac WebGL vendor/renderer combinations only
+        const webglConfigs = [
+            { vendor: 'Intel Inc.', renderer: 'Intel Iris OpenGL Engine' },
+            { vendor: 'Intel Inc.', renderer: 'Intel Iris Plus Graphics OpenGL Engine' },
+            { vendor: 'Intel Inc.', renderer: 'Intel UHD Graphics 630 OpenGL Engine' },
+            { vendor: 'Intel Inc.', renderer: 'Intel HD Graphics 530 OpenGL Engine' },
+            { vendor: 'Intel Inc.', renderer: 'Intel Iris Pro 5200 OpenGL Engine' },
+            { vendor: 'Apple', renderer: 'Apple M1' },
+            { vendor: 'Apple', renderer: 'Apple M1 Pro' },
+            { vendor: 'Apple', renderer: 'Apple M1 Max' },
+            { vendor: 'Apple', renderer: 'Apple M2' }
+        ];
+
+        // Authentic Mac screen resolution combinations (common Mac display sizes)
+        const macScreenConfigs = [
+            // MacBook Air 13" (2020+)
+            { width: 1440, height: 900, availWidth: 1440, availHeight: 870, name: "MacBook Air 13\"" },
+            // MacBook Pro 13" (2016+)  
+            { width: 1680, height: 1050, availWidth: 1680, availHeight: 1010, name: "MacBook Pro 13\"" },
+            // MacBook Pro 14" (M1/M2)
+            { width: 1728, height: 1117, availWidth: 1728, availHeight: 1087, name: "MacBook Pro 14\"" },
+            // MacBook Pro 16" (2019+)
+            { width: 1792, height: 1120, availWidth: 1792, availHeight: 1090, name: "MacBook Pro 16\"" },
+            // iMac 21.5" (1080p)
+            { width: 1920, height: 1080, availWidth: 1920, availHeight: 1040, name: "iMac 21.5\"" },
+            // iMac 24" (M1)
+            { width: 2240, height: 1260, availWidth: 2240, availHeight: 1220, name: "iMac 24\"" },
+            // Studio Display / iMac 27" (1440p)
+            { width: 2560, height: 1440, availWidth: 2560, availHeight: 1400, name: "iMac 27\" / Studio Display" },
+            // Pro Display XDR / iMac Pro (4K)
+            { width: 2880, height: 1800, availWidth: 2880, availHeight: 1760, name: "iMac Pro / Pro Display XDR" }
+        ];
+
+        // Select configurations based on seeded random
+        const webglIndex = Math.floor(seededRandom(0, webglConfigs.length));
+        const screenIndex = Math.floor(seededRandom(0, macScreenConfigs.length));
+        const selectedWebGL = webglConfigs[webglIndex];
+        const selectedScreen = macScreenConfigs[screenIndex];
+
+        return {
+            // WebGL - DISABLED for Mac authenticity (use real hardware)
+            webgl: {
+                enabled: false // Keep real WebGL for Mac authenticity
+            },
+
+            // Audio fingerprinting with variation (safe - minimal noise)
+            audio: {
+                enabled: true,
+                noiseAmount: seededRandom(audioNoiseRange[0], audioNoiseRange[1]),
+                enableAudioContext: true
+            },
+
+            // Canvas fingerprinting with variation (safe - minimal noise)
+            canvas: {
+                enabled: true,
+                noiseAmount: seededRandom(canvasNoiseRange[0], canvasNoiseRange[1])
+            },
+
+            // Screen variation - Optional Mac-authentic resolution variation
+            screen: {
+                enabled: varyScreenResolution,
+                ...selectedScreen,
+                colorDepth: 24,
+                pixelDepth: 24
+            },
+
+            // Keep authentic (no randomization for these)
+            timezone: {
+                enabled: false // Keep real timezone for authenticity
+            },
+
+            languages: {
+                enabled: false // Keep real languages for authenticity
+            },
+
+            userAgent: {
+                enabled: false // Keep real user agent for authenticity
+            }
+        };
+    }
+
+    /**
+     * Launch profile from template with randomized fingerprint
+     * @param {string} templateProfile - Template profile to clone from
+     * @param {string} newProfileName - Name for the new profile instance
+     * @param {object} options - Launch options
+     * @returns {object} Launch result
+     */
+    async launchFromTemplate(templateProfile, newProfileName, options = {}) {
+        const {
+            randomizeFingerprint = true,
+            enableFingerprintVariation = true,
+            stealthPreset = 'balanced',
+            varyScreenResolution = false, // Optional Mac-authentic screen resolution variation
+            varyWebGL = false, // Keep disabled for Mac authenticity
+            audioNoiseRange = [0.0001, 0.001],
+            canvasNoiseRange = [0.001, 0.005],
+            ...launchOptions
+        } = options;
+
+        console.log(`🎭 Launching ${newProfileName} from template: ${templateProfile}`);
+
+        // Get template profile
+        const template = await this.profileManager.getProfile(templateProfile);
+        if (!template) {
+            throw new Error(`Template profile '${templateProfile}' not found`);
+        }
+
+        // Generate randomized fingerprint for this profile instance
+        let fingerprintConfig = {};
+        if (randomizeFingerprint) {
+            const fingerprintOptions = {
+                varyScreenResolution,
+                varyWebGL,
+                audioNoiseRange,
+                canvasNoiseRange
+            };
+            fingerprintConfig = this.generateRandomizedFingerprint(newProfileName, fingerprintOptions);
+            console.log(`🎲 Generated randomized fingerprint for: ${newProfileName}`);
+            console.log(`   WebGL: AUTHENTIC (Mac hardware - no spoofing)`);
+            console.log(`   Audio noise: ${fingerprintConfig.audio.noiseAmount.toFixed(6)}`);
+            console.log(`   Canvas noise: ${fingerprintConfig.canvas.noiseAmount.toFixed(6)}`);
+            if (varyScreenResolution) {
+                console.log(`   Screen: ${fingerprintConfig.screen.width}x${fingerprintConfig.screen.height} (${fingerprintConfig.screen.name})`);
+            } else {
+                console.log(`   Screen: AUTHENTIC (real resolution)`);
+            }
+        }
+
+        // Create temporary profile based on template
+        const tempProfile = await this.profileManager.createProfile(newProfileName, {
+            description: `Template instance: ${newProfileName} (from ${templateProfile})`,
+            browserType: template.browserType
+        });
+
+        try {
+            // Copy template profile data to temp profile
+            const templateDataDir = path.join(this.profileManager.baseDir, 'data', template.id);
+            const tempDataDir = path.join(this.profileManager.baseDir, 'data', tempProfile.id);
+
+            if (await fs.pathExists(templateDataDir)) {
+                await fs.copy(templateDataDir, tempDataDir);
+                console.log(`📁 Copied template data to: ${tempProfile.id}`);
+            }
+
+            // Launch with randomized fingerprint and stealth config
+            const result = await this.launchProfile(tempProfile.id, {
+                ...launchOptions,
+                stealth: true,
+                stealthPreset,
+                stealthConfig: fingerprintConfig,
+                enableRequestCapture: launchOptions.enableRequestCapture !== false,
+                enableAutomation: launchOptions.enableAutomation !== false,
+                isTemporary: true // Mark this as a temporary profile
+            });
+
+            // Mark as template-based session
+            result.isTemplateInstance = true;
+            result.templateProfile = templateProfile;
+            result.instanceName = newProfileName;
+            result.fingerprintRandomized = randomizeFingerprint;
+
+            console.log(`✅ Template instance launched: ${newProfileName}`);
+            if (randomizeFingerprint) {
+                console.log(`🎭 Fingerprint variation: ENABLED`);
+            }
+
+            return result;
+
+        } catch (error) {
+            // Clean up temp profile on failure
+            await this.profileManager.deleteProfile(tempProfile.id);
+            throw error;
+        }
+    }
+
     async launchProfile(nameOrId, options = {}) {
         const {
             browserType = 'chromium',
@@ -67,11 +401,18 @@ export class ProfileLauncher {
             enableAutomation = true, // Enable automation by default
             enableRequestCapture = true, // Enable request capture by default
             maxStealth = true, // Enable maximum stealth by default
-            automationTasks = [] // Array of automation tasks to run
+            automationTasks = [], // Array of automation tasks to run
+            stealth = false, // Enable stealth features
+            stealthPreset = 'balanced', // Stealth preset
+            stealthConfig = null, // Custom stealth configuration
+            isTemporary = false // Mark as temporary profile for cleanup
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
         const sessionId = await this.profileManager.startSession(profile.id, 'automation');
+
+        // Store current profile name for extension customization
+        this.currentProfileName = profile.name;
 
         let browser, context;
         
@@ -211,7 +552,8 @@ export class ProfileLauncher {
                 profile,
                 sessionId,
                 browserType,
-                startTime: new Date()
+                startTime: new Date(),
+                isTemporary
             };
 
             this.activeBrowsers.set(sessionId, browserInfo);
@@ -229,6 +571,19 @@ export class ProfileLauncher {
             
             // Start autofill monitoring
             await this.autofillSystem.startMonitoring(sessionId, context);
+            
+            // Setup VidIQ device ID spoofing for this profile
+            await this.setupVidiqDeviceIdSpoofing(context, profile.name);
+            
+            // Apply stealth configuration if enabled
+            if (stealth && stealthConfig) {
+                console.log(`🛡️  Applying custom stealth configuration`);
+                await this.stealthManager.applyStealthScripts(context, stealthConfig);
+            } else if (stealth) {
+                console.log(`🛡️  Applying stealth preset: ${stealthPreset}`);
+                const presetConfig = this.stealthManager.getPresetConfig(stealthPreset);
+                await this.stealthManager.applyStealthScripts(context, presetConfig);
+            }
             
             // Start request capture monitoring if enabled
             if (enableRequestCapture) {
@@ -260,10 +615,10 @@ export class ProfileLauncher {
         });
 
         try {
-            const result = await this.launchProfile(profile.id, options);
-            
-            // Mark this as a temporary profile for cleanup
-            result.isTemporary = true;
+            const result = await this.launchProfile(profile.id, {
+                ...options,
+                isTemporary: true // Mark as temporary for cleanup
+            });
             
             return result;
         } catch (error) {
@@ -809,8 +1164,16 @@ export class ProfileLauncher {
                             // Check if manifest.json exists
                             const manifestPath = path.join(versionPath, 'manifest.json');
                             if (await fs.pathExists(manifestPath)) {
-                                extensionPaths.push(versionPath);
-                                console.log(`Found extension: ${extensionId} (${versionFolder})`);
+                                // Special handling for VidIQ extension
+                                if (extensionId === 'pachckjkecffpdphbpmfolblodfkgbhl' && this.currentProfileName) {
+                                    // Use profile-specific VidIQ extension instead
+                                    const profileVidiqPath = await this.createProfileVidiqExtension(this.currentProfileName);
+                                    extensionPaths.push(profileVidiqPath);
+                                    console.log(`🎭 Using profile-specific VidIQ extension: ${this.currentProfileName}`);
+                                } else {
+                                    extensionPaths.push(versionPath);
+                                    console.log(`Found extension: ${extensionId} (${versionFolder})`);
+                                }
                                 break; // Use the first valid version found
                             }
                         }

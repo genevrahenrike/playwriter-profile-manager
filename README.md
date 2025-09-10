@@ -74,6 +74,53 @@ npx ppm launch my-profile --no-auto-extensions
 npx ppm launch my-profile --load-extensions /path/to/ext1 --devtools
 ```
 
+### Launch from template with fingerprint randomization
+```bash
+# Launch from template with randomized fingerprint (perfect for multi-account automation)
+npx ppm launch-template vpn-fresh user1
+
+# Launch multiple instances from same template
+npx ppm launch-template vpn-fresh user2
+npx ppm launch-template vpn-fresh user3
+
+# Launch with Mac-authentic screen resolution variation
+npx ppm launch-template vpn-fresh user4 --vary-screen-resolution
+
+# Launch with options
+npx ppm launch-template my-template new-instance --devtools --stealth-preset maximum
+
+# Disable fingerprint randomization (keep template fingerprint)
+npx ppm launch-template my-template exact-copy --no-randomize-fingerprint
+```
+
+**Template Launch Features:**
+- **🎭 Fingerprint Randomization**: Each instance gets unique but authentic fingerprints
+- **🔑 Extension Key Variation**: Unique VidIQ extension keys per instance
+- **📱 Device ID Isolation**: Different device IDs for complete isolation
+- **🛡️ Authentic Spoofing**: Only varies safe fingerprinting vectors (audio/canvas noise)
+- **💾 Template Preservation**: Original template profile remains unchanged
+- **🧹 Auto-cleanup**: Temporary profiles are cleaned up after session ends
+
+**What gets randomized per instance:**
+- ✅ **Audio fingerprinting noise** (0.0001-0.001 variation)
+- ✅ **Canvas fingerprinting noise** (0.001-0.005 variation)  
+- ✅ **VidIQ device ID** (unique per instance)
+- ✅ **Extension installation key** (unique per instance)
+- 🎛️ **Screen resolution** (optional Mac-authentic variation with `--vary-screen-resolution`)
+- ❌ **WebGL vendor/renderer** (kept authentic for Mac)
+- ❌ **User agent** (kept authentic)
+- ❌ **Timezone/language** (kept authentic)
+
+**Mac-authentic screen resolutions available:**
+- MacBook Air 13": 1440x900
+- MacBook Pro 13": 1680x1050  
+- MacBook Pro 14": 1728x1117
+- MacBook Pro 16": 1792x1120
+- iMac 21.5": 1920x1080
+- iMac 24": 2240x1260
+- iMac 27"/Studio Display: 2560x1440
+- iMac Pro/Pro Display XDR: 2880x1800
+
 ### Clone a profile
 ```bash
 npx ppm clone source-profile new-profile-name
