@@ -52,16 +52,20 @@ async function selectProfile(message = 'Select a profile:', allowCancel = false)
             name: 'profile',
             message: message,
             source: async (answersSoFar, input) => {
-                if (!input) {
-                    return choices;
+                // Always return a fresh copy of filtered choices
+                const inputLower = input ? input.toLowerCase() : '';
+                
+                if (!input || input.trim() === '') {
+                    return [...choices]; // Return copy of all choices
                 }
                 
-                const filtered = choices.filter(choice => 
-                    choice.name.toLowerCase().includes(input.toLowerCase()) ||
-                    choice.value?.toLowerCase().includes(input.toLowerCase())
-                );
+                const filtered = choices.filter(choice => {
+                    if (!choice || !choice.name || !choice.value) return false;
+                    return choice.name.toLowerCase().includes(inputLower) ||
+                           (choice.value && choice.value.toLowerCase().includes(inputLower));
+                });
                 
-                return filtered;
+                return filtered.length > 0 ? filtered : [...choices]; // Return original if no matches
             },
             pageSize: 10
         }
@@ -516,6 +520,7 @@ program
     .option('-b, --browser <type>', 'Browser type (chromium, firefox, webkit)', 'chromium')
     .option('--headless', 'Run in headless mode')
     .option('--devtools', 'Open devtools')
+    .option('--temp', 'Create temporary profile that will be deleted when browser closes')
     .option('--no-randomize-fingerprint', 'Disable fingerprint randomization')
     .option('--vary-screen-resolution', 'Enable Mac-authentic screen resolution variation')
     .option('--stealth-preset <preset>', 'Stealth preset (minimal, balanced, maximum)', 'balanced')
@@ -527,9 +532,10 @@ program
         try {
             console.log(chalk.blue(`🎭 Launching template instance: ${instanceName}`));
             console.log(chalk.dim(`Template: ${template}`));
+            console.log(chalk.dim(`Profile type: ${options.temp ? 'TEMPORARY (will be deleted)' : 'PERMANENT (will be saved)'}`));
             console.log(chalk.dim(`Fingerprint randomization: ${options.randomizeFingerprint !== false ? 'ENABLED' : 'DISABLED'}`));
             if (options.varyScreenResolution) {
-                console.log(chalk.dim(`Screen resolution variation: ENABLED (Mac-authentic)`));
+                console.log(chalk.dim(`Screen resolution variation: ENABLED`));
             }
             
             const launchOptions = {
@@ -542,7 +548,8 @@ program
                 loadExtensions: options.loadExtensions || [],
                 autoLoadExtensions: options.autoExtensions !== false,
                 enableAutomation: options.automation !== false,
-                enableRequestCapture: options.capture !== false
+                enableRequestCapture: options.capture !== false,
+                isTemporary: options.temp || false // Only temporary if --temp flag is used
             };
 
             const result = await profileLauncher.launchFromTemplate(template, instanceName, launchOptions);
@@ -551,26 +558,44 @@ program
             console.log(chalk.dim(`Session ID: ${result.sessionId}`));
             console.log(chalk.dim(`Template: ${result.templateProfile}`));
             console.log(chalk.dim(`Instance: ${result.instanceName}`));
+            console.log(chalk.dim(`Profile type: ${options.temp ? 'TEMPORARY' : 'PERMANENT'}`));
             
             if (result.fingerprintRandomized) {
                 console.log(chalk.blue('🎲 Fingerprint randomized for uniqueness'));
             }
             
+            if (options.temp) {
+                console.log(chalk.yellow('\n⚠️  TEMPORARY PROFILE: This profile will be deleted when the browser closes.'));
+            } else {
+                console.log(chalk.green('\n💾 PERMANENT PROFILE: This profile will be saved and can be launched again later.'));
+            }
+            
             console.log(chalk.yellow('\n⚠️  Browser will remain open. Use Ctrl+C to close.'));
             
-            // Cleanup temp profile when browser closes
-            process.on('SIGINT', async () => {
-                console.log(chalk.yellow('\n🧹 Cleaning up template instance...'));
-                try {
-                    if (result.isTemplateInstance) {
+            // Cleanup handling based on temporary flag
+            if (options.temp) {
+                process.on('SIGINT', async () => {
+                    console.log(chalk.blue('\nClosing browser and cleaning up temporary profile...'));
+                    try {
                         await profileLauncher.closeBrowser(result.sessionId);
-                        console.log(chalk.green('✅ Template instance cleaned up'));
+                        console.log(chalk.green('✅ Temporary profile cleaned up'));
+                    } catch (error) {
+                        console.error(chalk.red('❌ Cleanup error:'), error.message);
                     }
-                } catch (error) {
-                    console.warn(chalk.yellow('⚠️  Warning during cleanup:'), error.message);
-                }
-                process.exit(0);
-            });
+                    process.exit(0);
+                });
+            } else {
+                process.on('SIGINT', async () => {
+                    console.log(chalk.blue('\nClosing browser (profile will be preserved)...'));
+                    try {
+                        await profileLauncher.closeBrowser(result.sessionId);
+                        console.log(chalk.green('✅ Browser closed, profile saved'));
+                    } catch (error) {
+                        console.error(chalk.red('❌ Error:'), error.message);
+                    }
+                    process.exit(0);
+                });
+            }
             
             // Keep process alive
             await new Promise(() => {});

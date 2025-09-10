@@ -310,6 +310,7 @@ export class ProfileLauncher {
             varyWebGL = false, // Keep disabled for Mac authenticity
             audioNoiseRange = [0.0001, 0.001],
             canvasNoiseRange = [0.001, 0.005],
+            isTemporary = false, // Default to permanent profiles
             ...launchOptions
         } = options;
 
@@ -366,7 +367,7 @@ export class ProfileLauncher {
                 stealthConfig: fingerprintConfig,
                 enableRequestCapture: launchOptions.enableRequestCapture !== false,
                 enableAutomation: launchOptions.enableAutomation !== false,
-                isTemporary: true // Mark this as a temporary profile
+                isTemporary: isTemporary // Use the explicit isTemporary setting
             });
 
             // Mark as template-based session
