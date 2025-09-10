@@ -12,6 +12,18 @@ export class AutofillHookSystem {
         this.hooks = new Map(); // URL pattern -> hook configuration
         this.processedPages = new Map(); // Track processed pages to avoid duplicates
         this.activeMonitors = new Map(); // Track active page monitors per session
+        this.completedSessions = new Map(); // Track sessions that have successfully completed autofill
+        this.sessionFieldCounts = new Map(); // Track successful field fills per session
+        
+        // Autofill behavior options
+        this.options = {
+            stopOnSuccess: options.stopOnSuccess !== false, // Stop scanning after successful autofill (default: true)
+            enforceMode: options.enforceMode || false, // Continue monitoring even after success (for race conditions)
+            minFieldsForSuccess: options.minFieldsForSuccess || 2, // Minimum fields filled to consider success
+            successCooldown: options.successCooldown || 30000, // Cooldown period before re-enabling (30s)
+            maxRetriesPerSession: options.maxRetriesPerSession || 3, // Max retries per session before giving up
+            ...options
+        };
         
         // Initialize random data generator
         this.dataGenerator = new RandomDataGenerator({
@@ -150,10 +162,15 @@ export class AutofillHookSystem {
             for (const hook of matchingHooks) {
                 if (!hook.enabled) continue;
                 
+                // Check if session should be skipped due to completion
+                if (this.shouldSkipSession(sessionId, hook.name)) {
+                    continue;
+                }
+                
                 const pageKey = `${sessionId}-${url}-${hook.name}`;
                 
-                // Avoid duplicate processing
-                if (this.processedPages.has(pageKey)) {
+                // Avoid duplicate processing (unless enforce mode is on)
+                if (this.processedPages.has(pageKey) && !this.options.enforceMode) {
                     console.log(`⏭️  Skipping ${hook.name} - already processed`);
                     continue;
                 }
@@ -162,8 +179,10 @@ export class AutofillHookSystem {
                 console.log(`   Description: ${hook.description}`);
                 console.log(`   URL: ${url}`);
                 
-                // Mark as processed
-                this.processedPages.set(pageKey, true);
+                // Mark as processed (unless enforce mode allows retries)
+                if (!this.options.enforceMode) {
+                    this.processedPages.set(pageKey, true);
+                }
                 
                 // Execute autofill
                 await this.executeAutofill(hook, page, sessionId);
@@ -266,6 +285,73 @@ export class AutofillHookSystem {
             a = ((a << 5) - a) + b.charCodeAt(0);
             return a & a;
         }, 0)) % 100 + 1;
+    }
+    
+    /**
+     * Check if a session should be skipped due to completion
+     * @param {string} sessionId - Session ID
+     * @param {string} hookName - Hook name
+     * @returns {boolean} Whether to skip this session
+     */
+    shouldSkipSession(sessionId, hookName) {
+        const sessionKey = `${sessionId}-${hookName}`;
+        const completion = this.completedSessions.get(sessionKey);
+        
+        if (!completion) {
+            return false; // Not completed, don't skip
+        }
+        
+        // If enforce mode is on, never skip (always monitor for race conditions)
+        if (this.options.enforceMode) {
+            console.log(`🔄 Enforce mode: Re-checking ${hookName} for session ${sessionId}`);
+            return false;
+        }
+        
+        // If stop on success is enabled, check cooldown
+        if (this.options.stopOnSuccess) {
+            const timeSinceCompletion = Date.now() - completion.timestamp;
+            const withinCooldown = timeSinceCompletion < this.options.successCooldown;
+            
+            if (withinCooldown) {
+                console.log(`⏭️  Skipping ${hookName} - recently completed (${Math.round(timeSinceCompletion/1000)}s ago)`);
+                return true;
+            } else {
+                // Cooldown expired, remove completion record
+                this.completedSessions.delete(sessionKey);
+                console.log(`🔄 Cooldown expired for ${hookName}, re-enabling autofill`);
+                return false;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Mark a session as completed
+     * @param {string} sessionId - Session ID
+     * @param {string} hookName - Hook name
+     * @param {number} filledFields - Number of successfully filled fields
+     */
+    markSessionCompleted(sessionId, hookName, filledFields) {
+        const sessionKey = `${sessionId}-${hookName}`;
+        
+        this.completedSessions.set(sessionKey, {
+            timestamp: Date.now(),
+            filledFields,
+            hookName
+        });
+        
+        // Track field counts per session
+        if (!this.sessionFieldCounts.has(sessionId)) {
+            this.sessionFieldCounts.set(sessionId, new Map());
+        }
+        this.sessionFieldCounts.get(sessionId).set(hookName, filledFields);
+        
+        if (this.options.stopOnSuccess) {
+            console.log(`✅ Session ${sessionId} completed for ${hookName} (${filledFields} fields) - autofill scanning stopped`);
+        } else {
+            console.log(`✅ Session ${sessionId} completed for ${hookName} (${filledFields} fields) - continuing monitoring`);
+        }
     }
     
     /**
@@ -564,6 +650,7 @@ export class AutofillHookSystem {
             console.log(`🎉 Autofill completed: ${filledCount} fields filled`);
             
             // Verify filled fields if verification is enabled
+            let finalFilledCount = filledCount;
             if (settings.verifyFill && filledCount > 0) {
                 console.log(`🔍 Verifying filled fields...`);
                 const verificationResults = await this.verifyFilledFields(page, hook.fields, userData);
@@ -573,11 +660,27 @@ export class AutofillHookSystem {
                     // Retry failed fields once more
                     for (const failedField of verificationResults.failedFields) {
                         console.log(`🔄 Retrying failed field: ${failedField.selector}`);
-                        await this.fillFieldSafely(page, failedField.selector, failedField.expectedValue, failedField.config, settings);
+                        const retrySuccess = await this.fillFieldSafely(page, failedField.selector, failedField.expectedValue, failedField.config, settings);
+                        if (retrySuccess && finalFilledCount === filledCount) {
+                            finalFilledCount++; // Count the successful retry
+                        }
                     }
                 } else {
                     console.log(`✅ All ${verificationResults.verified} fields verified successfully`);
+                    finalFilledCount = verificationResults.verified;
                 }
+            }
+            
+            // Check if we've achieved success and should mark completion
+            if (finalFilledCount >= this.options.minFieldsForSuccess) {
+                this.markSessionCompleted(sessionId, hook.name, finalFilledCount);
+                
+                // If stop on success is enabled, we can stop monitoring this hook for this session
+                if (this.options.stopOnSuccess && !this.options.enforceMode) {
+                    console.log(`🛑 Autofill goal achieved for ${hook.name} - stopping further attempts`);
+                }
+            } else if (finalFilledCount > 0) {
+                console.log(`⚠️  Partial success (${finalFilledCount}/${this.options.minFieldsForSuccess} required fields), will retry if page changes`);
             }
             
             // Detect submit buttons (but don't click unless autoSubmit is enabled)
@@ -654,6 +757,18 @@ export class AutofillHookSystem {
             }
         }
         keysToDelete.forEach(key => this.processedPages.delete(key));
+        
+        // Also clean up completion tracking
+        const completionKeysToDelete = [];
+        for (const [key] of this.completedSessions) {
+            if (key.startsWith(`${sessionId}-`)) {
+                completionKeysToDelete.push(key);
+            }
+        }
+        completionKeysToDelete.forEach(key => this.completedSessions.delete(key));
+        
+        // Clean up field counts
+        this.sessionFieldCounts.delete(sessionId);
     }
 
     /**
@@ -682,6 +797,13 @@ export class AutofillHookSystem {
             totalPatterns: this.hooks.size,
             activeSessions: this.activeMonitors.size,
             processedPages: this.processedPages.size,
+            completedSessions: this.completedSessions.size,
+            options: {
+                stopOnSuccess: this.options.stopOnSuccess,
+                enforceMode: this.options.enforceMode,
+                minFieldsForSuccess: this.options.minFieldsForSuccess,
+                successCooldown: this.options.successCooldown
+            },
             hooks: Array.from(hooksByName.values()),
             dataGenerator: {
                 trackingEnabled: generatorStats.trackingEnabled,
@@ -741,6 +863,57 @@ export class AutofillHookSystem {
      */
     getUserDataRecords() {
         return this.dataGenerator.getAllUserDataRecords();
+    }
+    
+    /**
+     * Get completion status for a session
+     * @param {string} sessionId - Session ID
+     * @returns {Object} Completion status
+     */
+    getSessionCompletionStatus(sessionId) {
+        const completions = [];
+        const fieldCounts = this.sessionFieldCounts.get(sessionId) || new Map();
+        
+        for (const [key, completion] of this.completedSessions) {
+            if (key.startsWith(`${sessionId}-`)) {
+                completions.push({
+                    hookName: completion.hookName,
+                    filledFields: completion.filledFields,
+                    timestamp: completion.timestamp,
+                    timeSinceCompletion: Date.now() - completion.timestamp
+                });
+            }
+        }
+        
+        return {
+            sessionId,
+            hasCompletions: completions.length > 0,
+            completions,
+            totalFieldsFilled: Array.from(fieldCounts.values()).reduce((sum, count) => sum + count, 0),
+            hooksCompleted: completions.length
+        };
+    }
+    
+    /**
+     * Force re-enable autofill for a session (clears completion status)
+     * @param {string} sessionId - Session ID
+     * @param {string} hookName - Optional hook name (if not provided, clears all for session)
+     */
+    forceReEnable(sessionId, hookName = null) {
+        if (hookName) {
+            const sessionKey = `${sessionId}-${hookName}`;
+            this.completedSessions.delete(sessionKey);
+            console.log(`🔄 Force re-enabled autofill for ${hookName} in session ${sessionId}`);
+        } else {
+            const keysToDelete = [];
+            for (const [key] of this.completedSessions) {
+                if (key.startsWith(`${sessionId}-`)) {
+                    keysToDelete.push(key);
+                }
+            }
+            keysToDelete.forEach(key => this.completedSessions.delete(key));
+            console.log(`🔄 Force re-enabled all autofill for session ${sessionId}`);
+        }
     }
     
     /**

@@ -123,45 +123,6 @@ program
         }
     });
 
-// Export captured requests
-program
-    .command('export')
-    .description('Export captured requests for a session')
-    .argument('<sessionId>', 'Session ID')
-    .option('-f, --format <format>', 'Export format (json, jsonl, csv)', 'jsonl')
-    .option('-o, --output <path>', 'Output file path')
-    .action(async (sessionId, options) => {
-        try {
-            console.log(chalk.blue('💾 Exporting captured requests...'));
-            console.log(chalk.dim(`Session: ${sessionId}`));
-            console.log(chalk.dim(`Format: ${options.format}`));
-            
-            const capturedRequests = profileLauncher.getCapturedRequests(sessionId);
-            if (capturedRequests.length === 0) {
-                console.log(chalk.yellow('⚠️  No captured requests found for this session'));
-                return;
-            }
-            
-            const exportResult = await profileLauncher.exportCapturedRequests(
-                sessionId, 
-                options.format, 
-                options.output
-            );
-            
-            if (exportResult) {
-                console.log(chalk.green('✅ Export completed!'));
-                console.log(chalk.dim(`File: ${exportResult.filePath}`));
-                console.log(chalk.dim(`Format: ${exportResult.format}`));
-                console.log(chalk.dim(`Requests: ${exportResult.count}`));
-                console.log(chalk.dim(`Size: ${Math.round(exportResult.size / 1024)}KB`));
-            }
-            
-        } catch (error) {
-            console.error(chalk.red('❌ Error:'), error.message);
-            process.exit(1);
-        }
-    });
-
 // List captured requests for a session
 program
     .command('list')
@@ -266,23 +227,13 @@ program
     .command('cleanup')
     .description('Clean up captured request data')
     .option('--session <sessionId>', 'Clean up specific session')
-    .option('--export-first', 'Export data before cleanup', true)
-    .option('--format <format>', 'Export format before cleanup', 'jsonl')
     .action(async (options) => {
         try {
             console.log(chalk.blue('🧹 Cleaning up captured request data...'));
             
             if (options.session) {
                 // Clean up specific session
-                const capturedRequests = profileLauncher.getCapturedRequests(options.session);
-                if (capturedRequests.length > 0 && options.exportFirst) {
-                    console.log(chalk.dim(`Exporting ${capturedRequests.length} requests before cleanup...`));
-                    await profileLauncher.exportCapturedRequests(options.session, options.format);
-                }
-                
-                await profileLauncher.requestCaptureSystem.cleanup(options.session, {
-                    exportBeforeCleanup: false // Already exported above
-                });
+                await profileLauncher.requestCaptureSystem.cleanup(options.session);
                 
                 console.log(chalk.green(`✅ Cleaned up session: ${options.session}`));
             } else {

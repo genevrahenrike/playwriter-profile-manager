@@ -15,7 +15,7 @@ export class RequestCaptureSystem {
         this.requestCounter = 0; // Global counter for unique request IDs
         this.outputFormat = options.outputFormat || 'jsonl';
         this.outputDirectory = options.outputDirectory || './captured-requests';
-        this.maxCaptureSize = options.maxCaptureSize || 1000; // Max requests per session
+        this.maxCaptureSize = options.maxCaptureSize || 1000; // Max requests per session (for memory management)
         this.perHookFiles = options.perHookFiles !== false; // Enable per-hook files by default
         
         // Ensure output directory exists
@@ -1165,22 +1165,9 @@ export class RequestCaptureSystem {
     /**
      * Clean up resources for a session
      * @param {string} sessionId - Session ID
-     * @param {Object} options - Cleanup options
+     * @param {Object} options - Cleanup options (unused, kept for compatibility)
      */
     async cleanup(sessionId, options = {}) {
-        const { exportBeforeCleanup = false, exportFormat = 'jsonl' } = options;
-        
-        // Export captured requests before cleanup if explicitly requested
-        // Note: Real-time capture already saves to {profile}-{hook}-{sessionId}.jsonl
-        // This export creates a separate timestamped file for backup/analysis
-        if (exportBeforeCleanup) {
-            const sessionRequests = this.capturedRequests.get(sessionId);
-            if (sessionRequests && sessionRequests.length > 0) {
-                console.log(`📦 Creating timestamped export (in addition to real-time capture file)`);
-                await this.exportCapturedRequests(sessionId, exportFormat);
-            }
-        }
-        
         // Stop monitoring
         await this.stopMonitoring(sessionId);
         

@@ -7,7 +7,7 @@ import { RequestCaptureSystem } from './RequestCaptureSystem.js';
 import { StealthManager } from './StealthManager.js';
 
 export class ProfileLauncher {
-    constructor(profileManager) {
+    constructor(profileManager, options = {}) {
         this.profileManager = profileManager;
         this.activeBrowsers = new Map();
         this.cleanupInProgress = new Set(); // Track sessions being cleaned up
@@ -19,7 +19,13 @@ export class ProfileLauncher {
             enableTracking: true,
             trackingDbPath: './profiles/data/generated_names.db',
             usePrefix: false,
-            usePostfix: true
+            usePostfix: true,
+            // Pass through autofill behavior options
+            stopOnSuccess: options.autofillStopOnSuccess !== false, // true by default
+            enforceMode: options.autofillEnforceMode || false,
+            minFieldsForSuccess: options.autofillMinFields || 2,
+            successCooldown: options.autofillCooldown || 30000,
+            ...options.autofillOptions
         });
         
         // Initialize the request capture system
@@ -699,11 +705,8 @@ export class ProfileLauncher {
             // Stop autofill monitoring
             this.autofillSystem.stopMonitoring(sessionId);
             
-            // Stop request capture monitoring and export data
-            await this.requestCaptureSystem.cleanup(sessionId, {
-                exportBeforeCleanup: true,
-                exportFormat: 'jsonl'
-            });
+            // Stop request capture monitoring
+            await this.requestCaptureSystem.cleanup(sessionId);
             
             return {
                 profile: browserInfo.profile,
@@ -804,10 +807,7 @@ export class ProfileLauncher {
             this.autofillSystem.stopMonitoring(sessionId);
             
             // Stop request capture monitoring
-            await this.requestCaptureSystem.cleanup(sessionId, {
-                exportBeforeCleanup: true,
-                exportFormat: 'jsonl'
-            });
+            await this.requestCaptureSystem.cleanup(sessionId);
             
             console.log(`✅ Session ${sessionId} cleaned up successfully`);
             
@@ -1410,9 +1410,7 @@ export class ProfileLauncher {
      * @param {string} format - Export format ('json', 'jsonl', 'csv')
      * @param {string} outputPath - Output file path (optional)
      */
-    async exportCapturedRequests(sessionId, format = 'jsonl', outputPath = null) {
-        return await this.requestCaptureSystem.exportCapturedRequests(sessionId, format, outputPath);
-    }
+
 
     /**
      * Get captured requests for a session

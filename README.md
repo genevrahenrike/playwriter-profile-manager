@@ -72,6 +72,11 @@ npx ppm launch my-profile --no-auto-extensions
 
 # Combine options
 npx ppm launch my-profile --load-extensions /path/to/ext1 --devtools
+
+# Autofill control options
+npx ppm launch my-profile --no-autofill-stop-on-success  # Disable default stop-on-success behavior
+npx ppm launch my-profile --autofill-enforce-mode       # Continue monitoring for race conditions
+npx ppm launch my-profile --autofill-min-fields 3 --autofill-cooldown 60000  # Custom thresholds
 ```
 
 ### Launch from template with fingerprint randomization
@@ -91,6 +96,11 @@ npx ppm launch-template my-template new-instance --devtools --stealth-preset max
 
 # Disable fingerprint randomization (keep template fingerprint)
 npx ppm launch-template my-template exact-copy --no-randomize-fingerprint
+
+# Autofill control for template launches
+npx ppm launch-template vpn-template user1  # Default: stops on success
+npx ppm launch-template vpn-template user2 --autofill-enforce-mode
+npx ppm launch-template vpn-template user3 --no-autofill-stop-on-success  # Old behavior
 ```
 
 **Template Launch Features:**

@@ -16,7 +16,8 @@ inquirer.registerPrompt('autocomplete', autocomplete);
 const program = new Command();
 const profileManager = new ProfileManager();
 const chromiumImporter = new ChromiumImporter();
-const profileLauncher = new ProfileLauncher(profileManager);
+// Create default ProfileLauncher (will be recreated with specific options in commands that need it)
+let profileLauncher = new ProfileLauncher(profileManager);
 
 // Profile selector utility function
 async function selectProfile(message = 'Select a profile:', allowCancel = false) {
@@ -476,8 +477,31 @@ program
     .option('--no-capture', 'Disable request capture (enabled by default)')
     .option('--capture-format <format>', 'Request capture output format (jsonl, json, csv)', 'jsonl')
     .option('--capture-dir <dir>', 'Request capture output directory', './captured-requests')
+    .option('--no-autofill-stop-on-success', 'Disable stopping autofill after success (default: enabled)')
+    .option('--autofill-enforce-mode', 'Continue autofill monitoring even after success for race condition protection')
+    .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
+    .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .action(async (profileName, options) => {
         try {
+            // Create ProfileLauncher with autofill options
+            const launcherOptions = {
+                autofillStopOnSuccess: options.autofillStopOnSuccess || false,
+                autofillEnforceMode: options.autofillEnforceMode || false,
+                autofillMinFields: parseInt(options.autofillMinFields) || 2,
+                autofillCooldown: parseInt(options.autofillCooldown) || 30000
+            };
+            
+            profileLauncher = new ProfileLauncher(profileManager, launcherOptions);
+            
+            // Show autofill configuration
+            if (options.autofillStopOnSuccess === false || options.autofillEnforceMode) {
+                console.log(chalk.blue('🎯 Autofill Configuration:'));
+                console.log(chalk.blue(`   Stop on Success: ${options.autofillStopOnSuccess !== false ? 'enabled (default)' : 'disabled'}`));
+                console.log(chalk.blue(`   Enforce Mode: ${options.autofillEnforceMode ? 'enabled' : 'disabled'}`));
+                console.log(chalk.blue(`   Min Fields for Success: ${parseInt(options.autofillMinFields) || 2}`));
+                console.log(chalk.blue(`   Success Cooldown: ${parseInt(options.autofillCooldown) || 30000}ms`));
+            }
+            
             let result;
             
             // If no profile name provided, show selector
@@ -608,8 +632,37 @@ program
     .option('--no-auto-extensions', 'Disable automatic extension loading')
     .option('--no-automation', 'Disable automation features')
     .option('--no-capture', 'Disable request capture')
+    .option('--no-autofill-stop-on-success', 'Disable stopping autofill after success (default: enabled)')
+    .option('--autofill-enforce-mode', 'Continue autofill monitoring even after success for race condition protection')
+    .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
+    .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .action(async (template, instanceName, options) => {
         try {
+            // Create ProfileLauncher with autofill options
+            const templateLauncherOptions = {
+                autofillStopOnSuccess: options.autofillStopOnSuccess !== false, // true by default, false only with --no-autofill-stop-on-success
+                autofillEnforceMode: options.autofillEnforceMode || false,
+                autofillMinFields: parseInt(options.autofillMinFields) || 2,
+                autofillCooldown: parseInt(options.autofillCooldown) || 30000
+            };
+            
+            const templateProfileLauncher = new ProfileLauncher(profileManager, templateLauncherOptions);            // Show autofill configuration if non-default
+            if (options.autofillStopOnSuccess === false || options.autofillEnforceMode) {
+                console.log(chalk.blue('🎯 Autofill Configuration:'));
+                console.log(chalk.blue(`   Stop on Success: ${options.autofillStopOnSuccess !== false ? 'enabled (default)' : 'disabled'}`));
+                console.log(chalk.blue(`   Enforce Mode: ${options.autofillEnforceMode ? 'enabled' : 'disabled'}`));
+                console.log(chalk.blue(`   Min Fields for Success: ${parseInt(options.autofillMinFields) || 2}`));
+                console.log(chalk.blue(`   Success Cooldown: ${parseInt(options.autofillCooldown) || 30000}ms`));
+            }
+            // Create ProfileLauncher with autofill options
+            const launcherOptions = {
+                autofillStopOnSuccess: options.autofillStopOnSuccess || false,
+                autofillEnforceMode: options.autofillEnforceMode || false,
+                autofillMinFields: parseInt(options.autofillMinFields) || 2,
+                autofillCooldown: parseInt(options.autofillCooldown) || 30000
+            };
+            
+            profileLauncher = new ProfileLauncher(profileManager, launcherOptions);
             console.log(chalk.blue(`🎭 Launching template instance: ${instanceName}`));
             console.log(chalk.dim(`Template: ${template}`));
             console.log(chalk.dim(`Profile type: ${options.temp ? 'TEMPORARY (will be deleted)' : 'PERMANENT (will be saved)'}`));
@@ -632,7 +685,7 @@ program
                 isTemporary: options.temp || false // Only temporary if --temp flag is used
             };
 
-            const result = await profileLauncher.launchFromTemplate(template, instanceName, launchOptions);
+            const result = await templateProfileLauncher.launchFromTemplate(template, instanceName, launchOptions);
             
             console.log(chalk.green('✅ Template instance launched successfully!'));
             console.log(chalk.dim(`Session ID: ${result.sessionId}`));
@@ -1155,21 +1208,6 @@ program
                     console.log(chalk.yellow('⚠️  No captured requests found for this session'));
                     return;
                 }
-                
-                console.log(chalk.blue('💾 Exporting captured requests...'));
-                const exportResult = await profileLauncher.exportCapturedRequests(
-                    options.export, 
-                    options.format, 
-                    options.output
-                );
-                
-                if (exportResult) {
-                    console.log(chalk.green('✅ Export completed!'));
-                    console.log(chalk.dim(`File: ${exportResult.filePath}`));
-                    console.log(chalk.dim(`Format: ${exportResult.format}`));
-                    console.log(chalk.dim(`Requests: ${exportResult.count}`));
-                    console.log(chalk.dim(`Size: ${Math.round(exportResult.size / 1024)}KB`));
-                }
                 return;
             }
             
@@ -1187,10 +1225,7 @@ program
                 
                 if (options.cleanup) {
                     // Clean up specific session
-                    await profileLauncher.requestCaptureSystem.cleanup(options.cleanup, {
-                        exportBeforeCleanup: true,
-                        exportFormat: 'jsonl'
-                    });
+                    await profileLauncher.requestCaptureSystem.cleanup(options.cleanup);
                     console.log(chalk.green(`✅ Cleaned up session: ${options.cleanup}`));
                 } else {
                     // Clean up all sessions
