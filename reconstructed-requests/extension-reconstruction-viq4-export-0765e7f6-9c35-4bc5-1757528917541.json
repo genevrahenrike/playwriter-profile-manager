@@ -1,0 +1,651 @@
+{
+  "sessionId": "viq4-export-0765e7f6-9c35-4bc5",
+  "report": {
+    "timestamp": "2025-09-10T18:28:37.541Z",
+    "summary": {
+      "totalRequests": 11,
+      "hasAuthorization": true,
+      "hasDeviceId": true,
+      "hasUserAgent": true
+    },
+    "coreData": {
+      "authorization": "Bearer UKP!10042e32-fd18-45fa-...",
+      "deviceId": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "timezone": "America/Los_Angeles"
+    },
+    "adaptationWarnings": [],
+    "reconstructionConcerns": [
+      {
+        "type": "ADAPTATION_REQUIRED",
+        "header": "accept",
+        "webapp": "application/json, text/plain, */*",
+        "extension": "*/*",
+        "reason": "Extension uses simplified accept header"
+      },
+      {
+        "type": "ADAPTATION_REQUIRED",
+        "header": "x-vidiq-client",
+        "webapp": "web 61b61ab9f9900c18d51c0605348e4169a6480e95",
+        "extension": "ext vch/3.151.0",
+        "reason": "Must identify as extension client, not web client"
+      },
+      {
+        "type": "ADAPTATION_REQUIRED",
+        "header": "x-client-location",
+        "webapp": "Not present",
+        "extension": "scorecard",
+        "reason": "Extension-specific header indicating UI context"
+      },
+      {
+        "type": "EXTENSION_SPECIFIC",
+        "header": "priority",
+        "value": "u=1, i",
+        "reason": "Cannot be captured from webapp, using standard extension values"
+      },
+      {
+        "type": "EXTENSION_SPECIFIC",
+        "header": "sec-fetch-dest",
+        "value": "empty",
+        "reason": "Cannot be captured from webapp, using standard extension values"
+      },
+      {
+        "type": "EXTENSION_SPECIFIC",
+        "header": "sec-fetch-mode",
+        "value": "cors",
+        "reason": "Cannot be captured from webapp, using standard extension values"
+      },
+      {
+        "type": "EXTENSION_SPECIFIC",
+        "header": "sec-fetch-site",
+        "value": "none",
+        "reason": "Cannot be captured from webapp, using standard extension values"
+      }
+    ],
+    "recommendations": [
+      "✅ Core authentication data available - reconstruction should work",
+      "✅ Successfully reconstructed extension requests",
+      "⚠️  Test reconstructed requests in small batches first",
+      "⚠️  Monitor for rate limiting or detection",
+      "💡 Consider rotating user agents and device IDs for large-scale use"
+    ]
+  },
+  "reconstructedRequests": [
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:16.389Z",
+        "type": "request",
+        "requestId": "req_0_1757493856389",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/auth/signup",
+        "method": "POST",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "content-type": "application/json",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "ext vch/3.151.0",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\""
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "postData": "{\"email\":\"patricialundgren8475@yahoo.com\",\"password\":\"HI.x(3=_M2v$=\",\"captcha_response\":\"0cAFcWeA50wSHAaPo4hf6xduUSrPdZpbjsB6vtxBWH7oNFzxPwwz6gQ_whWNLRV23YK8J3TQL6zVyTNFOzs9hO2cR_Ysmo1Y_eSK1NWtRszZ0rU7P4rE0DMt8JHAqyJM8_DQY0e98_9DPju-IbJ4GC207HG2MpbZNKYIjYHWuV3s8kR4xDD5NvSEimk65ESoBU_NTLUKhiZTi9c5EC4Kf6dSfJviuHohz_jO2lcL800QuvOhYNcwSYvNzQ0A6ApFja2gNdpqumFnhKt4RjmZJVsEE3ZtYRvgMi3zTJ3Ixj0XB0MLJSn10oKzrL6-0sOmipzg4LmFRolWWvD5lKecLoRPTO88A4J9R2p0nGGUD2SmxT0YvaIje7uYKVyX949eHSFy48YNBuqcbwEdYMh3GAwmxqjHvS9hTZe5fxoWv0M2-i5FNImRtCcW-ui24gVxUE1DsIiANlTC8SgXLrxfQ2-_-7I_IbSBKXtgeyGwoGrQyV26y9fCUhOyQj325htrsqsGomzz3nqVj97TYiYK0MDxDR2v7ul-avtq4bmpyXE2_tbfLp-qdTiI37mMx4gjIeQQQ8Qd9pzex7mGQGIXkvXipZp6FefmjJ81XoFCkxSO5GSSmXXEiaN_rIbMwHnBx4yd9YkL89IeTxl3Jw5Ay27HH4uQfsc-JxadM2uVkJT950bjQegT-6oGRUbwSECDEt1izm2Eb0n6xeBvHx6Rx3Fu5O1eR6oAVj94BAx4GDCXN-e33AwE5F7q6ooNnt-Qnq4pQxJ3CSj5pCoCRohtw4RliVz2qo2ElEObcPk2j9TXjQpo996S3SLK05gQ9LiuEr8NgENWJ9-G3_uhe-y7j0ff5hW5qw8VrTlg\"}",
+        "custom": {
+          "endpoint": "auth/signup",
+          "fullUrl": "https://api.vidiq.com/auth/signup"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0",
+        "content-type": "application/json"
+      },
+      "curlCommand": "curl -X POST \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"patricialundgren8475@yahoo.com\",\"password\":\"HI.x(3=_M2v$=\",\"captcha_response\":\"0cAFcWeA50wSHAaPo4hf6xduUSrPdZpbjsB6vtxBWH7oNFzxPwwz6gQ_whWNLRV23YK8J3TQL6zVyTNFOzs9hO2cR_Ysmo1Y_eSK1NWtRszZ0rU7P4rE0DMt8JHAqyJM8_DQY0e98_9DPju-IbJ4GC207HG2MpbZNKYIjYHWuV3s8kR4xDD5NvSEimk65ESoBU_NTLUKhiZTi9c5EC4Kf6dSfJviuHohz_jO2lcL800QuvOhYNcwSYvNzQ0A6ApFja2gNdpqumFnhKt4RjmZJVsEE3ZtYRvgMi3zTJ3Ixj0XB0MLJSn10oKzrL6-0sOmipzg4LmFRolWWvD5lKecLoRPTO88A4J9R2p0nGGUD2SmxT0YvaIje7uYKVyX949eHSFy48YNBuqcbwEdYMh3GAwmxqjHvS9hTZe5fxoWv0M2-i5FNImRtCcW-ui24gVxUE1DsIiANlTC8SgXLrxfQ2-_-7I_IbSBKXtgeyGwoGrQyV26y9fCUhOyQj325htrsqsGomzz3nqVj97TYiYK0MDxDR2v7ul-avtq4bmpyXE2_tbfLp-qdTiI37mMx4gjIeQQQ8Qd9pzex7mGQGIXkvXipZp6FefmjJ81XoFCkxSO5GSSmXXEiaN_rIbMwHnBx4yd9YkL89IeTxl3Jw5Ay27HH4uQfsc-JxadM2uVkJT950bjQegT-6oGRUbwSECDEt1izm2Eb0n6xeBvHx6Rx3Fu5O1eR6oAVj94BAx4GDCXN-e33AwE5F7q6ooNnt-Qnq4pQxJ3CSj5pCoCRohtw4RliVz2qo2ElEObcPk2j9TXjQpo996S3SLK05gQ9LiuEr8NgENWJ9-G3_uhe-y7j0ff5hW5qw8VrTlg\"}' \\\n  'https://api.vidiq.com/auth/signup'",
+      "endpoint": "auth/signup",
+      "timestamp": "2025-09-10T08:44:16.389Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.072Z",
+        "type": "request",
+        "requestId": "req_1_1757493857072",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/auth/login",
+        "method": "POST",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "content-type": "application/json",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "ext vch/3.151.0",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\""
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "postData": "{\"email\":\"patricialundgren8475@yahoo.com\",\"password\":\"HI.x(3=_M2v$=\",\"captcha_response\":\"0cAFcWeA5cH24YQ8zYDThV89f4YJNK8KyojUoyzWjMDp_RPVvuEl8d8OmHJYmGfpQXy-yyOJec3_QUznPeZLoBMsOa9iRim82oTdYK9QfxDa4RobM662-Gompr1iE5obhH7lVkcU-VBgH7_kaiZqJF7JD43Cj1HGkd2VvjoVmPpNJ2afGaN4mObD1u4mw4SkHpeazFdcEZMRJ4V2soYorl4ne3PDfNPKJHEgboiy0TLYqZx0o6qHZA4O0E94t3g2xUkTKnS3x5fxOqfEsV_-CBG-gxggNrp2ZiJnZF5qbAcbzHhSlhRFgExNDMxnmRUImNXeTXWGl4YxTB0ZfO0Ipw1SUEURCPr8qn_OGepSqDKkDQD9i2ff-A20FPvx8RK_4r7FNdqQKhc0jHQ-QGgqf_6AtzJv0NIYQOb7ClG8THw0931TULMdBqwxgKFuqaPKCgW2F3rYKzdLyJM5lmIPjhdiwSqb7sPQBUT7P7XdBlwKFT8yd2AvSztTWz1i1iP86M_AlZuRwrQb_zTxgJVPB6QOmEclnNCgAAgSpAF4D-jIF6aYN-GX9W11RoU5w3beNpX08aEcgmAOerlpd47Q_84xnbfJRQku1VE7Ary8BvcuZkyCahS9gfO6FGCKK-vtqpKwfe0GEW3RCKl5r1Gtbelo6vYn1qCXK7cmxGc5vngVLi_UAbqkPIiYVMW8D8265XpR0OW5DGqoIKmMVcVS26Huqd3bJXBci0JImTowQnlujTsijGvv-uf6p2UMa6QjXkq5k4Wka0S71Su2gqdflGjqfWpT-aiEKkiE2b3bT29Q6fW0r_qyC-luQeXo0oirm2MjAwx7nZDCA7\"}",
+        "custom": {
+          "endpoint": "auth/login",
+          "fullUrl": "https://api.vidiq.com/auth/login"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0",
+        "content-type": "application/json"
+      },
+      "curlCommand": "curl -X POST \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"patricialundgren8475@yahoo.com\",\"password\":\"HI.x(3=_M2v$=\",\"captcha_response\":\"0cAFcWeA5cH24YQ8zYDThV89f4YJNK8KyojUoyzWjMDp_RPVvuEl8d8OmHJYmGfpQXy-yyOJec3_QUznPeZLoBMsOa9iRim82oTdYK9QfxDa4RobM662-Gompr1iE5obhH7lVkcU-VBgH7_kaiZqJF7JD43Cj1HGkd2VvjoVmPpNJ2afGaN4mObD1u4mw4SkHpeazFdcEZMRJ4V2soYorl4ne3PDfNPKJHEgboiy0TLYqZx0o6qHZA4O0E94t3g2xUkTKnS3x5fxOqfEsV_-CBG-gxggNrp2ZiJnZF5qbAcbzHhSlhRFgExNDMxnmRUImNXeTXWGl4YxTB0ZfO0Ipw1SUEURCPr8qn_OGepSqDKkDQD9i2ff-A20FPvx8RK_4r7FNdqQKhc0jHQ-QGgqf_6AtzJv0NIYQOb7ClG8THw0931TULMdBqwxgKFuqaPKCgW2F3rYKzdLyJM5lmIPjhdiwSqb7sPQBUT7P7XdBlwKFT8yd2AvSztTWz1i1iP86M_AlZuRwrQb_zTxgJVPB6QOmEclnNCgAAgSpAF4D-jIF6aYN-GX9W11RoU5w3beNpX08aEcgmAOerlpd47Q_84xnbfJRQku1VE7Ary8BvcuZkyCahS9gfO6FGCKK-vtqpKwfe0GEW3RCKl5r1Gtbelo6vYn1qCXK7cmxGc5vngVLi_UAbqkPIiYVMW8D8265XpR0OW5DGqoIKmMVcVS26Huqd3bJXBci0JImTowQnlujTsijGvv-uf6p2UMa6QjXkq5k4Wka0S71Su2gqdflGjqfWpT-aiEKkiE2b3bT29Q6fW0r_qyC-luQeXo0oirm2MjAwx7nZDCA7\"}' \\\n  'https://api.vidiq.com/auth/login'",
+      "endpoint": "auth/login",
+      "timestamp": "2025-09-10T08:44:17.072Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.443Z",
+        "type": "request",
+        "requestId": "req_2_1757493857443",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/auth/user",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\""
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "auth/user",
+          "fullUrl": "https://api.vidiq.com/auth/user"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/auth/user'",
+      "endpoint": "auth/user",
+      "timestamp": "2025-09-10T08:44:17.443Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.444Z",
+        "type": "request",
+        "requestId": "req_3_1757493857444",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/user/channels",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "user/channels",
+          "fullUrl": "https://api.vidiq.com/user/channels"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/user/channels'",
+      "endpoint": "user/channels",
+      "timestamp": "2025-09-10T08:44:17.444Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.585Z",
+        "type": "request",
+        "requestId": "req_4_1757493857585",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/subscriptions/plans/available/authed-smart?plan_bundle_id=mega-bundle&disableExperiment=true",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "subscriptions/plans/available/authed-smart",
+          "fullUrl": "https://api.vidiq.com/subscriptions/plans/available/authed-smart?plan_bundle_id=mega-bundle&disableExperiment=true"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/subscriptions/plans/available/authed-smart?plan_bundle_id=mega-bundle&disableExperiment=true'",
+      "endpoint": "subscriptions/plans/available/authed-smart",
+      "timestamp": "2025-09-10T08:44:17.585Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.585Z",
+        "type": "request",
+        "requestId": "req_5_1757493857585",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/subscriptions/active?disableExperiment=true",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "subscriptions/active",
+          "fullUrl": "https://api.vidiq.com/subscriptions/active?disableExperiment=true"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/subscriptions/active?disableExperiment=true'",
+      "endpoint": "subscriptions/active",
+      "timestamp": "2025-09-10T08:44:17.585Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.585Z",
+        "type": "request",
+        "requestId": "req_6_1757493857585",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/experimentation/batch-by-keys",
+        "method": "POST",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "content-type": "application/json",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "postData": "{\"keys\":[\"boost-onboarding-checkout\",\"coaching-downgrade-flow\",\"content-analysis-feature\",\"custom-title-generator-model\",\"default-annual-plans\",\"enable-permitting-to-purchase-coaching\",\"expose-live-sessions\",\"extension-feedback-allowance\",\"my-coach-page\",\"thumbnail-generator\",\"optin-monster-eligible\",\"supernova-create-monetization\",\"supernova-custom-blueprint-credit\",\"dashboard-create-widget\",\"thumbnail-v2-optimize\",\"stop-rounding-prices\",\"stat-sig-session-recording\",\"supernova-upsell-checkout-improvement\",\"optinmonster-coaching-banner-sale\",\"enable-thumbnail-metadata\",\"onboarding-without-topics-selection\",\"downgrade-keep-boost-step\",\"highlight-paid-feature-retention\",\"new-payments-infrastructure\",\"thumbnail-new-font-styles\",\"thumbnail-new-generation-api\",\"onboarding-attribution-survey-channel-search\",\"slash-pricing-on-plans-page\",\"coaching-upsell-copy-in-vr\",\"survey-channel-search\",\"yt-20-yrs-discount\",\"coupon-reminder-offer\",\"auto-upsell-offer\",\"long-to-short-clips\",\"clipping-freemium\",\"clipping-custom-captions\",\"dvi-generate-button\",\"bypass-coaching-channel-auth\",\"video-reviews-checkout\",\"dashboard-coaching-upsell\",\"hide-seo-nav\",\"thumbnail-v3-optimize\",\"title-v3-optimize\",\"coach-matching-landing\",\"kwvol-v5-rollback\",\"nav-menu-hover-behavior\",\"video-reviews-auto-upsell\",\"extension-banner-upsell-v2\",\"coach-directory\",\"webapp-thumbnail-search\",\"new-plans-page-copy\",\"onboarding-no-thanks-button\",\"monthly-period-default\",\"resub-offer-card\",\"new-coaching-downgrade-flow\",\"connect-channel-cta-image-vs-no-image\",\"enable-explore-plan\",\"hide-subscriber-top-channels-upsell\",\"coaching-checkout-back-navigation\",\"coaching-charts\",\"new-coaching-sections\",\"video-upload-drafts\",\"viral-video-generator\",\"ai-coach-free-usage-reduction\",\"remove-monthly-for-annual-subs\",\"discord-button\",\"creatornow-to-coaching\",\"auto-applied-coupon-offer\",\"system-messages\"],\"context\":{\"language\":\"en\",\"userCreatedAtInHours\":488192,\"country\":\"US\",\"planKey\":\"basic\",\"email\":\"patricialundgren8475@yahoo.com\",\"isInternalEnvironment\":false}}",
+        "custom": {
+          "endpoint": "experimentation/batch-by-keys",
+          "fullUrl": "https://api.vidiq.com/experimentation/batch-by-keys"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0",
+        "content-type": "application/json"
+      },
+      "curlCommand": "curl -X POST \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  -H 'content-type: application/json' \\\n  -d '{\"keys\":[\"boost-onboarding-checkout\",\"coaching-downgrade-flow\",\"content-analysis-feature\",\"custom-title-generator-model\",\"default-annual-plans\",\"enable-permitting-to-purchase-coaching\",\"expose-live-sessions\",\"extension-feedback-allowance\",\"my-coach-page\",\"thumbnail-generator\",\"optin-monster-eligible\",\"supernova-create-monetization\",\"supernova-custom-blueprint-credit\",\"dashboard-create-widget\",\"thumbnail-v2-optimize\",\"stop-rounding-prices\",\"stat-sig-session-recording\",\"supernova-upsell-checkout-improvement\",\"optinmonster-coaching-banner-sale\",\"enable-thumbnail-metadata\",\"onboarding-without-topics-selection\",\"downgrade-keep-boost-step\",\"highlight-paid-feature-retention\",\"new-payments-infrastructure\",\"thumbnail-new-font-styles\",\"thumbnail-new-generation-api\",\"onboarding-attribution-survey-channel-search\",\"slash-pricing-on-plans-page\",\"coaching-upsell-copy-in-vr\",\"survey-channel-search\",\"yt-20-yrs-discount\",\"coupon-reminder-offer\",\"auto-upsell-offer\",\"long-to-short-clips\",\"clipping-freemium\",\"clipping-custom-captions\",\"dvi-generate-button\",\"bypass-coaching-channel-auth\",\"video-reviews-checkout\",\"dashboard-coaching-upsell\",\"hide-seo-nav\",\"thumbnail-v3-optimize\",\"title-v3-optimize\",\"coach-matching-landing\",\"kwvol-v5-rollback\",\"nav-menu-hover-behavior\",\"video-reviews-auto-upsell\",\"extension-banner-upsell-v2\",\"coach-directory\",\"webapp-thumbnail-search\",\"new-plans-page-copy\",\"onboarding-no-thanks-button\",\"monthly-period-default\",\"resub-offer-card\",\"new-coaching-downgrade-flow\",\"connect-channel-cta-image-vs-no-image\",\"enable-explore-plan\",\"hide-subscriber-top-channels-upsell\",\"coaching-checkout-back-navigation\",\"coaching-charts\",\"new-coaching-sections\",\"video-upload-drafts\",\"viral-video-generator\",\"ai-coach-free-usage-reduction\",\"remove-monthly-for-annual-subs\",\"discord-button\",\"creatornow-to-coaching\",\"auto-applied-coupon-offer\",\"system-messages\"],\"context\":{\"language\":\"en\",\"userCreatedAtInHours\":488192,\"country\":\"US\",\"planKey\":\"basic\",\"email\":\"patricialundgren8475@yahoo.com\",\"isInternalEnvironment\":false}}' \\\n  'https://api.vidiq.com/experimentation/batch-by-keys'",
+      "endpoint": "experimentation/batch-by-keys",
+      "timestamp": "2025-09-10T08:44:17.585Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.586Z",
+        "type": "request",
+        "requestId": "req_7_1757493857586",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/experimentation/amplitude?device_id=3f22a4d8-02c5-442b-a1c1-692c3614922d&user_id=68c13a60401f843a0aa4ae90",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "experimentation/amplitude",
+          "fullUrl": "https://api.vidiq.com/experimentation/amplitude?device_id=3f22a4d8-02c5-442b-a1c1-692c3614922d&user_id=68c13a60401f843a0aa4ae90"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/experimentation/amplitude?device_id=3f22a4d8-02c5-442b-a1c1-692c3614922d&user_id=68c13a60401f843a0aa4ae90'",
+      "endpoint": "experimentation/amplitude",
+      "timestamp": "2025-09-10T08:44:17.586Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:17.954Z",
+        "type": "request",
+        "requestId": "req_8_1757493857954",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/subscriptions/plans/available/authed-smart?exp=true",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "subscriptions/plans/available/authed-smart",
+          "fullUrl": "https://api.vidiq.com/subscriptions/plans/available/authed-smart?exp=true"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/subscriptions/plans/available/authed-smart?exp=true'",
+      "endpoint": "subscriptions/plans/available/authed-smart",
+      "timestamp": "2025-09-10T08:44:17.954Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:18.081Z",
+        "type": "request",
+        "requestId": "req_9_1757493858081",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/subscriptions/active",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "subscriptions/active",
+          "fullUrl": "https://api.vidiq.com/subscriptions/active"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/subscriptions/active'",
+      "endpoint": "subscriptions/active",
+      "timestamp": "2025-09-10T08:44:18.081Z"
+    },
+    {
+      "original": {
+        "timestamp": "2025-09-10T08:44:18.206Z",
+        "type": "request",
+        "requestId": "req_10_1757493858206",
+        "hookName": "vidiq-capture",
+        "sessionId": "0765e7f6-9c35-4bc5-843e-4309b513f0c9",
+        "url": "https://api.vidiq.com/subscriptions/stripe/next-subscription",
+        "method": "GET",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+          "referer": "https://app.vidiq.com/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "x-timezone": "America/Los_Angeles",
+          "x-vidiq-client": "web 4410b090401bec17e85363a1aa3b57e0495ce4b8",
+          "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+          "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"macOS\"",
+          "x-vidiq-auth": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsImtpZCI6IjZiNjk5ZDc4LWE0NDEtNGUyZC1iMTY2LTJiZjc4NDM5Y2Y5MSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnQudmlkaXEuY29tIiwic3ViIjoiMTAwNDJlMzItZmQxOC00NWZhLTk0YzAtODNmMDYwNGYzM2UzIiwiYXVkIjoidmlkaXEtYXBpIiwiZXhwIjoxNzU3NDk0NDU3LCJpYXQiOjE3NTc0OTM4NTcsImp0aSI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiIsInVzZXIiOnsiaWQiOiIxMDA0MmUzMi1mZDE4LTQ1ZmEtOTRjMC04M2YwNjA0ZjMzZTMiLCJtaWQiOiI2OGMxM2E2MDQwMWY4NDNhMGFhNGFlOTAiLCJlbWFpbCI6InBhdHJpY2lhbHVuZGdyZW44NDc1QHlhaG9vLmNvbSIsInJvbGUiOiJ1c2VyIiwic2Vzc2lvbl9pZCI6IjY2ODk2OWE4LWFjNGItNDAxOC1hNzliLTBiNDM4N2UzYmI0NiJ9fQ.YtD70i-VvUH77aF5VB8HaULgMw7isnUDwFYZ_WfvFFNbvQBzHcYpNUlxzMusNL23Vlm72tEZDSQeDelUWOhXErgsCBGxx0_F5JVqfke5sSVH57Dfih0BK__8Po4XOQsH6kkUGsUG3ow-LhpZq_y2zsFXM87iNQa-xTfvL6XdW03cWXu6oTSkC8iuXMn4zyZLOQjFMfZBJvYzXMWzm4r5eXRX7r1Qa-ghRwJH61hCij3yKvTwJQ80iFlM24FAfOwxJruMPObkI-tLHaTS3QSaVYtd__7elKNE4wOeASSzdopmzn5rESOkYQI8ipcNo5oKH0L2_ogA0mkVIhLET_WXwA"
+        },
+        "resourceType": "xhr",
+        "isNavigationRequest": false,
+        "frame": {
+          "url": "https://app.vidiq.com/extension_install?redirectTo=%2Fextension_login_success&source=ext+vch%2F3.151.0&location=null&action=install",
+          "name": null
+        },
+        "custom": {
+          "endpoint": "subscriptions/stripe/next-subscription",
+          "fullUrl": "https://api.vidiq.com/subscriptions/stripe/next-subscription"
+        }
+      },
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "x-vidiq-device-id": "3f22a4d8-02c5-442b-a1c1-692c3614922d",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-timezone": "America/Los_Angeles",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "curlCommand": "curl -X GET \\\n  -H 'accept: */*' \\\n  -H 'accept-language: en-US,en;q=0.9' \\\n  -H 'priority: u=1, i' \\\n  -H 'sec-fetch-dest: empty' \\\n  -H 'sec-fetch-mode: cors' \\\n  -H 'sec-fetch-site: none' \\\n  -H 'x-client-location: scorecard' \\\n  -H 'authorization: Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c' \\\n  -H 'x-amplitude-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'x-vidiq-device-id: 3f22a4d8-02c5-442b-a1c1-692c3614922d' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \\\n  -H 'x-timezone: America/Los_Angeles' \\\n  -H 'x-vidiq-client: ext vch/3.151.0' \\\n  'https://api.vidiq.com/subscriptions/stripe/next-subscription'",
+      "endpoint": "subscriptions/stripe/next-subscription",
+      "timestamp": "2025-09-10T08:44:18.206Z"
+    }
+  ]
+}

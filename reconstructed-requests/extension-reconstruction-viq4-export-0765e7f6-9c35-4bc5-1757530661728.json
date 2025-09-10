@@ -1,0 +1,195 @@
+{
+  "sessionId": "viq4-export-0765e7f6-9c35-4bc5",
+  "reconstructedRequests": [
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "82c6de93-ab10-44c1-b39b-2921dccf2bd7",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0",
+        "content-type": "application/json"
+      },
+      "endpoint": "auth/signup",
+      "timestamp": "2025-09-10T08:44:16.389Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "87c121e7-716a-46b0-b77c-7361760bacfa",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0",
+        "content-type": "application/json"
+      },
+      "endpoint": "auth/login",
+      "timestamp": "2025-09-10T08:44:17.072Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "2d24ae2e-e119-4e12-a2b7-c7b3d016469b",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "auth/user",
+      "timestamp": "2025-09-10T08:44:17.443Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "d6a3442c-fd6e-4595-910c-794878bcae1f",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "user/channels",
+      "timestamp": "2025-09-10T08:44:17.444Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "681908d9-f597-4a50-9540-541d876dc68a",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "subscriptions/plans/available/authed-smart",
+      "timestamp": "2025-09-10T08:44:17.585Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "fa595a70-a76a-40c3-b76b-9a2c730e4c2c",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "subscriptions/active",
+      "timestamp": "2025-09-10T08:44:17.585Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "273ad7fd-65fa-4b2e-8a60-8d25e679ffaf",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0",
+        "content-type": "application/json"
+      },
+      "endpoint": "experimentation/batch-by-keys",
+      "timestamp": "2025-09-10T08:44:17.585Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "1334df37-0332-4baa-8d7d-ffb05bfd94dd",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "experimentation/amplitude",
+      "timestamp": "2025-09-10T08:44:17.586Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "5543d092-6a29-40af-9b2d-77a21a82aed1",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "subscriptions/plans/available/authed-smart",
+      "timestamp": "2025-09-10T08:44:17.954Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "4cdeb917-89f3-4404-9fd5-5a45fd882848",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "subscriptions/active",
+      "timestamp": "2025-09-10T08:44:18.081Z"
+    },
+    {
+      "extensionHeaders": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "x-client-location": "scorecard",
+        "authorization": "Bearer UKP!10042e32-fd18-45fa-94c0-83f0604f33e3!40d553d6-d5f1-475c-94b6-56b61fa0d25c",
+        "x-amplitude-device-id": "e6efcae0-19a5-40e7-a12c-6c6c5d5ef6a7",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-vidiq-client": "ext vch/3.151.0"
+      },
+      "endpoint": "subscriptions/stripe/next-subscription",
+      "timestamp": "2025-09-10T08:44:18.206Z"
+    }
+  ]
+}
