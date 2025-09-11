@@ -157,11 +157,13 @@ npx ppm batch --template vidiq-clean \
     --prefix auto \
     --delete-on-failure
 
-# Long run (cache cleanup enabled by default)
+# Long run with extended delays for better spacing
 npx ppm batch --template vidiq-clean \
     --count 20 \
     --prefix auto \
-    --delete-on-failure
+    --delete-on-failure \
+    --delay 120 \
+    --failure-delay 600
 
 # Keep full cache for analysis (only for short runs)
 npx ppm batch --template vidiq-clean \
@@ -180,6 +182,14 @@ npx ppm batch --template vidiq-clean \
     --count 3 \
     --prefix auto \
     --resume
+
+# Quick run with minimal delays
+npx ppm batch --template vidiq-clean \
+    --count 5 \
+    --prefix auto \
+    --delete-on-failure \
+    --delay 30 \
+    --failure-delay 120
 ```
 
 **Profile Naming**: Uses simple autoincremental numbering (e.g., `auto1`, `auto2`, `auto3`, etc.) for easy identification and management.
@@ -194,11 +204,14 @@ Batch options:
 - `--headless`: Run in headless mode (default: headed).
 - `--delete-on-failure`: Delete the profile if the run fails.
 - `--no-clear-cache`: Disable cache clearing for successful profiles (cache cleanup enabled by default).
+- `--delay <seconds>`: Delay between successful runs in seconds (default: 60). Allows VPN and browser fingerprint cooldown.
+- `--failure-delay <seconds>`: Delay after failed runs in seconds (default: 300). Extended cooldown for failure recovery.
 
 Behavior:
 - Single attempt per profile (no headed retry cycle).
 - Profiles are permanent by default; successful profiles are preserved.
 - **Cache cleanup enabled by default** for successful profiles to prevent disk space issues during long runs (disable with `--no-clear-cache`).
+- **Intelligent delays**: 60s cooldown between successful runs, 5m cooldown after failures (customizable with `--delay` and `--failure-delay`).
 - On failure with `--delete-on-failure`, the profile is removed.
 - Writes a results file at `automation-results/batch-<prefix>-<timestamp>.jsonl` with per-attempt entries:
     - `timestamp, batchId, run, runId, profileId, profileName, attempt, headless, success, reason`

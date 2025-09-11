@@ -802,6 +802,8 @@ program
     .option('--headless', 'Run in headless mode (default: headed)')
     .option('--delete-on-failure', 'Delete the profile if the run fails')
     .option('--no-clear-cache', 'Disable cache clearing for successful profiles (cache cleanup enabled by default)')
+    .option('--delay <seconds>', 'Delay between successful runs (seconds)', '60')
+    .option('--failure-delay <seconds>', 'Delay after failed runs (seconds)', '300')
     .action(async (options) => {
         const pathMod = (await import('path')).default;
         const fsx = (await import('fs-extra')).default;
@@ -817,6 +819,10 @@ program
     const resume = !!options.resume;
         // Clear cache on success by default for space efficiency (can be disabled with --no-clear-cache)
         const clearCacheOnSuccess = !options.noClearCache;
+        
+        // Delay options for cooldown between runs
+        const delayBetweenRuns = parseInt(options.delay, 10) || 60; // 60 seconds default
+        const failureDelay = parseInt(options.failureDelay, 10) || 300; // 5 minutes default
 
         const resultsDir = pathMod.resolve('./automation-results');
         await fsx.ensureDir(resultsDir);
@@ -935,6 +941,7 @@ program
 
         console.log(chalk.cyan(`🚀 Starting batch: template=${template}, count=${total}, prefix=${prefix}`));
         console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
+        console.log(chalk.dim(`⏱️  Delays: ${delayBetweenRuns}s between runs, ${failureDelay}s after failures`));
         if (clearCacheOnSuccess) {
             console.log(chalk.dim(`🧹 Cache cleanup enabled for successful profiles (saves disk space)`));
         }
@@ -1006,6 +1013,14 @@ program
                     }
                 }
                 scheduled++;
+                
+                // Apply cooldown delay between runs (skip delay after the last run)
+                if (scheduled < total) {
+                    const delayToUse = outcome.success ? delayBetweenRuns : failureDelay;
+                    const delayReason = outcome.success ? 'cooldown' : 'failure recovery';
+                    console.log(chalk.dim(`⏳ Waiting ${delayToUse}s (${delayReason}) before next run...`));
+                    await new Promise(resolve => setTimeout(resolve, delayToUse * 1000));
+                }
             } catch (err) {
                 console.error(chalk.red(`💥 Batch run error: ${err.message}`));
                 if (profileRecord?.id && deleteOnFailure) {
@@ -1013,6 +1028,12 @@ program
                 }
                 await writeResult({ run: runNo, batchId, runId, error: err.message });
                 scheduled++;
+                
+                // Apply failure delay after errors (skip delay after the last run)
+                if (scheduled < total) {
+                    console.log(chalk.dim(`⏳ Waiting ${failureDelay}s (error recovery) before next run...`));
+                    await new Promise(resolve => setTimeout(resolve, failureDelay * 1000));
+                }
             } finally {
                 try { await launcher.closeAllBrowsers({}); } catch (_) {}
             }
