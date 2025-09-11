@@ -4,12 +4,12 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
-import { ExtensionRequestReconstructor } from './src/ExtensionRequestReconstructor.js';
+import { RequestExtractor } from './src/RequestExtractor.js';
 
 const program = new Command();
 
 program
-    .name('extension-reconstructor')
+    .name('request-extractor')
     .description('Reconstruct extension-compatible requests from captured webapp sessions')
     .version('1.0.0');
 
@@ -25,16 +25,16 @@ program
     .action(async (sessionIdOrProfile, options) => {
         try {
             if (!options.headersOnly) {
-                console.log(chalk.blue('🔧 Extension Request Reconstructor'));
+                console.log(chalk.blue('🔧 Request Extractor'));
                 console.log(chalk.blue('====================================\n'));
             }
             
-            const reconstructor = new ExtensionRequestReconstructor({
+            const extractor = new RequestExtractor({
                 outputDir: options.output,
                 quiet: options.headersOnly
             });
             
-            const results = await reconstructor.reconstructSession(sessionIdOrProfile, options);
+            const results = await extractor.reconstructSession(sessionIdOrProfile, options);
             
             if (options.headersOnly) {
                 // Print a single JSON object with extensionHeaders from the first reconstructed request
@@ -125,8 +125,8 @@ program
     .option('--no-randomize', 'Do not randomize x-amplitude-device-id, use captured or fallback')
     .action(async (sessionIdOrProfile, options) => {
         try {
-            const reconstructor = new ExtensionRequestReconstructor({ quiet: true });
-            const obj = await reconstructor.generateHeadersObject(sessionIdOrProfile, {
+            const extractor = new RequestExtractor({ quiet: true });
+            const obj = await extractor.generateHeadersObject(sessionIdOrProfile, {
                 randomizeDeviceId: options.randomize !== false,
                 includeContentType: true,
                 quiet: true
@@ -146,8 +146,8 @@ program
     .option('--no-randomize', 'Do not randomize x-amplitude-device-id, use captured values')
     .action(async (prefix, options) => {
         try {
-            const reconstructor = new ExtensionRequestReconstructor({ quiet: true });
-            const results = await reconstructor.generateHeadersForProfiles(prefix, {
+            const extractor = new RequestExtractor({ quiet: true });
+            const results = await extractor.generateHeadersForProfiles(prefix, {
                 randomizeDeviceId: options.randomize !== false,
                 includeContentType: false,
                 quiet: true
@@ -193,8 +193,8 @@ program
             console.log(chalk.blue('🔍 Extension Reconstruction Analysis'));
             console.log(chalk.blue('====================================\n'));
             
-            const reconstructor = new ExtensionRequestReconstructor();
-            const summary = reconstructor.getReconstructionSummary();
+            const extractor = new RequestExtractor();
+            const summary = extractor.getReconstructionSummary();
             
             // Adaptation Required
             console.log(chalk.yellow('⚠️  Adaptation Required:'));
@@ -256,7 +256,7 @@ program
             console.log(chalk.blue('📋 Available Sessions'));
             console.log(chalk.blue('===================\n'));
             
-            const reconstructor = new ExtensionRequestReconstructor();
+            const extractor = new RequestExtractor();
             const capturedDir = './captured-requests';
             const files = require('fs').readdirSync(capturedDir);
             

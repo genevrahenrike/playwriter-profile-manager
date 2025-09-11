@@ -1,5 +1,5 @@
 /**
- * ExtensionRequestReconstructor - Reconstructs extension-compatible requests from captured webapp sessions
+ * RequestExtractor - Reconstructs extension-compatible requests from captured webapp sessions
  * 
  * This tool analyzes captured session data and generates authentic extension requests by:
  * 1. Extracting core authentication and device data from webapp captures
@@ -12,7 +12,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { ProfileManager } from './ProfileManager.js';
 
-export class ExtensionRequestReconstructor {
+export class RequestExtractor {
     constructor(options = {}) {
         this.profileManager = options.profileManager || new ProfileManager('./profiles');
         this.capturedRequestsDir = options.capturedRequestsDir || './captured-requests';
