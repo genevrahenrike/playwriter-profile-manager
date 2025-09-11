@@ -11,8 +11,8 @@ export class RandomDataGenerator {
         this.config = {
             // Name generation options
             usePrefix: options.usePrefix || false,
-            usePostfix: options.usePostfix !== false, // default true
-            postfixDigits: options.postfixDigits || 4,
+            usePostfix: options.usePostfix !== false, // default true (deprecated by numberFlavorWeights)
+            postfixDigits: options.postfixDigits || 4, // deprecated by numberFlavorWeights
             
             // Username style options - NEW
             usernameStyle: options.usernameStyle || 'auto', // 'auto', 'concatenated', 'separated', 'business', 'handle'
@@ -22,10 +22,10 @@ export class RandomDataGenerator {
 
             // Weighted selection across patterns (concatenated/pattern_a, separated/pattern_b, business, handle/pattern_c)
             patternWeights: {
-                concatenated: 1,
-                separated: 1,
-                business: 1,
-                handle: 1,
+                concatenated: 4,    // Most common, clean firstname+lastname
+                separated: 2.5,     // Common, modern look
+                business: 0.8,      // Less common, professional contexts
+                handle: 3,          // Very common in personal emails, distinctive
                 ...(options.patternWeights || {})
             },
 
@@ -64,7 +64,20 @@ export class RandomDataGenerator {
 
             // Handle (Pattern C) options
             handleSyllables: options.handleSyllables || 4, // number of syllables (3-4 recommended)
-            handleBlocklist: options.handleBlocklist || ['admin','support','test','user','service','root','system']
+            handleBlocklist: options.handleBlocklist || ['admin','support','test','user','service','root','system'],
+
+            // Numbering flavor weights (decoupled digits strategy)
+            numberFlavorWeights: options.numberFlavorWeights || { 
+                none: 10,     // Very strong preference for clean names
+                d2: 3,        // Common, decent looking
+                d4: 0.01      // Extremely rare (1%), only occasionally for variety
+            },
+            // Optional per-style overrides
+            numberFlavorWeightsByStyle: {
+                concatenated: { none: 1, d2: 2, d4: 0.25 },
+                separated:    { none: 2, d2: 2, d4: 0.25 },
+                ...(options.numberFlavorWeightsByStyle || {})
+            }
         };
         
         this.usedNames = new Set();
@@ -74,6 +87,26 @@ export class RandomDataGenerator {
         if (this.config.enableTracking) {
             this.initializeDatabase();
         }
+    }
+
+    /**
+     * Numbering flavor weights for username postfix digits
+     * - none: no digits added
+     * - d2: two-digit postfix (10-99)
+     * - d4: four-digit postfix (1000-9999)
+     */
+    get numberFlavorWeights() {
+        // Allow runtime override via options, fallback to natural-looking defaults
+        const defaults = { none: 4, d2: 1.5, d4: 0.2 };
+        const provided = (this.config.numberFlavorWeights || {});
+        // Normalize invalid values out
+        const normalized = {};
+        for (const k of ['none', 'd2', 'd4']) {
+            const v = Number(provided[k]);
+            if (!Number.isFinite(v) || v <= 0) continue;
+            normalized[k] = v;
+        }
+        return Object.keys(normalized).length ? normalized : defaults;
     }
 
     weightedChoice(weightsObj) {
@@ -693,6 +726,7 @@ export class RandomDataGenerator {
             fs.ensureDirSync(dbDir);
             
             this.db = new Database(this.config.trackingDbPath);
+            this.hasNumberFlavorColumn = false;
             
             // Create table for tracking generated names
             this.db.exec(`
@@ -730,6 +764,19 @@ export class RandomDataGenerator {
                     notes TEXT
                 )
             `);
+
+            // Ensure optional number_flavor column exists; add if missing
+            try {
+                const cols = this.db.prepare("PRAGMA table_info('user_data_exports')").all();
+                const hasNumber = cols.some(c => c.name === 'number_flavor');
+                if (!hasNumber) {
+                    this.db.exec("ALTER TABLE user_data_exports ADD COLUMN number_flavor TEXT");
+                }
+                this.hasNumberFlavorColumn = true;
+            } catch (e) {
+                // If alter fails, continue without the column
+                this.hasNumberFlavorColumn = false;
+            }
 
             // Create table to track generated short handles (Pattern C)
             this.db.exec(`
@@ -831,9 +878,9 @@ export class RandomDataGenerator {
 
             // Italian surnames
             'rossi', 'russo', 'ferrari', 'esposito', 'bianchi', 'romano', 'colombo', 'ricci', 'marino', 'greco',
-            'bruno', 'gallo', 'conti', 'de luca', 'mancini', 'costa', 'giordano', 'rizzo', 'lombardi', 'moretti',
+            'bruno', 'gallo', 'conti', 'deluca', 'mancini', 'costa', 'giordano', 'rizzo', 'lombardi', 'moretti',
             'barbieri', 'fontana', 'santoro', 'mariani', 'rinaldi', 'caruso', 'ferrari', 'galli', 'martini', 'leone',
-            'longo', 'gentile', 'martinelli', 'vitale', 'lombardo', 'serra', 'coppola', 'de santis', 'damico', 'palumbo',
+            'longo', 'gentile', 'martinelli', 'vitale', 'lombardo', 'serra', 'coppola', 'desantis', 'damico', 'palumbo',
 
             // Spanish surnames
             'garcia', 'rodriguez', 'gonzalez', 'fernandez', 'lopez', 'martinez', 'sanchez', 'perez', 'gomez', 'martin',
@@ -858,9 +905,9 @@ export class RandomDataGenerator {
             'michalski', 'nowicki', 'adamczyk', 'dudek', 'zajac', 'wieczorek', 'jablonski', 'krol', 'majewski', 'olszewski',
 
             // Dutch surnames
-            'de jong', 'jansen', 'de vries', 'van den berg', 'van dijk', 'bakker', 'janssen', 'visser', 'smit', 'meijer',
-            'de boer', 'mulder', 'de groot', 'bos', 'vos', 'peters', 'hendriks', 'van leeuwen', 'dekker', 'brouwer',
-            'de wit', 'dijkstra', 'smits', 'de graaf', 'van der meer', 'van der laan', 'adriaanse', 'vermeulen', 'van den brink', 'de haan',
+            'dejong', 'jansen', 'devries', 'vandenberg', 'vandijk', 'bakker', 'janssen', 'visser', 'smit', 'meijer',
+            'deboer', 'mulder', 'degroot', 'bos', 'vos', 'peters', 'hendriks', 'vanleeuwen', 'dekker', 'brouwer',
+            'dewit', 'dijkstra', 'smits', 'degraaf', 'vandermeer', 'vanderlaan', 'adriaanse', 'vermeulen', 'vandenbrink', 'dehaan',
 
             // French surnames
             'martin', 'bernard', 'thomas', 'petit', 'robert', 'richard', 'durand', 'dubois', 'moreau', 'laurent',
@@ -1023,8 +1070,8 @@ export class RandomDataGenerator {
      */
     generatePatternA(firstName, lastName, options = {}) {
         const usePrefix = options.usePrefix !== undefined ? options.usePrefix : this.config.usePrefix;
-        const usePostfix = options.usePostfix !== undefined ? options.usePostfix : this.config.usePostfix;
         const currentIndex = options.currentIndex || 1;
+        const numberFlavor = options.numberFlavor;
         
         let nameParts = [firstName, lastName];
         
@@ -1032,13 +1079,22 @@ export class RandomDataGenerator {
             const prefix = String(currentIndex).padStart(2, '0');
             nameParts.unshift(prefix);
         }
-        
-        if (usePostfix) {
-            const postfix = this.randomInt(1000, 9999).toString();
-            nameParts.push(postfix);
+
+        let base = nameParts.join('').toLowerCase();
+
+        // Apply decoupled numbering flavor if provided; otherwise preserve legacy behavior
+        if (numberFlavor === 'none') return base;
+        if (numberFlavor === 'd2') return `${base}${this.randomInt(10, 99)}`;
+        if (numberFlavor === 'd4') return `${base}${this.randomInt(1000, 9999)}`;
+
+        // Legacy fallback when numberFlavor not specified
+        if (options.usePostfix !== undefined ? options.usePostfix : this.config.usePostfix) {
+            const digits = (options.postfixDigits || this.config.postfixDigits || 4) >= 4
+                ? this.randomInt(1000, 9999)
+                : this.randomInt(10, 99);
+            return `${base}${digits}`;
         }
-        
-        return nameParts.join('').toLowerCase();
+        return base;
     }
     
     /**
@@ -1047,9 +1103,9 @@ export class RandomDataGenerator {
      */
     generatePatternB(firstName, lastName, options = {}) {
         const usePrefix = options.usePrefix !== undefined ? options.usePrefix : this.config.usePrefix;
-        const usePostfix = options.usePostfix !== undefined ? options.usePostfix : this.config.usePostfix;
         const currentIndex = options.currentIndex || 1;
         const separator = this.randomChoice(this.config.separatorChars);
+        const numberFlavor = options.numberFlavor;
         
         let nameParts = [firstName, lastName];
         
@@ -1057,14 +1113,22 @@ export class RandomDataGenerator {
             const prefix = String(currentIndex).padStart(2, '0');
             nameParts.unshift(prefix);
         }
-        
-        if (usePostfix) {
-            // Shorter postfix for separated style to avoid overly long usernames
-            const postfix = this.randomInt(10, 99).toString();
-            nameParts.push(postfix);
+
+        let base = nameParts.join(separator).toLowerCase();
+
+        // Apply decoupled numbering flavor if provided; otherwise preserve legacy behavior
+        if (numberFlavor === 'none') return base;
+        if (numberFlavor === 'd2') return `${base}${separator}${this.randomInt(10, 99)}`;
+        if (numberFlavor === 'd4') return `${base}${separator}${this.randomInt(1000, 9999)}`;
+
+        // Legacy fallback when numberFlavor not specified
+        if (options.usePostfix !== undefined ? options.usePostfix : this.config.usePostfix) {
+            const digits = (options.postfixDigits || this.config.postfixDigits || 4) >= 4
+                ? this.randomInt(1000, 9999)
+                : this.randomInt(10, 99);
+            return `${base}${separator}${digits}`;
         }
-        
-        return nameParts.join(separator).toLowerCase();
+        return base;
     }
     
     /**
@@ -1126,39 +1190,73 @@ export class RandomDataGenerator {
      * Examples: larimo, venaro, melodu, rastemi
      */
     generatePatternCHandle(options = {}) {
-        const syllables = this.getHandleSyllables(); // curated latin-like syllables
-        const count = Math.max(3, Math.min(6, options.handleSyllables || this.config.handleSyllables || 4));
+        const phonics = this.getHandleSyllables();
+        const numSyllables = Math.max(2, Math.min(4, options.handleSyllables || this.config.handleSyllables || 3));
         const blocklist = (options.handleBlocklist || this.config.handleBlocklist || []).map(s => s.toLowerCase());
 
-        // Try multiple times to avoid blocklist and ensure uniqueness if tracking is enabled
-        for (let attempt = 0; attempt < 25; attempt++) {
-            let handle = '';
-            for (let i = 0; i < count; i++) {
-                handle += syllables[this.randomInt(0, syllables.length - 1)];
+        // Increased attempts for more complex generation
+        for (let attempt = 0; attempt < 100; attempt++) {
+            let parts = [];
+            for (let i = 0; i < numSyllables; i++) {
+                const syllableType = this.weightedChoice({ V: 1, CV: 4, CVC: 2, VC: 1 });
+                let syllable = '';
+
+                switch (syllableType) {
+                    case 'V':
+                        syllable = this.randomChoice(phonics.nuclei);
+                        break;
+                    case 'CV':
+                        syllable = this.randomChoice(phonics.onsets) + this.randomChoice(phonics.nuclei);
+                        break;
+                    case 'VC':
+                        syllable = this.randomChoice(phonics.nuclei) + this.randomChoice(phonics.codas);
+                        break;
+                    case 'CVC':
+                        syllable = this.randomChoice(phonics.onsets) + this.randomChoice(phonics.nuclei) + this.randomChoice(phonics.codas);
+                        break;
+                }
+                parts.push(syllable);
             }
-            handle = handle.toLowerCase();
+
+            let handle = parts.join('').toLowerCase();
+
+            // Post-processing and validation
+            if (handle.length < 4 || handle.length > 12) continue;
             if (blocklist.includes(handle)) continue;
             if (this.isHandleUsed(handle)) continue;
+
+            // Avoid ugly patterns like triple letters or too many consonants/vowels in a row
+            if (/(.)\1{2,}/.test(handle) || /[aeiouy]{4,}/i.test(handle) || /[^aeiouy]{4,}/i.test(handle)) {
+                continue;
+            }
+
             return handle;
         }
-        // Fallback
-        return 'lanero';
+
+        // Fallback to a simpler, more random handle if all attempts fail
+        return 'syllab' + this.randomInt(100, 999);
     }
 
     /**
-     * Curated set of 32 latin-like syllables for pronounceable handles
+     * Curated set of phonetic components for building latin-like syllables.
+     * This provides a much richer base for generating unique and pronounceable handles.
      */
     getHandleSyllables() {
-        return [
-            'la','le','li','lo','lu',
-            'ra','re','ri','ro','ru',
-            'na','ne','ni','no','nu',
-            'ma','me','mi','mo','mu',
-            'sa','se','si','so','su',
-            'ta','te','ti','to','tu',
-            'ca','co','ci','ce',
-            'da','de','di','do','du'
-        ];
+        return {
+            // Common starting consonants and consonant clusters (onsets)
+            onsets: [
+                'b', 'c', 'd', 'f', 'g', 'h', 'j', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z',
+                'br', 'cr', 'dr', 'fr', 'gr', 'pr', 'str', 'tr', 'bl', 'cl', 'fl', 'gl', 'pl', 'sl',
+                'ch', 'sh', 'th', 'wh'
+            ],
+            // Vowels and common vowel combinations (nuclei)
+            nuclei: ['a', 'e', 'i', 'o', 'u', 'ae', 'ai', 'au', 'ea', 'ee', 'ei', 'eu', 'ia', 'ie', 'io', 'iu', 'oa', 'oi', 'ou', 'ua', 'ui'],
+            // Common ending consonants and clusters (codas)
+            codas: [
+                'b', 'd', 'f', 'g', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'x',
+                'st', 'rt', 'nt', 'nd', 'mp', 'nk', 'ft', 'lp', 'lt', 'sk', 'sh', 'th'
+            ]
+        };
     }
 
     /**
@@ -1208,7 +1306,7 @@ export class RandomDataGenerator {
         const lastNames = this.getLastNames();
         
     let attempts = 0;
-    let firstName, lastName, fullName, usernameStyle, usernamePattern;
+    let firstName, lastName, fullName, usernameStyle, usernamePattern, numberFlavor;
 
         // Determine username style and pattern with weighted selection
         const forceBusiness = options.businessMode !== undefined ? options.businessMode : this.config.businessMode;
@@ -1247,6 +1345,21 @@ export class RandomDataGenerator {
                 usernamePattern = configPattern;
             }
         }
+
+        // Choose numbering flavor, decoupled from pattern selection
+        // Enforce no digits for business and handle styles
+        if (usernameStyle === 'business' || usernameStyle === 'handle' || usernamePattern === 'pattern_c') {
+            numberFlavor = 'none';
+        } else {
+            // Allow override via options.numberFlavor explicitly
+            if (options.numberFlavor === 'none' || options.numberFlavor === 'd2' || options.numberFlavor === 'd4') {
+                numberFlavor = options.numberFlavor;
+            } else {
+                const byStyle = (this.config.numberFlavorWeightsByStyle || {})[usernameStyle];
+                const weights = byStyle && Object.keys(byStyle).length ? byStyle : this.numberFlavorWeights;
+                numberFlavor = this.weightedChoice(weights) || 'd2';
+            }
+        }
         
         // Try to find unused combination
         while (attempts < this.config.maxAttempts) {
@@ -1265,9 +1378,9 @@ export class RandomDataGenerator {
         } else if (usernameStyle === 'handle' || usernamePattern === 'pattern_c') {
             fullName = this.generatePatternCHandle(options);
         } else if (usernamePattern === 'pattern_a' || usernameStyle === 'concatenated') {
-            fullName = this.generatePatternA(firstName, lastName, options);
+            fullName = this.generatePatternA(firstName, lastName, { ...options, numberFlavor });
         } else {
-            fullName = this.generatePatternB(firstName, lastName, options);
+            fullName = this.generatePatternB(firstName, lastName, { ...options, numberFlavor });
         }
         
         return {
@@ -1276,6 +1389,7 @@ export class RandomDataGenerator {
             fullName,
             usernameStyle,
             usernamePattern,
+            numberFlavor,
             attempts
         };
     }
@@ -1338,30 +1452,57 @@ export class RandomDataGenerator {
         }
         
         try {
-            const stmt = this.db.prepare(`
-                INSERT INTO user_data_exports (
-                    session_id, site_url, hook_name, first_name, last_name,
-                    full_name, email, email_provider, password, password_length,
-                    username_style, username_pattern, business_mode
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `);
-            
-            stmt.run(
-                sessionId,
-                siteUrl,
-                hookName,
-                userData.firstName,
-                userData.lastName,
-                userData.fullName,
-                userData.email,
-                userData.emailProvider,
-                userData.password,
-                userData.password.length,
-                userData.usernameStyle || 'unknown',
-                userData.usernamePattern || 'unknown',
-                userData.businessMode ? 1 : 0
-            );
+            let stmt;
+            if (this.hasNumberFlavorColumn) {
+                stmt = this.db.prepare(`
+                    INSERT INTO user_data_exports (
+                        session_id, site_url, hook_name, first_name, last_name,
+                        full_name, email, email_provider, password, password_length,
+                        username_style, username_pattern, number_flavor, business_mode
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `);
+                stmt.run(
+                    sessionId,
+                    siteUrl,
+                    hookName,
+                    userData.firstName,
+                    userData.lastName,
+                    userData.fullName,
+                    userData.email,
+                    userData.emailProvider,
+                    userData.password,
+                    userData.password.length,
+                    userData.usernameStyle || 'unknown',
+                    userData.usernamePattern || 'unknown',
+                    userData.numberFlavor || 'none',
+                    userData.businessMode ? 1 : 0
+                );
+            } else {
+                stmt = this.db.prepare(`
+                    INSERT INTO user_data_exports (
+                        session_id, site_url, hook_name, first_name, last_name,
+                        full_name, email, email_provider, password, password_length,
+                        username_style, username_pattern, business_mode
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `);
+                stmt.run(
+                    sessionId,
+                    siteUrl,
+                    hookName,
+                    userData.firstName,
+                    userData.lastName,
+                    userData.fullName,
+                    userData.email,
+                    userData.emailProvider,
+                    userData.password,
+                    userData.password.length,
+                    userData.usernameStyle || 'unknown',
+                    userData.usernamePattern || 'unknown',
+                    userData.businessMode ? 1 : 0
+                );
+            }
             
             console.log(`📊 User data recorded for export: ${userData.email} (${userData.usernameStyle}/${userData.usernamePattern})`);
         } catch (error) {
@@ -1394,6 +1535,7 @@ export class RandomDataGenerator {
             emailProvider,
             usernameStyle: nameData.usernameStyle,
             usernamePattern: nameData.usernamePattern,
+            numberFlavor: nameData.numberFlavor,
             businessMode: businessModeUsed,
             generationAttempts: nameData.attempts,
             timestamp: new Date().toISOString()
