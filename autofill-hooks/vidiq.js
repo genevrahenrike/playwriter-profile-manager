@@ -16,7 +16,7 @@ export default {
         patternWeights: {
             concatenated: 3,    // erikmueller2847 - common for creative platforms
             separated: 4,       // erik.mueller.47 - professional look, increased weight
-            business: 2,        // j.doe, erik.s - professional, clean
+            business: 3.5,      // j.doe, erik.s - increased for more professional business emails
             handle: 1           // larimo, venaro - reduced for this platform
         },
         
@@ -27,12 +27,21 @@ export default {
             d4: 0.1             // Four digits less common for this use case
         },
         
+        // Business format weights - make super short aliases very rare
+        businessFormatWeights: {
+            full: 1,            // firstname.lastname style
+            alias: 1            // various alias styles
+        },
+        
+        // Control business alias patterns - make super short ones very rare
+        businessAliasPatterns: null, // Use default patterns with weighted selection
+        
         // Professional email provider preferences for VidIQ
         emailProviders: [
             // Major providers (higher weight for video platform)
             { domain: 'gmail.com', weight: 35 },
             { domain: 'outlook.com', weight: 15 },
-            { domain: 'yahoo.com', weight: 12 },
+            { domain: 'yahoo.com', weight: 6 },
             { domain: 'hotmail.com', weight: 8 },
             
             // Professional/privacy providers

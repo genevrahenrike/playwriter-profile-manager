@@ -24,7 +24,7 @@ export class RandomDataGenerator {
             patternWeights: {
                 concatenated: 4,    // Most common, clean firstname+lastname
                 separated: 2.5,     // Common, modern look
-                business: 1.5,      // Increased from 0.8 - More professional contexts
+                business: 2.5,      // Increased for more professional contexts (~10% more business emails)
                 handle: 3,          // Very common in personal emails, distinctive
                 ...(options.patternWeights || {})
             },
@@ -128,7 +128,7 @@ export class RandomDataGenerator {
         return [
             // Major providers (higher weight)
             { domain: 'gmail.com', weight: 30 },
-            { domain: 'yahoo.com', weight: 15 },
+            { domain: 'yahoo.com', weight: 8 },
             { domain: 'outlook.com', weight: 12 },
             { domain: 'hotmail.com', weight: 10 },
             
@@ -1155,18 +1155,27 @@ export class RandomDataGenerator {
 
         const supportedAlias = this.config.businessAliasPatterns || [
             'flast',     // jdoe
-            'f.last',    // j.doe
+            'f.last',    // j.doe  
             'first.l',   // john.d
             'fl',        // jd (highly abbreviated)
             'lf'         // dj (highly abbreviated)
         ];
+        
+        // Weight patterns to make super short aliases very rare
+        const aliasWeights = {
+            'flast': 10,    // Most common
+            'f.last': 8,    // Common professional style
+            'first.l': 6,   // Moderately common
+            'fl': 0.5,      // Very rare - super short
+            'lf': 0.5       // Very rare - super short
+        };
 
         let userPart;
         if (chosenFormat === 'full') {
             userPart = `${first}${separator}${last}`;
         } else {
-            // alias
-            const alias = this.randomChoice(supportedAlias);
+            // alias - use weighted selection to make super short aliases rare
+            const alias = this.weightedChoice(aliasWeights) || 'flast';
             switch (alias) {
                 case 'flast':
                     userPart = `${f}${last}`; break;
