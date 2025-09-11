@@ -24,7 +24,7 @@ export class RandomDataGenerator {
             patternWeights: {
                 concatenated: 4,    // Most common, clean firstname+lastname
                 separated: 2.5,     // Common, modern look
-                business: 0.8,      // Less common, professional contexts
+                business: 1.5,      // Increased from 0.8 - More professional contexts
                 handle: 3,          // Very common in personal emails, distinctive
                 ...(options.patternWeights || {})
             },
@@ -1001,13 +1001,16 @@ export class RandomDataGenerator {
     /**
      * Select weighted random email provider
      */
-    getRandomEmailProvider(businessMode = false) {
+    getRandomEmailProvider(businessMode = false, emailProviders = null, businessEmailProviders = null) {
+        const baseProviders = emailProviders || this.config.emailProviders;
+        const bizProviders = businessEmailProviders || this.config.businessEmailProviders;
+        
         let providers;
         
         if (businessMode) {
-            providers = [...this.config.businessEmailProviders, ...this.config.customEmailProviders];
+            providers = [...bizProviders, ...this.config.customEmailProviders];
         } else {
-            providers = [...this.config.emailProviders, ...this.config.customEmailProviders];
+            providers = [...baseProviders, ...this.config.customEmailProviders];
         }
         
         const totalWeight = providers.reduce((sum, p) => sum + (p.weight || 1), 0);
@@ -1016,11 +1019,11 @@ export class RandomDataGenerator {
         for (const provider of providers) {
             random -= (provider.weight || 1);
             if (random <= 0) {
-                return provider.domain;
+                return provider;
             }
         }
         
-        return providers[0].domain; // fallback
+        return providers[0]; // fallback
     }
     
     /**
@@ -1317,8 +1320,9 @@ export class RandomDataGenerator {
             usernameStyle = 'business';
             usernamePattern = 'business';
         } else if (configStyle === 'auto') {
-            // Weighted choice among patterns
-            const chosen = this.weightedChoice(this.config.patternWeights) || 'concatenated';
+            // Weighted choice among patterns (use provided weights or config defaults)
+            const patternWeights = options.patternWeights || this.config.patternWeights;
+            const chosen = this.weightedChoice(patternWeights) || 'concatenated';
             if (chosen === 'business') {
                 usernameStyle = 'business';
                 usernamePattern = 'business';
@@ -1355,8 +1359,11 @@ export class RandomDataGenerator {
             if (options.numberFlavor === 'none' || options.numberFlavor === 'd2' || options.numberFlavor === 'd4') {
                 numberFlavor = options.numberFlavor;
             } else {
-                const byStyle = (this.config.numberFlavorWeightsByStyle || {})[usernameStyle];
-                const weights = byStyle && Object.keys(byStyle).length ? byStyle : this.numberFlavorWeights;
+                // Use number flavor weights from options or config
+                const numberFlavorWeightsByStyle = options.numberFlavorWeightsByStyle || this.config.numberFlavorWeightsByStyle;
+                const numberFlavorWeights = options.numberFlavorWeights || this.numberFlavorWeights;
+                const byStyle = (numberFlavorWeightsByStyle || {})[usernameStyle];
+                const weights = byStyle && Object.keys(byStyle).length ? byStyle : numberFlavorWeights;
                 numberFlavor = this.weightedChoice(weights) || 'd2';
             }
         }
@@ -1514,10 +1521,20 @@ export class RandomDataGenerator {
      * Generate complete random user data
      */
     generateUserData(options = {}) {
-    const nameData = this.generateUniqueName(options);
-    const businessModeUsed = (options.businessMode !== undefined ? options.businessMode : this.config.businessMode) || (nameData.usernameStyle === 'business');
-    const emailProvider = this.getRandomEmailProvider(businessModeUsed);
-        const email = `${nameData.fullName}@${emailProvider}`;
+        // Merge hook-provided weights with defaults
+        const mergedOptions = {
+            ...options,
+            patternWeights: options.patternWeights || this.config.patternWeights,
+            numberFlavorWeights: options.numberFlavorWeights || this.config.numberFlavorWeights,
+            numberFlavorWeightsByStyle: options.numberFlavorWeightsByStyle || this.config.numberFlavorWeightsByStyle,
+            emailProviders: options.emailProviders || this.config.emailProviders,
+            businessEmailProviders: options.businessEmailProviders || this.config.businessEmailProviders
+        };
+        
+        const nameData = this.generateUniqueName(mergedOptions);
+        const businessModeUsed = (options.businessMode !== undefined ? options.businessMode : this.config.businessMode) || (nameData.usernameStyle === 'business');
+        const emailProvider = this.getRandomEmailProvider(businessModeUsed, mergedOptions.emailProviders, mergedOptions.businessEmailProviders);
+        const email = `${nameData.fullName}@${emailProvider.domain}`;
         const password = this.generatePassword(options.password);
         
         // Record usage if tracking enabled
@@ -1532,7 +1549,7 @@ export class RandomDataGenerator {
             fullName: nameData.fullName,
             email,
             password,
-            emailProvider,
+            emailProvider: emailProvider.domain,
             usernameStyle: nameData.usernameStyle,
             usernamePattern: nameData.usernamePattern,
             numberFlavor: nameData.numberFlavor,

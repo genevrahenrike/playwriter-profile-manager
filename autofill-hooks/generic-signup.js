@@ -11,6 +11,30 @@ export default {
     generationOptions: {
         usePrefix: false,       // Set to true for numbered prefixes (01, 02, etc.)
         usePostfix: true,       // Set to false to disable postfix numbers
+        
+        // Custom pattern weights (uncomment to override defaults)
+        // patternWeights: {
+        //     concatenated: 4,    // erikmueller2847 - clean firstname+lastname
+        //     separated: 2.5,     // erik.mueller.47 - modern professional look  
+        //     business: 1.5,      // j.doe, erik.s - professional contexts
+        //     handle: 3           // larimo, venaro - distinctive personal style
+        // },
+        
+        // Custom number flavor weights (uncomment to override defaults)
+        // numberFlavorWeights: {
+        //     none: 4,            // No numbers - clean professional look
+        //     d2: 1.5,            // Two digits (10-99)
+        //     d4: 0.2             // Four digits (1000-9999)
+        // },
+        
+        // Custom email provider weights (uncomment to override defaults)
+        // emailProviders: [
+        //     { domain: 'gmail.com', weight: 30 },
+        //     { domain: 'yahoo.com', weight: 15 },
+        //     { domain: 'outlook.com', weight: 12 },
+        //     // ... add more providers as needed
+        // ],
+        
         password: {
             minLength: 14,      // Minimum password length
             maxLength: 18,      // Maximum password length

@@ -292,6 +292,12 @@ export class AutofillHookSystem {
             businessAliasPatterns: hook.generationOptions?.businessAliasPatterns,
             handleSyllables: hook.generationOptions?.handleSyllables,
             handleBlocklist: hook.generationOptions?.handleBlocklist,
+            // Allow per-hook number flavor weight overrides
+            numberFlavorWeights: hook.generationOptions?.numberFlavorWeights,
+            numberFlavorWeightsByStyle: hook.generationOptions?.numberFlavorWeightsByStyle,
+            // Allow per-hook email provider overrides
+            emailProviders: hook.generationOptions?.emailProviders,
+            businessEmailProviders: hook.generationOptions?.businessEmailProviders,
             sessionId: sessionId,
             siteUrl: siteUrl,
             hookName: hook.name

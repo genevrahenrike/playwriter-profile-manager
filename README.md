@@ -154,35 +154,78 @@ Run repeated automated signups with a single attempt per profile. Defaults to he
 # Headed (default), delete failed profiles automatically
 npx ppm batch --template vidiq-clean \
     --count 5 \
-    --prefix auto-run \
-    --timeout 120000 \
-    --captcha-grace 45000 \
+    --prefix auto \
     --delete-on-failure
 
 # Long run (cache cleanup enabled by default)
 npx ppm batch --template vidiq-clean \
     --count 20 \
-    --prefix long-run \
+    --prefix auto \
     --delete-on-failure
 
 # Keep full cache for analysis (only for short runs)
 npx ppm batch --template vidiq-clean \
     --count 3 \
-    --prefix full-cache \
+    --prefix auto \
     --no-clear-cache
 
 # Headless variant (optional), keep failed profiles
 npx ppm batch --template vidiq-clean \
     --count 3 \
-    --prefix auto-headless \
+    --prefix auto \
     --headless
 
 # Resume from existing prefix lineage (skip used indices)
 npx ppm batch --template vidiq-clean \
     --count 3 \
-    --prefix auto-run \
+    --prefix auto \
     --resume
 ```
+
+**Profile Naming**: Uses simple autoincremental numbering (e.g., `auto1`, `auto2`, `auto3`, etc.) for easy identification and management.
+
+Batch options:
+- `--template <name>`: Template profile to clone from (e.g., `vidiq-clean`).
+- `--count <n>`: Number of profiles to create (default: 1).
+- `--prefix <prefix>`: Profile name prefix (default: `auto`). Creates profiles like `{prefix}1`, `{prefix}2`, etc.
+- `--resume`: Continue numbering by skipping indices already used by profiles with the same prefix. Useful to re-run batches later without name conflicts while keeping the same prefix lineage.
+- `--timeout <ms>`: Per-run success timeout (default: 120000).
+- `--captcha-grace <ms>`: Extra grace time if CAPTCHA detected (default: 45000).
+- `--headless`: Run in headless mode (default: headed).
+- `--delete-on-failure`: Delete the profile if the run fails.
+- `--no-clear-cache`: Disable cache clearing for successful profiles (cache cleanup enabled by default).
+
+Behavior:
+- Single attempt per profile (no headed retry cycle).
+- Profiles are permanent by default; successful profiles are preserved.
+- **Cache cleanup enabled by default** for successful profiles to prevent disk space issues during long runs (disable with `--no-clear-cache`).
+- On failure with `--delete-on-failure`, the profile is removed.
+- Writes a results file at `automation-results/batch-<prefix>-<timestamp>.jsonl` with per-attempt entries:
+    - `timestamp, batchId, run, runId, profileId, profileName, attempt, headless, success, reason`
+- Saves a best-effort screenshot on timeout to `automation-results/`.
+
+Success detection:
+- Automation completion events (from the automation hook system).
+- 200/201 responses for `api.vidiq.com/subscriptions/active` or `/subscriptions/stripe/next-subscription`.
+
+### Profile Name Migration
+
+If you have existing timestamp-based profiles from older versions, you can migrate them to the new autoincremental naming:
+
+```bash
+# Migrate timestamp-based profile names to autoincremental (auto-2025-...01 -> auto1)
+npx ppm migrate-names
+
+# Skip confirmation prompt
+npx ppm migrate-names -y
+```
+
+This will:
+- Convert `auto-2025-09-11T02-37-46-464Z-01` → `auto1`
+- Convert `auto-2025-09-11T02-38-18-236Z-02` → `auto2`
+- etc.
+- Also rename corresponding request capture files
+- Preserve chronological order (oldest profiles get lowest numbers)
 
 Batch options:
 - `--template <name>`: Template profile to clone from (e.g., `vidiq-clean`).

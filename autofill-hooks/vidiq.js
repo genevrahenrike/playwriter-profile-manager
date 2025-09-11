@@ -11,6 +11,45 @@ export default {
     generationOptions: {
         usePrefix: false,      // No prefix for cleaner names
         usePostfix: true,      // Use postfix for uniqueness
+        
+        // Custom pattern weights for VidIQ - favor business/professional styles
+        patternWeights: {
+            concatenated: 3,    // erikmueller2847 - common for creative platforms
+            separated: 4,       // erik.mueller.47 - professional look, increased weight
+            business: 2,        // j.doe, erik.s - professional, clean
+            handle: 1           // larimo, venaro - reduced for this platform
+        },
+        
+        // Custom number flavor weights for VidIQ
+        numberFlavorWeights: {
+            none: 2,            // Clean professional look
+            d2: 3,              // Two digits common for video platforms
+            d4: 0.1             // Four digits less common for this use case
+        },
+        
+        // Professional email provider preferences for VidIQ
+        emailProviders: [
+            // Major providers (higher weight for video platform)
+            { domain: 'gmail.com', weight: 35 },
+            { domain: 'outlook.com', weight: 15 },
+            { domain: 'yahoo.com', weight: 12 },
+            { domain: 'hotmail.com', weight: 8 },
+            
+            // Professional/privacy providers
+            { domain: 'protonmail.com', weight: 6 },
+            { domain: 'icloud.com', weight: 8 },
+            { domain: 'proton.me', weight: 1 }, // Minimal for professional use
+            
+            // Alternative providers
+            { domain: 'tutanota.com', weight: 2 },
+            { domain: 'yandex.com', weight: 2 },
+            { domain: 'mail.com', weight: 1 },
+            { domain: 'zoho.com', weight: 1 },
+            { domain: 'fastmail.com', weight: 1 },
+            { domain: 'gmx.com', weight: 0.5 },
+            { domain: 'mailbox.org', weight: 0.2 }
+        ],
+        
         password: {
             minLength: 12,
             maxLength: 16,

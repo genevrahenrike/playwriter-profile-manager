@@ -829,8 +829,7 @@ program
         };
 
         const generateName = (idx) => {
-            const ts = new Date().toISOString().replace(/[:.]/g, '-');
-            return `${prefix}-${ts}-${String(idx).padStart(2, '0')}`;
+            return `${prefix}${idx}`;
         };
 
         const waitForOutcome = async (launcher, sessionId, context) => {
@@ -919,9 +918,10 @@ program
             try {
                 const existing = await pmLocal.listProfiles();
                 const indices = existing
-                    .filter(p => typeof p.name === 'string' && p.name.startsWith(`${prefix}-`))
+                    .filter(p => typeof p.name === 'string' && p.name.startsWith(prefix))
                     .map(p => {
-                        const m = p.name.match(/-(\d{1,})$/);
+                        // Extract number after prefix (e.g., "auto1" -> 1, "auto42" -> 42)
+                        const m = p.name.match(new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\d+)$`));
                         return m ? parseInt(m[1], 10) : null;
                     })
                     .filter(n => Number.isInteger(n));
@@ -1693,6 +1693,39 @@ program
             }
         } catch (error) {
             console.error(chalk.red('✗ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+// Profile name migration command
+program
+    .command('migrate-names')
+    .description('Migrate timestamp-based profile names to autoincremental numbering (auto-2025-...01 -> auto1)')
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .action(async (options) => {
+        try {
+            const { migrateProfileNames } = await import('../migrate-profile-names.js');
+            
+            if (!options.yes) {
+                const inquirer = await import('inquirer');
+                const { confirm } = await inquirer.default.prompt([
+                    {
+                        type: 'confirm',
+                        name: 'confirm',
+                        message: 'This will rename timestamp-based profiles to autoincremental numbering. Continue?',
+                        default: false
+                    }
+                ]);
+                
+                if (!confirm) {
+                    console.log('Migration cancelled.');
+                    return;
+                }
+            }
+            
+            await migrateProfileNames();
+        } catch (error) {
+            console.error(chalk.red(`❌ Migration failed: ${error.message}`));
             process.exit(1);
         }
     });
