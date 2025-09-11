@@ -146,6 +146,18 @@ npx ppm batch --template vidiq-clean \
     --captcha-grace 45000 \
     --delete-on-failure
 
+# Long run (cache cleanup enabled by default)
+npx ppm batch --template vidiq-clean \
+    --count 20 \
+    --prefix long-run \
+    --delete-on-failure
+
+# Keep full cache for analysis (only for short runs)
+npx ppm batch --template vidiq-clean \
+    --count 3 \
+    --prefix full-cache \
+    --no-clear-cache
+
 # Headless variant (optional), keep failed profiles
 npx ppm batch --template vidiq-clean \
     --count 3 \
@@ -163,16 +175,17 @@ Batch options:
 - `--template <name>`: Template profile to clone from (e.g., `vidiq-clean`).
 - `--count <n>`: Number of profiles to create (default: 1).
 - `--prefix <prefix>`: Profile name prefix (timestamp + index appended).
-- `--prefix <prefix>`: Profile name prefix (timestamp + index appended).
 - `--resume`: Continue numbering by skipping indices already used by profiles with the same prefix. Useful to re-run batches later without name conflicts while keeping the same prefix lineage.
 - `--timeout <ms>`: Per-run success timeout (default: 120000).
 - `--captcha-grace <ms>`: Extra grace time if CAPTCHA detected (default: 45000).
 - `--headless`: Run in headless mode (default: headed).
 - `--delete-on-failure`: Delete the profile if the run fails.
+- `--no-clear-cache`: Disable cache clearing for successful profiles (cache cleanup enabled by default).
 
 Behavior:
 - Single attempt per profile (no headed retry cycle).
 - Profiles are permanent by default; successful profiles are preserved.
+- **Cache cleanup enabled by default** for successful profiles to prevent disk space issues during long runs (disable with `--no-clear-cache`).
 - On failure with `--delete-on-failure`, the profile is removed.
 - Writes a results file at `automation-results/batch-<prefix>-<timestamp>.jsonl` with per-attempt entries:
     - `timestamp, batchId, run, runId, profileId, profileName, attempt, headless, success, reason`

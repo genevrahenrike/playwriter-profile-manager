@@ -788,6 +788,7 @@ program
     .option('--captcha-grace <ms>', 'Extra grace if CAPTCHA detected (ms)', '45000')
     .option('--headless', 'Run in headless mode (default: headed)')
     .option('--delete-on-failure', 'Delete the profile if the run fails')
+    .option('--no-clear-cache', 'Disable cache clearing for successful profiles (cache cleanup enabled by default)')
     .action(async (options) => {
         const pathMod = (await import('path')).default;
         const fsx = (await import('fs-extra')).default;
@@ -801,6 +802,8 @@ program
     const runHeadless = !!options.headless;
     const deleteOnFailure = !!options.deleteOnFailure;
     const resume = !!options.resume;
+        // Clear cache on success by default for space efficiency (can be disabled with --no-clear-cache)
+        const clearCacheOnSuccess = !options.noClearCache;
 
         const resultsDir = pathMod.resolve('./automation-results');
         await fsx.ensureDir(resultsDir);
@@ -897,6 +900,9 @@ program
 
         console.log(chalk.cyan(`🚀 Starting batch: template=${template}, count=${total}, prefix=${prefix}`));
         console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
+        if (clearCacheOnSuccess) {
+            console.log(chalk.dim(`🧹 Cache cleanup enabled for successful profiles (saves disk space)`));
+        }
 
     let created = 0;
     let successes = 0;
@@ -945,6 +951,16 @@ program
                 if (outcome.success) {
                     successes++;
                     console.log(chalk.green(`✅ Success: ${name}`));
+                    
+                    // Clear cache for successful profiles to save disk space
+                    if (clearCacheOnSuccess && profileRecord?.id) {
+                        try {
+                            const cacheClearResult = await pmLocal.clearProfileCache(profileRecord.id);
+                            console.log(chalk.dim(`🧹 Cache cleared for successful profile: ${name}`));
+                        } catch (cacheError) {
+                            console.log(chalk.yellow(`⚠️  Cache clear failed for ${name}: ${cacheError.message}`));
+                        }
+                    }
                 } else {
                     console.log(chalk.red(`❌ Failed: ${name} (${outcome.reason})`));
                     if (deleteOnFailure && profileRecord?.id) {
