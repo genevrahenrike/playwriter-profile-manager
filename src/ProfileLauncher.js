@@ -135,12 +135,12 @@ export class ProfileLauncher {
         const originalExtensionPath = './extensions/pachckjkecffpdphbpmfolblodfkgbhl/3.151.0_0';
         const profileExtensionPath = `./profiles/data/vidiq-extensions/${profileName}-vidiq-extension`;
         
-        // Check if profile-specific extension already exists
+        // Always create fresh extension copy (remove any existing one first)
         if (await fs.pathExists(profileExtensionPath)) {
-            return profileExtensionPath;
+            await fs.remove(profileExtensionPath);
         }
         
-        console.log(`🔧 Creating profile-specific VidIQ extension for: ${profileName}`);
+        console.log(`🔧 Creating fresh VidIQ extension copy for: ${profileName}`);
         
         // Create directory for profile extensions
         await fs.ensureDir(path.dirname(profileExtensionPath));
@@ -384,6 +384,9 @@ export class ProfileLauncher {
         });
 
         try {
+            // Ensure template is decompressed before copying
+            await this.profileManager.ensureDecompressed(template);
+            
             // Copy template profile data to temp profile
             const templateDataDir = path.join(this.profileManager.baseDir, 'data', template.id);
             const tempDataDir = path.join(this.profileManager.baseDir, 'data', tempProfile.id);
@@ -440,10 +443,18 @@ export class ProfileLauncher {
             stealth = false, // Enable stealth features
             stealthPreset = 'balanced', // Stealth preset
             stealthConfig = null, // Custom stealth configuration
-            isTemporary = false // Mark as temporary profile for cleanup
+            isTemporary = false, // Mark as temporary profile for cleanup
+            disableCompression = undefined // Optional override per launch
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
+        // Ensure profile directory exists (decompress if archived)
+        await this.profileManager.ensureDecompressed(profile);
+        // Optionally override compression preference for this profile
+        if (typeof disableCompression === 'boolean') {
+            await this.profileManager.setCompressionPreference(profile.id, !disableCompression);
+            profile.metadata = { ...(profile.metadata || {}), compressOnClose: !disableCompression };
+        }
         const sessionId = await this.profileManager.startSession(profile.id, 'automation');
 
         // Store current profile name for extension customization
@@ -741,6 +752,18 @@ export class ProfileLauncher {
                 await this.profileManager.deleteProfile(browserInfo.profile.id);
             }
             
+            // Compress on close if enabled and not a temporary profile
+            try {
+                const compressPref = browserInfo.profile.metadata?.compressOnClose !== false;
+                if (!browserInfo.isTemporary && browserInfo.browserType === 'chromium' && compressPref) {
+                    console.log(`📦 Compressing profile data: ${browserInfo.profile.name}`);
+                    await this.profileManager.compressProfile(browserInfo.profile);
+                    console.log(`✅ Profile compressed`);
+                }
+            } catch (zipErr) {
+                console.warn(`⚠️  Profile compression failed: ${zipErr.message}`);
+            }
+            
             // Clear cache if requested
             let cacheCleared = null;
             if (clearCache && !browserInfo.isTemporary) {
@@ -780,6 +803,17 @@ export class ProfileLauncher {
             
             // Stop request capture monitoring
             await this.requestCaptureSystem.cleanup(sessionId);
+            
+            // Clean up profile-specific VidIQ extension
+            try {
+                const vidiqExtensionPath = `./profiles/data/vidiq-extensions/${browserInfo.profile.name}-vidiq-extension`;
+                if (await fs.pathExists(vidiqExtensionPath)) {
+                    await fs.remove(vidiqExtensionPath);
+                    console.log(`🧹 Cleaned up VidIQ extension for: ${browserInfo.profile.name}`);
+                }
+            } catch (error) {
+                console.warn(`⚠️  Could not clean up VidIQ extension: ${error.message}`);
+            }
             
             return {
                 profile: browserInfo.profile,

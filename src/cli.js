@@ -16,8 +16,16 @@ inquirer.registerPrompt('autocomplete', autocomplete);
 const program = new Command();
 const profileManager = new ProfileManager();
 const chromiumImporter = new ChromiumImporter();
-// Create default ProfileLauncher (will be recreated with specific options in commands that need it)
-let profileLauncher = new ProfileLauncher(profileManager);
+// ProfileLauncher will be created only when needed to avoid loading all systems
+let profileLauncher = null;
+
+// Helper function to get ProfileLauncher instance
+function getProfileLauncher(options = {}) {
+    if (!profileLauncher) {
+        profileLauncher = new ProfileLauncher(profileManager, options);
+    }
+    return profileLauncher;
+}
 
 // Profile selector utility function
 async function selectProfile(message = 'Select a profile:', allowCancel = false) {
@@ -91,6 +99,7 @@ program
     .option('-n, --name <name>', 'Profile name')
     .option('-d, --description <description>', 'Profile description')
     .option('-b, --browser <type>', 'Browser type (chromium, firefox, webkit)', 'chromium')
+    .option('--no-compress', 'Disable on-close compression for this profile')
     .action(async (options) => {
         try {
             let name = options.name;
@@ -116,7 +125,8 @@ program
             
             const profile = await profileManager.createProfile(name, {
                 description,
-                browserType: options.browser
+                browserType: options.browser,
+                disableCompression: options.compress === false
             });
             
             console.log(chalk.green('✓ Profile created successfully!'));
@@ -146,7 +156,6 @@ program
                 console.log(chalk.yellow('No profiles found. Create one with: ppm create'));
                 return;
             }
-
             // Sort profiles based on options
             const sortField = options.sort.toLowerCase();
             const isDescending = options.desc;
@@ -181,7 +190,7 @@ program
                         comparison = a.name.localeCompare(b.name);
                 }
                 
-                return isDescending ? -comparison : comparison;
+        return isDescending ? -comparison : comparison;
             });
 
             const sortDisplay = {
@@ -485,6 +494,7 @@ program
     .option('--no-autofill-stop-on-success', 'Disable stopping autofill after success (default: enabled)')
     .option('--autofill-enforce-mode', 'Continue autofill monitoring even after success for race condition protection')
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
+    .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .action(async (profileName, options) => {
         try {
@@ -536,7 +546,8 @@ program
                 autoCloseOnSuccess: options.autoCloseOnSuccess || false,
                 autoCloseOnFailure: options.autoCloseOnFailure || false,
                 autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
-                captchaGraceMs: parseInt(options.captchaGrace) || 45000
+                captchaGraceMs: parseInt(options.captchaGrace) || 45000,
+                disableCompression: options.compress === false
             };
 
             // Show extension-related info
@@ -657,6 +668,7 @@ program
     .option('--autofill-enforce-mode', 'Continue autofill monitoring even after success for race condition protection')
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
+    .option('--no-compress', 'Disable compress-on-close for this instance')
     .action(async (template, instanceName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -667,7 +679,7 @@ program
                 autofillCooldown: parseInt(options.autofillCooldown) || 30000
             };
             
-            const templateProfileLauncher = new ProfileLauncher(profileManager, templateLauncherOptions);            // Show autofill configuration if non-default
+            const templateProfileLauncher = getProfileLauncher(templateLauncherOptions);            // Show autofill configuration if non-default
             if (options.autofillStopOnSuccess === false || options.autofillEnforceMode) {
                 console.log(chalk.blue('🎯 Autofill Configuration:'));
                 console.log(chalk.blue(`   Stop on Success: ${options.autofillStopOnSuccess !== false ? 'enabled (default)' : 'disabled'}`));
@@ -683,7 +695,7 @@ program
                 autofillCooldown: parseInt(options.autofillCooldown) || 30000
             };
             
-            profileLauncher = new ProfileLauncher(profileManager, launcherOptions);
+            const profileLauncher = getProfileLauncher(launcherOptions);
             console.log(chalk.blue(`🎭 Launching template instance: ${instanceName}`));
             console.log(chalk.dim(`Template: ${template}`));
             console.log(chalk.dim(`Profile type: ${options.temp ? 'TEMPORARY (will be deleted)' : 'PERMANENT (will be saved)'}`));
@@ -708,7 +720,8 @@ program
                 autoCloseOnSuccess: options.autoCloseOnSuccess || false,
                 autoCloseOnFailure: options.autoCloseOnFailure || false,
                 autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
-                captchaGraceMs: parseInt(options.captchaGrace) || 45000
+                captchaGraceMs: parseInt(options.captchaGrace) || 45000,
+                disableCompression: options.compress === false
             };
 
             const result = await templateProfileLauncher.launchFromTemplate(template, instanceName, launchOptions);
@@ -992,6 +1005,7 @@ program
     .argument('[source]', 'Source profile name or ID (optional - will show selection if not provided)')
     .argument('[name]', 'New profile name (optional - will prompt if not provided)')
     .option('-d, --description <description>', 'Description for cloned profile')
+    .option('--no-compress', 'Disable compress-on-close for cloned profile')
     .action(async (source, name, options) => {
         try {
             // If no source profile provided, show selector
@@ -1016,7 +1030,8 @@ program
             const clonedProfile = await profileManager.cloneProfile(
                 source, 
                 name, 
-                options.description
+                options.description,
+                { disableCompression: options.compress === false }
             );
             
             console.log(chalk.green('✓ Profile cloned successfully!'));
@@ -1118,7 +1133,7 @@ program
     .description('Show active browser sessions')
     .action(async () => {
         try {
-            const sessions = profileLauncher.getActiveSessions();
+            const sessions = getProfileLauncher().getActiveSessions();
             
             if (sessions.length === 0) {
                 console.log(chalk.yellow('No active sessions.'));
@@ -1384,7 +1399,7 @@ program
     .action(async (options) => {
         try {
             if (options.status) {
-                const captureStatus = profileLauncher.getRequestCaptureStatus();
+                const captureStatus = getProfileLauncher().getRequestCaptureStatus();
                 
                 console.log(chalk.blue('🕸️  Request Capture System Status'));
                 console.log(chalk.blue('===================================\n'));
@@ -1416,7 +1431,7 @@ program
             }
             
             if (options.list) {
-                const capturedRequests = profileLauncher.getCapturedRequests(options.list);
+                const capturedRequests = getProfileLauncher().getCapturedRequests(options.list);
                 
                 if (capturedRequests.length === 0) {
                     console.log(chalk.yellow('⚠️  No captured requests found for this session'));
@@ -1449,7 +1464,7 @@ program
             }
             
             if (options.export) {
-                const capturedRequests = profileLauncher.getCapturedRequests(options.export);
+                const capturedRequests = getProfileLauncher().getCapturedRequests(options.export);
                 if (capturedRequests.length === 0) {
                     console.log(chalk.yellow('⚠️  No captured requests found for this session'));
                     return;
@@ -1494,6 +1509,164 @@ program
             
         } catch (error) {
             console.error(chalk.red('❌ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+// Compression management command
+program
+    .command('compress')
+    .description('Manage profile compression')
+    .option('-p, --profile <name>', 'Profile name or ID to process (omit to process ALL profiles)')
+    .option('--enable', 'Enable compress-on-close for profile')
+    .option('--disable', 'Disable compress-on-close for profile')
+    .option('--run', 'Compress now (ALL profiles if no --profile specified)')
+    .option('--decompress', 'Decompress now (ALL profiles if no --profile specified)')
+    .option('-y, --yes', 'Skip confirmation prompts for batch operations')
+    .action(async (options) => {
+        try {
+            if (options.enable && options.disable) {
+                throw new Error('Use either --enable or --disable, not both');
+            }
+            if (options.run && options.decompress) {
+                throw new Error('Use either --run or --decompress, not both');
+            }
+
+            // Handle preference changes
+            if (options.profile && (options.enable || options.disable)) {
+                const updated = await profileManager.setCompressionPreference(options.profile, !options.disable);
+                console.log(chalk.green(`✓ Compression preference updated for ${updated.name}: ${updated.metadata.compressOnClose ? 'ENABLED' : 'DISABLED'}`));
+                return;
+            }
+
+            // Handle compression operations
+            if (options.run) {
+                if (options.profile) {
+                    const p = await profileManager.getProfile(options.profile);
+                    if (await profileManager.isCompressed(p)) {
+                        console.log(chalk.yellow(`Profile ${p.name} is already compressed`));
+                        return;
+                    }
+                    console.log(chalk.blue(`Compressing profile: ${p.name}...`));
+                    const res = await profileManager.compressProfile(p);
+                    if (res.skipped) {
+                        console.log(chalk.yellow(`⚠ Skipped: ${res.reason}`));
+                    } else {
+                        console.log(chalk.green(`✓ Compressed ${p.name}`));
+                    }
+                } else {
+                    if (!options.yes) {
+                        const confirm = await inquirer.prompt([{
+                            type: 'confirm',
+                            name: 'proceed',
+                            message: 'Compress all uncompressed profiles?',
+                            default: false
+                        }]);
+                        if (!confirm.proceed) {
+                            console.log(chalk.yellow('Operation cancelled'));
+                            return;
+                        }
+                    }
+                    console.log(chalk.blue('Compressing all profiles...'));
+                    const results = await profileManager.compressAllProfiles();
+                    const successful = results.filter(r => r.success);
+                    const skipped = results.filter(r => r.skipped);
+                    const failed = results.filter(r => r.success === false);
+                    
+                    console.log(chalk.green(`✓ Compressed: ${successful.length} profile(s)`));
+                    if (skipped.length > 0) {
+                        console.log(chalk.yellow(`⚠ Skipped: ${skipped.length} profile(s)`));
+                    }
+                    if (failed.length > 0) {
+                        console.log(chalk.red(`✗ Failed: ${failed.length} profile(s)`));
+                        failed.forEach(f => console.log(chalk.red(`  ${f.profileName}: ${f.error}`)));
+                    }
+                }
+            } else if (options.decompress) {
+                if (options.profile) {
+                    const p = await profileManager.getProfile(options.profile);
+                    if (!(await profileManager.isCompressed(p))) {
+                        console.log(chalk.yellow(`Profile ${p.name} is not compressed`));
+                        return;
+                    }
+                    console.log(chalk.blue(`Decompressing profile: ${p.name}...`));
+                    const res = await profileManager.decompressProfile(p);
+                    if (res.skipped) {
+                        console.log(chalk.yellow(`⚠ Skipped: ${res.reason}`));
+                    } else {
+                        console.log(chalk.green(`✓ Decompressed ${p.name}`));
+                    }
+                } else {
+                    if (!options.yes) {
+                        const confirm = await inquirer.prompt([{
+                            type: 'confirm',
+                            name: 'proceed',
+                            message: 'Decompress all compressed profiles?',
+                            default: false
+                        }]);
+                        if (!confirm.proceed) {
+                            console.log(chalk.yellow('Operation cancelled'));
+                            return;
+                        }
+                    }
+                    console.log(chalk.blue('Decompressing all profiles...'));
+                    const results = await profileManager.decompressAllProfiles();
+                    const successful = results.filter(r => r.success);
+                    const skipped = results.filter(r => r.skipped);
+                    const failed = results.filter(r => r.success === false);
+                    
+                    console.log(chalk.green(`✓ Decompressed: ${successful.length} profile(s)`));
+                    if (skipped.length > 0) {
+                        console.log(chalk.yellow(`⚠ Skipped: ${skipped.length} profile(s)`));
+                    }
+                    if (failed.length > 0) {
+                        console.log(chalk.red(`✗ Failed: ${failed.length} profile(s)`));
+                        failed.forEach(f => console.log(chalk.red(`  ${f.profileName}: ${f.error}`)));
+                    }
+                }
+            } else if (!options.profile && !options.enable && !options.disable && !options.run && !options.decompress) {
+                // Show compression status summary
+                const profiles = await profileManager.listProfiles();
+                let compressed = 0, total = profiles.length;
+                let totalSize = 0, compressedSize = 0;
+                
+                console.log(chalk.blue('\n📦 Profile Compression Status:\n'));
+                
+                for (const p of profiles) {
+                    const isComp = await profileManager.isCompressed(p);
+                    if (isComp) compressed++;
+                    
+                    // Calculate sizes
+                    const { dirPath, archivePath } = profileManager.getProfileStoragePaths(p);
+                    try {
+                        if (isComp && await fs.pathExists(archivePath)) {
+                            const stats = await fs.stat(archivePath);
+                            compressedSize += stats.size;
+                        } else if (await fs.pathExists(dirPath)) {
+                            const size = await profileManager.getDirectorySize(dirPath);
+                            totalSize += size;
+                        }
+                    } catch (e) {
+                        // Ignore size calculation errors
+                    }
+                }
+                
+                console.log(`Total profiles: ${total}`);
+                console.log(`Compressed: ${compressed}`);
+                console.log(`Uncompressed: ${total - compressed}`);
+                if (compressedSize > 0) {
+                    console.log(`Compressed size: ${profileManager.formatBytes(compressedSize)}`);
+                }
+                if (totalSize > 0) {
+                    console.log(`Uncompressed size: ${profileManager.formatBytes(totalSize)}`);
+                }
+                
+                console.log(chalk.gray('\nUse --run to compress uncompressed profiles'));
+                console.log(chalk.gray('Use --decompress to decompress compressed profiles'));
+                console.log(chalk.gray('Use --profile <name> to target a specific profile'));
+            }
+        } catch (error) {
+            console.error(chalk.red('✗ Error:'), error.message);
             process.exit(1);
         }
     });

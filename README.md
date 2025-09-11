@@ -1,4 +1,13 @@
-# Playwright Profile Manager
+# Pl## Features
+
+- 🚀 **Launch on fresh profiles** - Create temporary profiles for testing
+- 📥 **Import from existing Chromium profiles** - Import cookies, extensions, bookmarks, and more
+- 💾 **Save and track sessions** - Maintain profiles like regular browsers
+- 🔄 **Clone, rename, and delete profiles** - Full profile management
+- 🧹 **Cache clearing** - Reduce disk usage by clearing browser cache files
+- 📦 **Profile compression** - Profiles auto-compress on close to save disk space (enabled by default)
+- 🖥️ **CLI interface** - Easy command-line usage
+- 🔧 **Programmatic API** - Use in your automation scriptsrofile Manager
 
 A comprehensive browser profile manager for Playwright automation, similar to built-in Chrome/Firefox/Safari profile managers.
 
@@ -9,7 +18,8 @@ A comprehensive browser profile manager for Playwright automation, similar to bu
 - 💾 **Save and track sessions** - Maintain profiles like regular browsers
 - 🔄 **Clone, rename, and delete profiles** - Full profile management
 - 🧹 **Cache clearing** - Reduce disk usage by clearing browser cache files
-- 🖥️ **CLI interface** - Easy command-line usage
+- � **Profile compression** - Profiles auto-compress on close to save disk
+- �🖥️ **CLI interface** - Easy command-line usage
 - 🔧 **Programmatic API** - Use in your automation scripts
 
 ## Installation
@@ -63,6 +73,9 @@ npx ppm launch temp-profile --fresh
 
 # Launch with options
 npx ppm launch my-profile --browser chromium --devtools
+
+# Disable compression for this session (will keep unpacked on close)
+npx ppm launch my-profile --no-compress
 
 # Inject specific extensions from paths
 npx ppm launch my-profile --load-extensions /path/to/ext1 /path/to/ext2
@@ -213,7 +226,57 @@ npx ppm launch-template my-template new-instance --devtools --stealth-preset max
 # Disable fingerprint randomization (keep template fingerprint)
 npx ppm launch-template my-template exact-copy --no-randomize-fingerprint
 
-# Autofill control for template launches
+# Disable compression for this profile instance
+npx ppm launch-template my-template new-instance --no-compress
+
+# Temporary profile (auto-deleted when browser closes)
+npx ppm launch-template my-template temp-session --temp
+
+# Headless automation with template
+npx ppm launch-template my-template auto-instance --headless-automation --auto-close-on-success
+```
+
+### Profile Compression
+
+Profiles are automatically compressed when browsers close to save disk space. Compression is **enabled by default** but can be controlled at creation time and managed afterwards.
+
+```bash
+# Check compression status for all profiles
+npx ppm compress
+
+# Create profiles with compression disabled
+npx ppm create -n my-profile --no-compress
+npx ppm clone source-profile new-profile --no-compress
+npx ppm launch-template template instance --no-compress
+
+# Launch profiles with compression disabled for the session
+npx ppm launch my-profile --no-compress
+npx ppm launch-template template instance --no-compress
+
+# Manually compress/decompress profiles
+npx ppm compress --run --profile my-profile       # Compress specific profile
+npx ppm compress --decompress --profile my-profile # Decompress specific profile
+npx ppm compress --run                             # Compress all uncompressed profiles
+npx ppm compress --decompress                      # Decompress all compressed profiles
+npx ppm compress --run -y                          # Skip confirmation prompts
+
+# Enable/disable compression preference for profiles
+npx ppm compress --enable --profile my-profile     # Enable auto-compression
+npx ppm compress --disable --profile my-profile    # Disable auto-compression
+```
+
+**Compression Benefits:**
+- **Space Savings**: Compressed profiles typically use 90%+ less disk space
+- **Automatic**: Works seamlessly without user intervention
+- **Fast**: Compression/decompression happens in seconds
+- **Selective**: Control which profiles get compressed
+- **Transparent**: Launch automatically decompresses when needed
+
+**How it works:**
+1. **On launch**: Compressed profiles are automatically decompressed
+2. **On close**: Profiles compress based on their preference setting (default: enabled)
+3. **Manual control**: Use `compress` command for immediate compression operations
+4. **Status tracking**: View compression status and disk usage with `npx ppm compress`
 npx ppm launch-template vpn-template user1  # Default: stops on success
 npx ppm launch-template vpn-template user2 --autofill-enforce-mode
 npx ppm launch-template vpn-template user3 --no-autofill-stop-on-success  # Old behavior
@@ -290,6 +353,27 @@ npx ppm launch my-profile --clear-cache-on-exit
 - **Auto-clear on exit**: Optionally clear cache when browser sessions end
 - **Detailed feedback**: Reports which directories and files were cleared
 
+## Profile Compression
+
+- Default behavior: profiles compress to a `.tgz` archive on close to save space.
+- Launching automatically decompresses when needed.
+- Disable per-profile at creation with `--no-compress`, or per-launch with `--no-compress`.
+
+CLI:
+```bash
+# Show compression summary
+npx ppm compress
+
+# Compress all profiles now
+npx ppm compress --run
+
+# Decompress all profiles now
+npx ppm compress --decompress
+
+# Toggle preference for one profile
+npx ppm compress --profile my-profile --disable
+npx ppm compress --profile my-profile --enable
+```
 **Cache directories cleared:**
 - Browser caches (Cache, Code Cache, GPU Cache)
 - Graphics caches (GraphiteDawnCache, ShaderCache, GrShaderCache)  
@@ -540,16 +624,93 @@ npx ppm launch my-profile --load-extensions /path/to/extension1 /path/to/extensi
 npx ppm launch my-profile --no-auto-extensions --load-extensions /path/to/specific-ext
 ```
 
+### VidIQ Extension Device ID Isolation 🎭
+
+**Critical Feature**: The system provides complete isolation between profiles for VidIQ extension usage by creating profile-specific extension copies with unique device IDs and extension keys.
+
+#### **How VidIQ Device ID Isolation Works:**
+
+1. **Profile-Specific Device IDs**: Each profile gets a **deterministic but unique** VidIQ device ID
+   - Generated using SHA256 hash of `profileName + '-vidiq-device-v1'`
+   - Same profile = same device ID every time (consistent across launches)
+   - Different profiles = completely different device IDs
+
+2. **Profile-Specific Extension Keys**: Each profile gets a **unique extension installation key**
+   - Generated using SHA256 hash of `profileName + '-vidiq-extension-key-v1'`
+   - Prevents cross-profile tracking via extension fingerprinting
+
+3. **Fresh Extension Copies**: On every launch, a fresh copy of the VidIQ extension is created
+   - Original extension: `./extensions/pachckjkecffpdphbpmfolblodfkgbhl/3.151.0_0`
+   - Profile copy: `./profiles/data/vidiq-extensions/{profileName}-vidiq-extension`
+   - Extension manifest is modified with profile-specific key
+
+4. **Automatic Cleanup**: Extension copies are cleaned up when browsers close
+   - Prevents disk space accumulation (each extension ~15MB)
+   - No orphaned extensions left behind
+
+#### **Why This Design:**
+
+✅ **Complete Isolation**: Each profile appears as a completely different VidIQ installation
+✅ **Consistent Identity**: Same profile always gets the same device ID (not random)
+✅ **Anti-Tracking**: Different extension keys prevent fingerprinting correlation
+✅ **Space Efficient**: Extensions are cleaned up after each session
+✅ **Transparent**: Works automatically without user intervention
+
+#### **Extension Lifecycle:**
+
+```bash
+# Launch profile
+npx ppm launch my-profile
+# → Creates fresh VidIQ extension copy with unique device ID
+# → Browser launches with profile-specific extension
+
+# Use browser with VidIQ
+# → Extension uses deterministic device ID for this profile
+# → API requests include profile-specific device ID
+
+# Close browser
+# → Extension copy is automatically cleaned up
+# → No disk space accumulation
+
+# Next launch of same profile  
+npx ppm launch my-profile
+# → Creates fresh extension copy again
+# → Uses SAME device ID as before (deterministic)
+```
+
+#### **Device ID Examples:**
+
+```javascript
+// Profile: "vidiq-clean" always gets device ID:
+// 327948f8-59b6-44f5-9356-0f6a9a8804d8
+
+// Profile: "user-batch-001" always gets device ID:  
+// 8fa2c15e-7b91-4c2a-a123-9dfe84c7b629
+
+// Each profile gets its own unique but consistent ID
+```
+
+#### **Benefits for Multi-Account Workflows:**
+
+- **Batch Operations**: Each batch profile gets isolated device ID
+- **Template Launches**: Each instance from template gets unique device ID
+- **Account Separation**: Complete isolation prevents account correlation
+- **Automation Safe**: Perfect for headless automation workflows
+
 ### Extension Management Workflow
 1. **Add extensions** to `./extensions/extension-id/version/` folder
 2. **Launch profile** - extensions are automatically injected
-3. **Extensions persist** for that browser session only
-4. **Next launch** - extensions are injected again (required every time)
+3. **VidIQ special handling** - gets profile-specific copy with unique device ID
+4. **Extensions persist** for that browser session only
+5. **Auto-cleanup** - VidIQ extension copies are removed on close
+6. **Next launch** - fresh extensions injected again (required every time)
 
 ### Important Notes
 - ❌ **No manual installation**: Cannot install extensions via Chrome Web Store or chrome://extensions/
 - ✅ **Injection only**: Extensions must be pre-downloaded and placed in folders
 - ✅ **Session-based**: Extensions are injected per browser session
+- ✅ **VidIQ isolation**: Automatic device ID isolation for VidIQ extension
+- ✅ **Auto-cleanup**: Extension copies cleaned up automatically
 - ✅ **Works with Chromium**: Uses Playwright's `channel: 'chromium'` requirement
 
 ### Imported Extensions

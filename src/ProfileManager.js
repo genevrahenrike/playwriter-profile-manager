@@ -3,6 +3,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
+import tar from 'tar';
 
 export class ProfileManager {
     constructor(baseDir = './profiles') {
@@ -53,7 +54,8 @@ export class ProfileManager {
         const {
             description = '',
             browserType = 'chromium',
-            importFrom = null
+            importFrom = null,
+            disableCompression = false
         } = options;
 
         const profileId = uuidv4();
@@ -69,6 +71,12 @@ export class ProfileManager {
                 INSERT INTO profiles (id, name, description, browser_type, user_data_dir, imported_from)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [profileId, name, description, browserType, userDataDir, importFrom]);
+            // Initialize metadata: compression preference on by default unless disabled
+            const initialMeta = {
+                compressOnClose: !disableCompression,
+                compressed: false
+            };
+            await this.setProfileMetadata(profileId, initialMeta);
             
             return {
                 id: profileId,
@@ -76,7 +84,8 @@ export class ProfileManager {
                 description,
                 browserType,
                 userDataDir,
-                importedFrom: importFrom
+                importedFrom: importFrom,
+                metadata: initialMeta
             };
         } catch (error) {
             // Clean up directory if database insert fails
@@ -121,6 +130,13 @@ export class ProfileManager {
             throw new Error(`Profile not found: ${nameOrId}`);
         }
         
+        // Load metadata if present
+        let metadata = {};
+        try {
+            const meta = await this.getProfileMetadataRaw(profile.id);
+            metadata = meta || {};
+        } catch (_) {}
+
         return {
             id: profile.id,
             name: profile.name,
@@ -130,7 +146,8 @@ export class ProfileManager {
             createdAt: profile.created_at,
             lastUsed: profile.last_used,
             sessionCount: profile.session_count,
-            importedFrom: profile.imported_from
+            importedFrom: profile.imported_from,
+            metadata
         };
     }
 
@@ -139,8 +156,23 @@ export class ProfileManager {
         const profile = await this.getProfile(nameOrId);
         const run = promisify(this.db.run.bind(this.db));
         
-        // Remove user data directory
+        // Remove user data directory or archive
+        const { archivePath } = this.getProfileStoragePaths(profile);
+        if (await fs.pathExists(archivePath)) {
+            await fs.remove(archivePath);
+        }
         await fs.remove(profile.userDataDir);
+        
+        // Clean up profile-specific VidIQ extension
+        try {
+            const vidiqExtensionPath = `./profiles/data/vidiq-extensions/${profile.name}-vidiq-extension`;
+            if (await fs.pathExists(vidiqExtensionPath)) {
+                await fs.remove(vidiqExtensionPath);
+            }
+        } catch (error) {
+            // Non-critical error, just warn
+            console.warn(`Could not clean up VidIQ extension for ${profile.name}: ${error.message}`);
+        }
         
         // Remove from database
         await run('DELETE FROM profiles WHERE id = ?', [profile.id]);
@@ -148,15 +180,22 @@ export class ProfileManager {
         return profile;
     }
 
-    async cloneProfile(sourceNameOrId, newName, description = '') {
+    async cloneProfile(sourceNameOrId, newName, description = '', options = {}) {
         const sourceProfile = await this.getProfile(sourceNameOrId);
         const clonedProfile = await this.createProfile(newName, {
             description: description || `Clone of ${sourceProfile.name}`,
-            browserType: sourceProfile.browserType
+            browserType: sourceProfile.browserType,
+            disableCompression: options.disableCompression !== undefined ? options.disableCompression : (sourceProfile.metadata?.compressOnClose === false)
         });
         
-        // Copy user data directory
-        await fs.copy(sourceProfile.userDataDir, clonedProfile.userDataDir);
+        // Copy or extract source data
+        const { archivePath: srcArchive } = this.getProfileStoragePaths(sourceProfile);
+        if (await fs.pathExists(sourceProfile.userDataDir)) {
+            await fs.copy(sourceProfile.userDataDir, clonedProfile.userDataDir);
+        } else if (await fs.pathExists(srcArchive)) {
+            await fs.ensureDir(clonedProfile.userDataDir);
+            await tar.extract({ file: srcArchive, cwd: clonedProfile.userDataDir, strip: 1 });
+        }
         
         return clonedProfile;
     }
@@ -208,6 +247,10 @@ export class ProfileManager {
 
     async clearProfileCache(nameOrId) {
         const profile = await this.getProfile(nameOrId);
+        // If profile is compressed, skip cache clearing (no effect) and report
+        if (await this.isCompressed(profile)) {
+            return profile; // no-op for compressed archives
+        }
         await this.clearCacheDirectories(profile.userDataDir);
         return profile;
     }
@@ -340,6 +383,120 @@ export class ProfileManager {
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // ---- Compression helpers ----
+
+    getProfileStoragePaths(profile) {
+        const dirPath = profile.userDataDir;
+        const archivePath = path.join(this.baseDir, 'data', `${profile.id}.tgz`);
+        return { dirPath, archivePath };
+    }
+
+    async getProfileMetadataRaw(profileId) {
+        const get = promisify(this.db.get.bind(this.db));
+        const row = await get('SELECT metadata FROM profiles WHERE id = ?', [profileId]);
+        if (!row) return null;
+        try {
+            return row.metadata ? JSON.parse(row.metadata) : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async setProfileMetadata(profileId, obj = {}) {
+        await this.initPromise;
+        const run = promisify(this.db.run.bind(this.db));
+        const existing = (await this.getProfileMetadataRaw(profileId)) || {};
+        const merged = { ...existing, ...obj };
+        await run('UPDATE profiles SET metadata = ? WHERE id = ?', [JSON.stringify(merged), profileId]);
+        return merged;
+    }
+
+    async isCompressed(profile) {
+        const { dirPath, archivePath } = this.getProfileStoragePaths(profile);
+        const dirExists = await fs.pathExists(dirPath);
+        const archiveExists = await fs.pathExists(archivePath);
+        return archiveExists && !dirExists;
+    }
+
+    async compressProfile(profile) {
+        const { dirPath, archivePath } = this.getProfileStoragePaths(profile);
+        if (!await fs.pathExists(dirPath)) {
+            // Nothing to compress
+            return { skipped: true, reason: 'No directory to compress' };
+        }
+        await fs.ensureDir(path.dirname(archivePath));
+        // Create tar.gz archive of the directory contents
+        await tar.create(
+            { gzip: true, cwd: dirPath, file: archivePath },
+            ['.']
+        );
+        // Remove original directory after successful archive
+        await fs.remove(dirPath);
+        await this.setProfileMetadata(profile.id, { compressed: true });
+        return { archivePath };
+    }
+
+    async decompressProfile(profile) {
+        const { dirPath, archivePath } = this.getProfileStoragePaths(profile);
+        if (!await fs.pathExists(archivePath)) {
+            return { skipped: true, reason: 'No archive to decompress' };
+        }
+        await fs.ensureDir(dirPath);
+        await tar.extract({ file: archivePath, cwd: dirPath });
+        // Remove archive after extraction to avoid duplication
+        await fs.remove(archivePath);
+        await this.setProfileMetadata(profile.id, { compressed: false });
+        return { dirPath };
+    }
+
+    async ensureDecompressed(profile) {
+        if (await this.isCompressed(profile)) {
+            await this.decompressProfile(profile);
+        }
+    }
+
+    async setCompressionPreference(nameOrId, compressOnClose) {
+        const profile = await this.getProfile(nameOrId);
+        await this.setProfileMetadata(profile.id, { compressOnClose: !!compressOnClose });
+        return { ...profile, metadata: { ...(profile.metadata || {}), compressOnClose: !!compressOnClose } };
+    }
+
+    async compressAllProfiles(filter = {}) {
+        const profiles = await this.listProfiles();
+        const results = [];
+        for (const p of profiles) {
+            try {
+                if (await this.isCompressed(p)) {
+                    results.push({ profileId: p.id, profileName: p.name, skipped: true, reason: 'already compressed' });
+                    continue;
+                }
+                const r = await this.compressProfile(p);
+                results.push({ profileId: p.id, profileName: p.name, success: true, ...r });
+            } catch (e) {
+                results.push({ profileId: p.id, profileName: p.name, success: false, error: e.message });
+            }
+        }
+        return results;
+    }
+
+    async decompressAllProfiles() {
+        const profiles = await this.listProfiles();
+        const results = [];
+        for (const p of profiles) {
+            try {
+                if (!(await this.isCompressed(p))) {
+                    results.push({ profileId: p.id, profileName: p.name, skipped: true, reason: 'not compressed' });
+                    continue;
+                }
+                const r = await this.decompressProfile(p);
+                results.push({ profileId: p.id, profileName: p.name, success: true, ...r });
+            } catch (e) {
+                results.push({ profileId: p.id, profileName: p.name, success: false, error: e.message });
+            }
+        }
+        return results;
     }
 
     async close() {
