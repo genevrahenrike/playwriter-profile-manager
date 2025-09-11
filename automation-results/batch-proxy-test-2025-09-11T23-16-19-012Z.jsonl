@@ -1,0 +1,1 @@
+{"timestamp":"2025-09-11T23:16:51.403Z","run":1,"batchId":"2025-09-11T23-16-19-012Z","runId":"662f5ebd-c38e-4259-8d8d-eb0d8fde387f","profileId":"ec3dce8b-6cb3-4ffd-8c4a-3e02d7655014","profileName":"proxy-test1-l2wy","attempt":1,"headless":false,"success":false,"reason":"timeout","proxy":{"label":"US","type":"http","host":"geo.floppydata.com","port":10080}}

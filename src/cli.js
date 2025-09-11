@@ -496,6 +496,9 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
+    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
+    .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--list-proxies', 'List all available proxies and exit')
     .action(async (profileName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -507,6 +510,13 @@ program
             };
             
             profileLauncher = new ProfileLauncher(profileManager, launcherOptions);
+            
+            // Handle proxy listing
+            if (options.listProxies) {
+                await profileLauncher.ensureProxiesLoaded();
+                profileLauncher.proxyManager.listProxies();
+                return;
+            }
             
             // Show autofill configuration
             if (options.autofillStopOnSuccess === false || options.autofillEnforceMode) {
@@ -547,7 +557,9 @@ program
                 autoCloseOnFailure: options.autoCloseOnFailure || false,
                 autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
                 captchaGraceMs: parseInt(options.captchaGrace) || 45000,
-                disableCompression: options.compress === false
+                disableCompression: options.compress === false,
+                proxy: options.proxy,
+                proxyType: options.proxyType
             };
 
             // Show extension-related info
@@ -669,6 +681,8 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .option('--no-compress', 'Disable compress-on-close for this instance')
+    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
+    .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .action(async (template, instanceName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -721,7 +735,9 @@ program
                 autoCloseOnFailure: options.autoCloseOnFailure || false,
                 autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
                 captchaGraceMs: parseInt(options.captchaGrace) || 45000,
-                disableCompression: options.compress === false
+                disableCompression: options.compress === false,
+                proxy: options.proxy,
+                proxyType: options.proxyType
             };
 
             const result = await templateProfileLauncher.launchFromTemplate(template, instanceName, launchOptions);
@@ -804,6 +820,9 @@ program
     .option('--no-clear-cache', 'Disable cache clearing for successful profiles (cache cleanup enabled by default)')
     .option('--delay <seconds>', 'Delay between successful runs (seconds)', '60')
     .option('--failure-delay <seconds>', 'Delay after failed runs (seconds)', '300')
+    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
+    .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
     .action(async (options) => {
         const pathMod = (await import('path')).default;
         const fsx = (await import('fs-extra')).default;
@@ -823,6 +842,7 @@ program
         // Delay options for cooldown between runs
         const delayBetweenRuns = parseInt(options.delay, 10) || 60; // 60 seconds default
         const failureDelay = parseInt(options.failureDelay, 10) || 300; // 5 minutes default
+        const maxProfilesPerIP = parseInt(options.maxProfilesPerIp, 10) || 5;
 
         const resultsDir = pathMod.resolve('./automation-results');
         await fsx.ensureDir(resultsDir);
@@ -918,6 +938,27 @@ program
             }
         } catch (_) { /* ignore */ }
 
+        // Initialize proxy rotation if proxy options are provided
+        let proxyRotator = null;
+        let useProxyRotation = false;
+        
+        if (options.proxy) {
+            const { ProxyRotator } = await import('./ProxyRotator.js');
+            const launcher = new ProfileLauncher(pmLocal, {});
+            
+            proxyRotator = new ProxyRotator(launcher.proxyManager, {
+                maxProfilesPerIP: maxProfilesPerIP
+            });
+            
+            const hasProxies = await proxyRotator.initialize();
+            if (hasProxies) {
+                useProxyRotation = true;
+                console.log(chalk.green(`🌐 Proxy rotation enabled: max ${maxProfilesPerIP} profiles per IP`));
+            } else {
+                console.log(chalk.yellow('⚠️  No proxies available, running without proxy rotation'));
+            }
+        }
+
         // Determine starting index when resuming: find highest existing numeric suffix for this prefix
         let startIndex = 1;
         if (resume) {
@@ -942,6 +983,9 @@ program
         console.log(chalk.cyan(`🚀 Starting batch: template=${template}, count=${total}, prefix=${prefix}`));
         console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
         console.log(chalk.dim(`⏱️  Delays: ${delayBetweenRuns}s between runs, ${failureDelay}s after failures`));
+        if (useProxyRotation) {
+            console.log(chalk.dim(`🌐 Proxy rotation: max ${maxProfilesPerIP} profiles per IP, then rotate`));
+        }
         if (clearCacheOnSuccess) {
             console.log(chalk.dim(`🧹 Cache cleanup enabled for successful profiles (saves disk space)`));
         }
@@ -955,11 +999,39 @@ program
             const runNo = scheduled + 1;
             const runId = uuidv4();
             let profileRecord = null;
+            let currentProxy = null;
+            let proxyConfig = null;
+
+            // Get next proxy if rotation is enabled
+            if (useProxyRotation) {
+                try {
+                    const proxyResult = await proxyRotator.getNextProxy();
+                    if (!proxyResult) {
+                        console.log(chalk.yellow('🛑 All proxies exhausted (no new IPs available), stopping batch'));
+                        
+                        // Show final statistics
+                        const finalStats = proxyRotator.getStats();
+                        console.log('\n📊 Final Proxy Statistics:');
+                        console.log(`   Proxy cycles completed: ${finalStats.proxyCycle}`);
+                        console.log(`   Total unique IPs used: ${finalStats.totalUniqueIPs}`);
+                        for (const [label, stats] of Object.entries(finalStats.proxyStats)) {
+                            console.log(`   ${label}: ${stats.uniqueIPs} unique IPs`);
+                        }
+                        break;
+                    }
+                    currentProxy = proxyResult.proxy;
+                    proxyConfig = proxyResult.proxyConfig;
+                    console.log(chalk.blue(`🌐 Using proxy: ${currentProxy.label} (${currentProxy.type})`));
+                } catch (error) {
+                    console.log(chalk.red(`❌ Proxy error: ${error.message}`));
+                    console.log(chalk.yellow('⚠️  Continuing without proxy for this run'));
+                }
+            }
 
             console.log(chalk.blue(`\n▶️  Run ${runNo}/${total}: ${name}`));
             const launcher = new ProfileLauncher(pmLocal, {});
             try {
-                const runRes = await launcher.launchFromTemplate(template, name, {
+                const launchOptions = {
                     browserType: 'chromium',
                     headless: runHeadless,
                     enableAutomation: true,
@@ -973,7 +1045,20 @@ program
                     stealthPreset: 'balanced',
                     // Keep the new instance uncompressed until batch completes decisions
                     disableCompression: false
-                });
+                };
+                
+                // Add proxy configuration if available
+                if (useProxyRotation && currentProxy) {
+                    // Use the specific proxy from rotation
+                    launchOptions.proxy = currentProxy.label;
+                    launchOptions.proxyType = currentProxy.type;
+                } else if (options.proxy && !useProxyRotation) {
+                    // Use the manual proxy selection
+                    launchOptions.proxy = options.proxy;
+                    launchOptions.proxyType = options.proxyType;
+                }
+                
+                const runRes = await launcher.launchFromTemplate(template, name, launchOptions);
                 created++;
                 profileRecord = runRes.profile;
 
@@ -989,7 +1074,13 @@ program
                     attempt: 1,
                     headless: runHeadless,
                     success: outcome.success,
-                    reason: outcome.reason
+                    reason: outcome.reason,
+                    proxy: currentProxy ? {
+                        label: currentProxy.label,
+                        type: currentProxy.type,
+                        host: currentProxy.host,
+                        port: currentProxy.port
+                    } : null
                 });
 
                 if (outcome.success) {
@@ -1041,6 +1132,20 @@ program
 
         const summary = { batchId, template, totalRequested: total, created, successes, resultsFile };
         console.log(chalk.cyan(`\n📊 Batch summary: ${JSON.stringify(summary)}`));
+        
+        // Show proxy rotation statistics if proxy rotation was used
+        if (useProxyRotation && proxyRotator) {
+            const finalStats = proxyRotator.getStats();
+            console.log(chalk.cyan('\n🌐 Proxy Rotation Statistics:'));
+            console.log(chalk.dim(`   Cycles completed: ${finalStats.proxyCycle}`));
+            console.log(chalk.dim(`   Total unique IPs: ${finalStats.totalUniqueIPs}`));
+            console.log(chalk.dim(`   Max profiles per IP: ${finalStats.maxProfilesPerIP}`));
+            
+            for (const [label, stats] of Object.entries(finalStats.proxyStats)) {
+                const ips = stats.ips.join(', ');
+                console.log(chalk.dim(`   ${label}: ${stats.uniqueIPs} unique IP(s) [${ips}]`));
+            }
+        }
     });
 
 // Clone profile command
@@ -1749,6 +1854,69 @@ program
             console.error(chalk.red(`❌ Migration failed: ${error.message}`));
             process.exit(1);
         }
+    });
+
+// Proxy management command
+program
+    .command('proxy')
+    .description('Manage proxy configurations')
+    .option('-l, --list', 'List all available proxies')
+    .option('-t, --test <selection>', 'Test proxy connectivity (selection: auto, fastest, proxy-label)')
+    .option('--type <type>', 'Filter by proxy type: http or socks5')
+    .option('-s, --stats', 'Show proxy statistics and performance')
+    .action(async (options) => {
+        const launcher = getProfileLauncher();
+        
+        // Ensure proxies are loaded for all operations
+        await launcher.ensureProxiesLoaded();
+        
+        if (options.list) {
+            launcher.proxyManager.listProxies();
+            return;
+        }
+        
+        if (options.test) {
+            console.log(`🔍 Testing proxy: ${options.test}${options.type ? ` (type: ${options.type})` : ''}`);
+            
+            try {
+                const proxyConfig = await launcher.proxyManager.getProxyConfig(options.test, options.type);
+                if (proxyConfig) {
+                    console.log(chalk.green('✅ Proxy configuration is valid'));
+                    console.log(chalk.dim(`   Server: ${proxyConfig.server}`));
+                    if (proxyConfig.username) {
+                        console.log(chalk.dim(`   Username: ${proxyConfig.username}`));
+                    }
+                } else {
+                    console.log(chalk.red('❌ Could not configure proxy'));
+                }
+            } catch (error) {
+                console.log(chalk.red(`❌ Proxy test failed: ${error.message}`));
+            }
+            return;
+        }
+        
+        if (options.stats) {
+            const allProxies = launcher.proxyManager.getAllProxies();
+            console.log(`\n📊 Proxy Statistics:`);
+            console.log(`Total proxies: ${allProxies.total}`);
+            console.log(`HTTP proxies: ${allProxies.http.length}`);
+            console.log(`SOCKS5 proxies: ${allProxies.socks5.length}`);
+            
+            // Show fastest proxies
+            const fastestHttp = launcher.proxyManager.getFastestProxy('http');
+            const fastestSocks5 = launcher.proxyManager.getFastestProxy('socks5');
+            
+            if (fastestHttp) {
+                console.log(`Fastest HTTP: ${fastestHttp.label} (${fastestHttp.avgLatencyMs}ms)`);
+            }
+            if (fastestSocks5) {
+                console.log(`Fastest SOCKS5: ${fastestSocks5.label} (${fastestSocks5.avgLatencyMs}ms)`);
+            }
+            return;
+        }
+        
+        // Default: show help
+        console.log(chalk.yellow('Use --list to see available proxies or --help for more options'));
     });
 
 program.parse();

@@ -1,6 +1,14 @@
-# Pl## Features
+# Pl## Featur## Features
 
 - 🚀 **Launch on fresh profiles** - Create temporary profiles for testing
+- 📥 **Import from existing Chromium profiles** - Import cookies, extensions, bookmarks, and more
+- 💾 **Save and track sessions** - Maintain profiles like regular browsers
+- 🔄 **Clone, rename, and delete profiles** - Full profile management
+- 🧹 **Cache clearing** - Reduce disk usage by clearing browser cache files
+- 📦 **Profile compression** - Profiles auto-compress on close to save disk space (enabled by default)
+- 🌐 **Proxy support** - HTTP and SOCKS5 proxy integration with smart selection strategies
+- 🖥️ **CLI interface** - Easy command-line usage
+- 🔧 **Programmatic API** - Use in your automation scripts*Launch on fresh profiles** - Create temporary profiles for testing
 - 📥 **Import from existing Chromium profiles** - Import cookies, extensions, bookmarks, and more
 - 💾 **Save and track sessions** - Maintain profiles like regular browsers
 - 🔄 **Clone, rename, and delete profiles** - Full profile management
@@ -74,6 +82,12 @@ npx ppm launch temp-profile --fresh
 # Launch with options
 npx ppm launch my-profile --browser chromium --devtools
 
+# Launch with proxy support
+npx ppm launch my-profile --proxy auto                    # Random working proxy
+npx ppm launch my-profile --proxy fastest                 # Lowest latency proxy  
+npx ppm launch my-profile --proxy "Germany"               # Specific proxy by label
+npx ppm launch my-profile --proxy auto --proxy-type http  # HTTP proxies only
+
 # Disable compression for this session (will keep unpacked on close)
 npx ppm launch my-profile --no-compress
 
@@ -84,7 +98,7 @@ npx ppm launch my-profile --load-extensions /path/to/ext1 /path/to/ext2
 npx ppm launch my-profile --no-auto-extensions
 
 # Combine options
-npx ppm launch my-profile --load-extensions /path/to/ext1 --devtools
+npx ppm launch my-profile --load-extensions /path/to/ext1 --devtools --proxy fastest
 
 # Autofill control options
 npx ppm launch my-profile --no-autofill-stop-on-success  # Disable default stop-on-success behavior
@@ -92,8 +106,8 @@ npx ppm launch my-profile --autofill-enforce-mode       # Continue monitoring fo
 npx ppm launch my-profile --autofill-min-fields 3 --autofill-cooldown 60000  # Custom thresholds
 
 # Headless automation mode - Complete automated workflow
-npx ppm launch my-profile --headless-automation --auto-close-on-success
-npx ppm launch my-profile --headless --headless-automation --auto-close-on-success
+npx ppm launch my-profile --headless-automation --auto-close-on-success --proxy auto
+npx ppm launch my-profile --headless --headless-automation --auto-close-on-success --proxy "US"
 ```
 
 ### Headless Automation Mode
@@ -269,15 +283,15 @@ Success detection:
 # Launch from template with randomized fingerprint (perfect for multi-account automation)
 npx ppm launch-template vpn-fresh user1
 
-# Launch multiple instances from same template
-npx ppm launch-template vpn-fresh user2
-npx ppm launch-template vpn-fresh user3
+# Launch multiple instances from same template with different proxies
+npx ppm launch-template vpn-fresh user2 --proxy auto
+npx ppm launch-template vpn-fresh user3 --proxy "Germany"
 
 # Launch with Mac-authentic screen resolution variation
-npx ppm launch-template vpn-fresh user4 --vary-screen-resolution
+npx ppm launch-template vpn-fresh user4 --vary-screen-resolution --proxy fastest
 
-# Launch with options
-npx ppm launch-template my-template new-instance --devtools --stealth-preset maximum
+# Launch with options and proxy
+npx ppm launch-template my-template new-instance --devtools --stealth-preset maximum --proxy round-robin
 
 # Disable fingerprint randomization (keep template fingerprint)
 npx ppm launch-template my-template exact-copy --no-randomize-fingerprint
@@ -286,10 +300,10 @@ npx ppm launch-template my-template exact-copy --no-randomize-fingerprint
 npx ppm launch-template my-template new-instance --no-compress
 
 # Temporary profile (auto-deleted when browser closes)
-npx ppm launch-template my-template temp-session --temp
+npx ppm launch-template my-template temp-session --temp --proxy auto
 
-# Headless automation with template
-npx ppm launch-template my-template auto-instance --headless-automation --auto-close-on-success
+# Headless automation with template and proxy
+npx ppm launch-template my-template auto-instance --headless-automation --auto-close-on-success --proxy "US"
 ```
 
 ### Profile Compression
@@ -387,6 +401,23 @@ npx ppm rm profile-name --force  # skip confirmation
 npx ppm sessions
 ```
 
+### Proxy management
+```bash
+# List all available proxies
+npx ppm proxy --list
+
+# Show proxy statistics and performance
+npx ppm proxy --stats
+
+# Test proxy connectivity
+npx ppm proxy --test auto
+npx ppm proxy --test "Germany"
+npx ppm proxy --test fastest --type socks5
+
+# List proxies during launch
+npx ppm launch my-profile --list-proxies
+```
+
 ### Clear cache to reduce disk usage
 ```bash
 # Clear cache for all profiles
@@ -454,11 +485,23 @@ const profile = await system.createProfile('test-profile', {
 // Launch the profile (extension installation enabled by default)
 const { browser, page, sessionId } = await system.launchProfile('test-profile');
 
+// Launch with proxy support
+const { browser: browserWithProxy, page: pageWithProxy, sessionId: sessionWithProxy } = 
+    await system.launchProfile('test-profile', {
+        proxy: 'auto',           // or 'fastest', 'round-robin', or specific label
+        proxyType: 'http'        // optional: 'http' or 'socks5'
+    });
+
 // Use the browser
 await page.goto('https://example.com');
 
 // Close when done (optionally clear cache)
 await system.profileLauncher.closeBrowser(sessionId, { clearCache: true });
+
+// Direct proxy manager access
+const proxyManager = system.profileLauncher.proxyManager;
+const allProxies = proxyManager.getAllProxies();
+const fastestProxy = proxyManager.getFastestProxy('http');
 
 // Or clear cache for all profiles
 const results = await system.profileManager.clearAllProfilesCache();
@@ -469,6 +512,31 @@ const profile = await system.profileManager.clearProfileCache('test-profile');
 console.log(`Cache cleared for: ${profile.name}`);
 
 await system.cleanup();
+```
+
+## Proxy Support
+
+The system includes comprehensive proxy support for both HTTP and SOCKS5 proxies. See [PROXY_SUPPORT.md](PROXY_SUPPORT.md) for complete documentation including:
+
+- 🌐 **Dual Protocol Support**: HTTP and SOCKS5 proxies
+- 🔄 **Smart Selection**: Auto, random, fastest, round-robin strategies  
+- 📊 **Performance Aware**: Latency-based proxy selection
+- 🎯 **Flexible Configuration**: CLI and programmatic proxy options
+- 🛠️ **Management Tools**: Built-in testing and statistics
+
+### Quick Proxy Examples
+```bash
+# Launch with automatic proxy selection
+npx ppm launch my-profile --proxy auto
+
+# Use fastest available proxy
+npx ppm launch my-profile --proxy fastest
+
+# Batch automation with proxy rotation
+npx ppm batch --template clean-template --count 5 --proxy round-robin
+
+# Template launch with specific location
+npx ppm launch-template vpn-template user1 --proxy "Germany"
 ```
 
 ## Profile Import
@@ -921,3 +989,308 @@ console.log(`Suspicion Flags: ${authenticityResults.scores.suspicion_flags.lengt
 
 - Node.js 16+
 - Playwright
+
+# Proxy Support
+
+The Playwright Profile Manager now includes comprehensive proxy support for both HTTP and SOCKS5 proxies, enabling you to launch browser profiles with different IP addresses and locations for testing, automation, and privacy.
+
+## Features
+
+- 🌐 **Dual Protocol Support**: HTTP and SOCKS5 proxies
+- 🔄 **Multiple Selection Strategies**: Auto, random, fastest, round-robin, or by label
+- 📊 **Performance Awareness**: Considers latency data for optimal selection
+- ⚡ **Smart Filtering**: Automatically filters out non-working proxies
+- 🎯 **Flexible Configuration**: Per-command proxy settings
+- 🛠️ **Management Tools**: Built-in proxy testing and statistics
+
+## Proxy Configuration Files
+
+Proxy configurations are stored in JSON files in the `./proxies` folder:
+
+### HTTP Proxies (`./proxies/http.proxies.json`)
+```json
+[
+  {
+    "label": "US",
+    "host": "geo.floppydata.com",
+    "port": 10080,
+    "login": "username",
+    "password": "password", 
+    "url": "http://username:password@geo.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-07T09:01:31.299Z",
+    "avgLatencyMs": 2182,
+    "latenciesByEndpoint": {
+      "ipify": 2966,
+      "httpbin": 2389,
+      "google204": 1192
+    }
+  }
+]
+```
+
+### SOCKS5 Proxies (`./proxies/socks5.proxies.json`)
+```json
+[
+  {
+    "label": "nl",
+    "host": "nl.socks.nordhold.net",
+    "port": 1080,
+    "username": "user",
+    "password": "pass",
+    "url": "socks5://user:pass@nl.socks.nordhold.net:1080",
+    "status": "OK",
+    "lastChecked": "2025-09-06T03:11:12.973Z",
+    "avgLatencyMs": 3905,
+    "latenciesByEndpoint": {
+      "ipify": 6736,
+      "httpbin": 3203,
+      "google204": 1775
+    }
+  }
+]
+```
+
+## CLI Usage
+
+### Launch with Proxy
+
+```bash
+# Use automatic proxy selection (random working proxy)
+npx ppm launch my-profile --proxy auto
+
+# Use the fastest available proxy
+npx ppm launch my-profile --proxy fastest
+
+# Use round-robin selection
+npx ppm launch my-profile --proxy round-robin
+
+# Use specific proxy by label
+npx ppm launch my-profile --proxy "US"
+npx ppm launch my-profile --proxy "nl"
+
+# Filter by proxy type
+npx ppm launch my-profile --proxy auto --proxy-type http
+npx ppm launch my-profile --proxy fastest --proxy-type socks5
+
+# List available proxies
+npx ppm launch my-profile --list-proxies
+```
+
+### Template Launch with Proxy
+
+```bash
+# Launch template with automatic proxy
+npx ppm launch-template vpn-fresh user1 --proxy auto
+
+# Launch with specific proxy type
+npx ppm launch-template vpn-fresh user2 --proxy fastest --proxy-type socks5
+
+# Launch with specific proxy location
+npx ppm launch-template vpn-fresh user3 --proxy "Germany"
+```
+
+### Batch Automation with Proxy
+
+```bash
+# Run batch with automatic proxy rotation
+npx ppm batch --template vidiq-clean --count 5 --proxy round-robin
+
+# Run batch with HTTP proxies only
+npx ppm batch --template vidiq-clean --count 10 --proxy auto --proxy-type http
+
+# Run batch with specific proxy
+npx ppm batch --template vidiq-clean --count 3 --proxy "UK"
+```
+
+### Proxy Management Commands
+
+```bash
+# List all available proxies
+npx ppm proxy --list
+
+# Show proxy statistics
+npx ppm proxy --stats
+
+# Test proxy configuration
+npx ppm proxy --test auto
+npx ppm proxy --test "US"
+npx ppm proxy --test fastest --type socks5
+```
+
+## Proxy Selection Strategies
+
+### `auto` / `random`
+Randomly selects from all working proxies. Good for general use and load distribution.
+
+### `fastest`
+Selects the proxy with the lowest average latency. Best for performance-critical tasks.
+
+### `round-robin`
+Cycles through proxies in order. Ensures even distribution across all proxies.
+
+### By Label
+Selects a specific proxy by its label (e.g., "US", "Germany", "nl"). Useful when you need a specific location.
+
+## Programmatic Usage
+
+```javascript
+import { createProfileSystem } from './src/index.js';
+
+const system = createProfileSystem('./my-profiles');
+
+// Launch with automatic proxy
+const result1 = await system.launchProfile('my-profile', {
+    proxy: 'auto',
+    proxyType: 'http'
+});
+
+// Launch with fastest SOCKS5 proxy
+const result2 = await system.launchProfile('my-profile', {
+    proxy: 'fastest',
+    proxyType: 'socks5'
+});
+
+// Launch with specific proxy
+const result3 = await system.launchProfile('my-profile', {
+    proxy: 'Germany'
+});
+
+// Access proxy manager directly
+const proxyManager = system.profileLauncher.proxyManager;
+const allProxies = proxyManager.getAllProxies();
+const fastestProxy = proxyManager.getFastestProxy('http');
+```
+
+## Advanced Configuration
+
+### ProxyManager Options
+
+```javascript
+import { ProxyManager } from './src/ProxyManager.js';
+
+const proxyManager = new ProxyManager({
+    proxiesDir: './custom-proxies' // Custom proxy directory
+});
+
+await proxyManager.loadProxies();
+```
+
+### Custom Proxy Selection
+
+```javascript
+// Get proxy by specific criteria
+const proxy = proxyManager.getProxyByLabel('US', 'http');
+const randomProxy = proxyManager.getRandomProxy('socks5');
+const nextProxy = proxyManager.getNextProxy(); // Round-robin
+
+// Convert to Playwright format
+const playwrightConfig = proxyManager.toPlaywrightProxy(proxy);
+```
+
+## Proxy File Format
+
+### Required Fields
+- `label`: Human-readable identifier
+- `host`: Proxy server hostname/IP
+- `port`: Proxy server port
+
+### Authentication Fields
+- `username`/`login`: Username for proxy authentication
+- `password`: Password for proxy authentication
+
+### Status Fields
+- `status`: "OK" for working proxies, "ERROR" for non-working
+- `lastChecked`: ISO timestamp of last status check
+- `avgLatencyMs`: Average latency in milliseconds
+- `latenciesByEndpoint`: Latency breakdown by test endpoint
+
+### Generated Fields
+- `url`: Complete proxy URL (auto-generated from other fields)
+
+## Browser Compatibility
+
+| Browser | HTTP Proxy | SOCKS5 Proxy | Notes |
+|---------|------------|--------------|-------|
+| Chromium | ✅ | ✅ | Full support via persistent context |
+| Firefox | ✅ | ✅ | Full support via browser options |
+| WebKit | ✅ | ❌ | HTTP only, SOCKS5 not supported |
+
+## Security Considerations
+
+- Proxy credentials are stored in plain text in JSON files
+- Consider using environment variables for sensitive credentials
+- Ensure proxy files are not committed to public repositories
+- Use HTTPS endpoints when testing proxy connectivity
+
+## Performance Tips
+
+1. **Use `fastest` for time-sensitive operations**
+2. **Use `round-robin` for batch operations to distribute load**
+3. **Filter by proxy type based on your needs (HTTP for simple proxying, SOCKS5 for more advanced use cases)**
+4. **Regularly update proxy status and latency data**
+5. **Remove or disable non-working proxies to improve selection speed**
+
+## Troubleshooting
+
+### Proxy Authentication Dialog
+If you see a browser dialog asking for proxy username/password, this indicates an authentication issue that has been resolved.
+
+**Fixed**: The system now automatically handles proxy authentication by:
+- Setting HTTP credentials at the browser context level
+- Handling authentication dialogs programmatically  
+- Setting up authentication handlers for all pages
+- Using proper credential passing for persistent contexts
+
+This resolves authentication issues with HTTP proxies requiring username/password.
+
+### Proxy not working
+```bash
+# Test proxy configuration
+npx ppm proxy --test "proxy-label"
+
+# Check proxy status
+npx ppm proxy --list
+```
+
+### No proxies found
+- Verify proxy files exist in `./proxies/` directory
+- Check that proxy `status` is set to "OK"
+- Ensure proxy file format is valid JSON
+
+### Authentication failures
+- Verify username/password are correct
+- Some proxies use `username` field, others use `login`
+- Check that proxy supports authentication
+
+### Performance issues
+- Use `--proxy-type` to filter by protocol
+- Check proxy latency with `npx ppm proxy --stats`
+- Consider using `fastest` selection for better performance
+
+## Example Workflows
+
+### Multi-Location Testing
+```bash
+# Test from different locations
+npx ppm launch test-profile --proxy "US"
+npx ppm launch test-profile --proxy "Germany" 
+npx ppm launch test-profile --proxy "Australia"
+```
+
+### High-Volume Automation
+```bash
+# Rotate through all proxies for large batches
+npx ppm batch --template clean-template \
+    --count 50 \
+    --proxy round-robin \
+    --delay 30
+```
+
+### Performance-Critical Tasks
+```bash
+# Use fastest proxy for time-sensitive operations
+npx ppm launch-template speed-template instance \
+    --proxy fastest \
+    --headless
+```

@@ -7,6 +7,7 @@ import { RequestCaptureSystem } from './RequestCaptureSystem.js';
 import { StealthManager } from './StealthManager.js';
 import { AutomationHookSystem } from './AutomationHookSystem.js';
 import { ProfileEventBus, EVENTS } from './ProfileEventBus.js';
+import { ProxyManager } from './ProxyManager.js';
 
 export class ProfileLauncher {
     constructor(profileManager, options = {}) {
@@ -56,6 +57,10 @@ export class ProfileLauncher {
         
         // Initialize stealth manager
         this.stealthManager = new StealthManager();
+        
+        // Initialize proxy manager
+        this.proxyManager = new ProxyManager();
+        // Note: Proxies will be loaded asynchronously when first needed
     }
 
     /**
@@ -91,6 +96,31 @@ export class ProfileLauncher {
             console.log(`🤖 Automation system initialized with ${this.automationSystem.getStatus().hooksLoaded} hooks`);
         } catch (error) {
             console.error('❌ Failed to initialize automation system:', error.message);
+        }
+    }
+
+    /**
+     * Initialize the proxy manager
+     */
+    async initializeProxyManager() {
+        try {
+            await this.proxyManager.loadProxies();
+            const { total } = this.proxyManager.getAllProxies();
+            if (total > 0) {
+                console.log(`🌐 Proxy manager initialized with ${total} working proxies`);
+            }
+        } catch (error) {
+            console.warn(`⚠️  Could not initialize proxy manager: ${error.message}`);
+        }
+    }
+
+    /**
+     * Ensure proxies are loaded before use
+     */
+    async ensureProxiesLoaded() {
+        const { total } = this.proxyManager.getAllProxies();
+        if (total === 0) {
+            await this.initializeProxyManager();
         }
     }
 
@@ -474,7 +504,9 @@ export class ProfileLauncher {
             stealthPreset = 'balanced', // Stealth preset
             stealthConfig = null, // Custom stealth configuration
             isTemporary = false, // Mark as temporary profile for cleanup
-            disableCompression = undefined // Optional override per launch
+            disableCompression = undefined, // Optional override per launch
+            proxy = null, // Proxy configuration: null, 'auto', 'random', 'fastest', 'round-robin', or proxy label
+            proxyType = null // Proxy type filter: null, 'http', 'socks5'
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
@@ -497,6 +529,16 @@ export class ProfileLauncher {
 
         // Store current profile name for extension customization
         this.currentProfileName = profile.name;
+
+        // Configure proxy if requested
+        let proxyConfig = null;
+        if (proxy) {
+            await this.ensureProxiesLoaded();
+            proxyConfig = await this.proxyManager.getProxyConfig(proxy, proxyType);
+            if (!proxyConfig) {
+                console.warn(`⚠️  Proxy configuration failed, launching without proxy`);
+            }
+        }
 
         let browser, context;
         
@@ -522,6 +564,7 @@ export class ProfileLauncher {
                     devtools,
                     viewport,
                     channel: 'chromium', // Required for extension loading
+                    proxy: proxyConfig, // Add proxy configuration
                     args: [
                         // Core stealth flags
                         '--disable-blink-features=AutomationControlled',
@@ -577,6 +620,38 @@ export class ProfileLauncher {
                 context = await chromium.launchPersistentContext(profile.userDataDir, launchOptions);
                 browser = context.browser();
                 
+                // Handle proxy authentication if needed
+                if (proxyConfig && proxyConfig.username && proxyConfig.password) {
+                    console.log('🔐 Setting up proxy authentication handler');
+                    
+                    // Set up authentication for all pages created in this context
+                    context.on('page', async (page) => {
+                        // Handle authentication requests
+                        await page.context().setHTTPCredentials({
+                            username: proxyConfig.username,
+                            password: proxyConfig.password
+                        });
+                        
+                        // Handle dialogs that might be proxy auth dialogs
+                        page.on('dialog', async (dialog) => {
+                            const message = dialog.message().toLowerCase();
+                            if (message.includes('proxy') || message.includes('username') || message.includes('password')) {
+                                console.log('🔐 Proxy authentication dialog detected, accepting with credentials');
+                                // For proxy auth dialogs, we need to provide username and password
+                                await dialog.accept(proxyConfig.username);
+                            } else {
+                                await dialog.dismiss();
+                            }
+                        });
+                    });
+                    
+                    // Also set credentials for the initial context
+                    await context.setHTTPCredentials({
+                        username: proxyConfig.username,
+                        password: proxyConfig.password
+                    });
+                }
+                
                 // Load cookies if available
                 if (importedData.cookies && importedData.cookies.length > 0) {
                     try {
@@ -602,6 +677,7 @@ export class ProfileLauncher {
                 const browserOptions = {
                     headless,
                     devtools,
+                    proxy: proxyConfig, // Add proxy configuration
                     args: [
                         '--disable-blink-features=AutomationControlled',
                         '--disable-features=VizDisplayCompositor',
@@ -624,10 +700,17 @@ export class ProfileLauncher {
                 }
                 
                 // Create a persistent context for non-Chromium browsers
-                context = await browser.newContext({
+                const contextOptions = {
                     viewport,
                     storageState: path.join(profile.userDataDir, 'storage-state.json')
-                });
+                };
+                
+                // Add proxy configuration to context if not already set at browser level
+                if (proxyConfig && browserType !== 'chromium') {
+                    contextOptions.proxy = proxyConfig;
+                }
+                
+                context = await browser.newContext(contextOptions);
             }
 
             const browserInfo = {
