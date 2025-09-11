@@ -345,6 +345,7 @@ export class ProfileLauncher {
             audioNoiseRange = [0.0001, 0.001],
             canvasNoiseRange = [0.001, 0.005],
             isTemporary = false, // Default to permanent profiles
+            disableCompression = undefined,
             ...launchOptions
         } = options;
 
@@ -355,6 +356,14 @@ export class ProfileLauncher {
         if (!template) {
             throw new Error(`Template profile '${templateProfile}' not found`);
         }
+        // Debug: show template identifiers and compression state
+        try {
+            const { dirPath: tDir, archivePath: tArch } = this.profileManager.getProfileStoragePaths(template);
+            const tCompressed = await this.profileManager.isCompressed(template);
+            console.log(`🔎 Template profile: ${template.name} (${template.id})`);
+            console.log(`   • dir: ${tDir}`);
+            console.log(`   • archive: ${tArch} (compressed=${tCompressed})`);
+        } catch (_) {}
 
         // Generate randomized fingerprint for this profile instance
         let fingerprintConfig = {};
@@ -377,24 +386,40 @@ export class ProfileLauncher {
             }
         }
 
-        // Create temporary profile based on template
-        const tempProfile = await this.profileManager.createProfile(newProfileName, {
-            description: `Template instance: ${newProfileName} (from ${templateProfile})`,
-            browserType: template.browserType
-        });
-
+        // Robustly ensure template has data and clone from it
         try {
-            // Ensure template is decompressed before copying
-            await this.profileManager.ensureDecompressed(template);
-            
-            // Copy template profile data to temp profile
-            const templateDataDir = path.join(this.profileManager.baseDir, 'data', template.id);
-            const tempDataDir = path.join(this.profileManager.baseDir, 'data', tempProfile.id);
-
-            if (await fs.pathExists(templateDataDir)) {
-                await fs.copy(templateDataDir, tempDataDir);
-                console.log(`📁 Copied template data to: ${tempProfile.id}`);
+            const { dirPath: templateDir, archivePath: templateArchive } = this.profileManager.getProfileStoragePaths(template);
+            let dirExists = await fs.pathExists(templateDir);
+            let archiveExists = await fs.pathExists(templateArchive);
+            if (!dirExists && !archiveExists) {
+                // Attempt to restore template by invoking sticky uncompress logic
+                try {
+                    await this.profileManager.ensureProfileUncompressedAndSticky(template.id);
+                } catch (e) {
+                    // fall through to final recheck
+                }
+                dirExists = await fs.pathExists(templateDir);
+                archiveExists = await fs.pathExists(templateArchive);
+                if (!dirExists && !archiveExists) {
+                    throw new Error(`Template data missing: neither directory nor archive found at ${templateDir} or ${templateArchive}`);
+                }
             }
+
+            // Clone the template profile to a new instance (handles dir or archive)
+            const tempProfile = await this.profileManager.cloneProfile(
+                template.id,
+                newProfileName,
+                `Template instance: ${newProfileName} (from ${template.name})`,
+                { disableCompression: disableCompression !== undefined ? disableCompression : (template.metadata?.compressOnClose === false) }
+            );
+
+            // Debug: show new profile identifiers
+            try {
+                const { dirPath: nDir, archivePath: nArch } = this.profileManager.getProfileStoragePaths(tempProfile);
+                console.log(`🆕 Created new instance profile: ${tempProfile.name} (${tempProfile.id})`);
+                console.log(`   • dir: ${nDir}`);
+                console.log(`   • archive: ${nArch}`);
+            } catch (_) {}
 
             // Launch with randomized fingerprint and stealth config
             const result = await this.launchProfile(tempProfile.id, {
@@ -404,7 +429,8 @@ export class ProfileLauncher {
                 stealthConfig: fingerprintConfig,
                 enableRequestCapture: launchOptions.enableRequestCapture !== false,
                 enableAutomation: launchOptions.enableAutomation !== false,
-                isTemporary: isTemporary // Use the explicit isTemporary setting
+                isTemporary: isTemporary, // Use the explicit isTemporary setting
+                disableCompression
             });
 
             // Mark as template-based session
@@ -421,8 +447,12 @@ export class ProfileLauncher {
             return result;
 
         } catch (error) {
-            // Clean up temp profile on failure
-            await this.profileManager.deleteProfile(tempProfile.id);
+            // Nothing created if clone failed before; if created and launch failed, attempt cleanup
+            try {
+                if (result && result.profile && result.profile.id) {
+                    // no-op
+                }
+            } catch (_) {}
             throw error;
         }
     }
@@ -448,12 +478,20 @@ export class ProfileLauncher {
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
+        try {
+            const { dirPath, archivePath } = this.profileManager.getProfileStoragePaths(profile);
+            const isComp = await this.profileManager.isCompressed(profile);
+            console.log(`🔧 Launch target profile: ${profile.name} (${profile.id})`);
+            console.log(`   • dir: ${dirPath}`);
+            console.log(`   • archive: ${archivePath} (compressed=${isComp})`);
+        } catch (_) {}
         // Ensure profile directory exists (decompress if archived)
         await this.profileManager.ensureDecompressed(profile);
         // Optionally override compression preference for this profile
         if (typeof disableCompression === 'boolean') {
             await this.profileManager.setCompressionPreference(profile.id, !disableCompression);
             profile.metadata = { ...(profile.metadata || {}), compressOnClose: !disableCompression };
+            console.log(`📌 Compression preference for '${profile.name}': ${!disableCompression ? 'ENABLED' : 'DISABLED'}`);
         }
         const sessionId = await this.profileManager.startSession(profile.id, 'automation');
 

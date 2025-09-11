@@ -58,6 +58,16 @@ export class ProfileManager {
             disableCompression = false
         } = options;
 
+        // Defensive: ensure unique name if a collision occurs (e.g., concurrent runs)
+        try {
+            const get = promisify(this.db.get.bind(this.db));
+            const existing = await get('SELECT id FROM profiles WHERE name = ?', [name]);
+            if (existing) {
+                const short = Math.random().toString(36).slice(2, 6);
+                name = `${name}-${short}`;
+            }
+        } catch (_) {}
+
         const profileId = uuidv4();
         const userDataDir = path.join(this.baseDir, 'data', profileId);
         
@@ -121,11 +131,11 @@ export class ProfileManager {
     async getProfile(nameOrId) {
         await this.initPromise;
         const get = promisify(this.db.get.bind(this.db));
-        const profile = await get(`
-            SELECT * FROM profiles 
-            WHERE id = ? OR name = ?
-        `, [nameOrId, nameOrId]);
-        
+        // Prefer exact ID match first to avoid ambiguous OR matching
+        let profile = await get('SELECT * FROM profiles WHERE id = ?', [nameOrId]);
+        if (!profile) {
+            profile = await get('SELECT * FROM profiles WHERE name = ?', [nameOrId]);
+        }
         if (!profile) {
             throw new Error(`Profile not found: ${nameOrId}`);
         }
@@ -457,6 +467,29 @@ export class ProfileManager {
         }
     }
 
+    async ensureProfileUncompressedAndSticky(nameOrId) {
+        const profile = await this.getProfile(nameOrId);
+        const { dirPath, archivePath } = this.getProfileStoragePaths(profile);
+        const dirExists = await fs.pathExists(dirPath);
+        const archiveExists = await fs.pathExists(archivePath);
+        if (!dirExists && archiveExists) {
+            // Decompress and keep uncompressed for subsequent operations
+            await this.decompressProfile(profile);
+        } else if (!dirExists && !archiveExists) {
+            // Attempt restore from backup location if present (e.g., 'profiles/data 2/<id>')
+            const backupDir = path.join(this.baseDir, 'data 2', profile.id);
+            if (await fs.pathExists(backupDir)) {
+                await fs.ensureDir(path.dirname(dirPath));
+                await fs.copy(backupDir, dirPath);
+                console.log(`♻️  Restored profile data for '${profile.name}' from backup: ${backupDir}`);
+            } else {
+                throw new Error(`Profile storage missing for '${profile.name}' (${profile.id}): no directory at ${dirPath} and no archive at ${archivePath}`);
+            }
+        }
+        await this.setProfileMetadata(profile.id, { compressOnClose: false });
+        return { ...profile, metadata: { ...(profile.metadata || {}), compressOnClose: false } };
+    }
+
     async setCompressionPreference(nameOrId, compressOnClose) {
         const profile = await this.getProfile(nameOrId);
         await this.setProfileMetadata(profile.id, { compressOnClose: !!compressOnClose });
@@ -468,6 +501,12 @@ export class ProfileManager {
         const results = [];
         for (const p of profiles) {
             try {
+                // Respect per-profile compression preference; skip when disabled
+                const meta = await this.getProfileMetadataRaw(p.id);
+                if (meta && meta.compressOnClose === false) {
+                    results.push({ profileId: p.id, profileName: p.name, skipped: true, reason: 'preference disabled' });
+                    continue;
+                }
                 if (await this.isCompressed(p)) {
                     results.push({ profileId: p.id, profileName: p.name, skipped: true, reason: 'already compressed' });
                     continue;

@@ -890,6 +890,28 @@ program
         };
 
         const pmLocal = new ProfileManager();
+        // Ensure the template stays uncompressed to avoid missing data dirs
+        try {
+            await pmLocal.ensureProfileUncompressedAndSticky(template);
+            console.log(chalk.dim(`📌 Template '${template}' set to stay uncompressed for cloning`));
+        } catch (e) {
+            console.log(chalk.yellow(`⚠️  Could not prepare template '${template}': ${e.message}`));
+        }
+        // Preflight: verify template storage exists after attempt to uncompress
+        try {
+            const t = await pmLocal.getProfile(template);
+            const { dirPath: tDir, archivePath: tArch } = pmLocal.getProfileStoragePaths(t);
+            const fsx = (await import('fs-extra')).default;
+            const hasDir = await fsx.pathExists(tDir);
+            const hasArc = await fsx.pathExists(tArch);
+            if (!hasDir && !hasArc) {
+                console.log(chalk.red(`✗ Template storage missing for '${t.name}' (${t.id}).`));
+                console.log(chalk.red(`  Expected directory: ${tDir}`));
+                console.log(chalk.red(`  Expected archive:   ${tArch}`));
+                console.log(chalk.yellow(`Tip: Restore the template (e.g., re-import or copy back its data), then rerun.`));
+                process.exit(1);
+            }
+        } catch (_) { /* ignore */ }
 
         // Determine starting index when resuming: find highest existing numeric suffix for this prefix
         let startIndex = 1;
@@ -941,7 +963,9 @@ program
                     autoCloseTimeout: 0,
                     isTemporary: false,
                     stealth: true,
-                    stealthPreset: 'balanced'
+                    stealthPreset: 'balanced',
+                    // Keep the new instance uncompressed until batch completes decisions
+                    disableCompression: false
                 });
                 created++;
                 profileRecord = runRes.profile;
@@ -1377,7 +1401,9 @@ program
 process.on('SIGINT', async () => {
     console.log(chalk.blue('\nShutting down...'));
     try {
-        await profileLauncher.closeAllBrowsers();
+        if (profileLauncher && typeof profileLauncher.closeAllBrowsers === 'function') {
+            await profileLauncher.closeAllBrowsers();
+        }
         await profileManager.close();
     } catch (error) {
         console.error(chalk.red('Error during cleanup:'), error.message);
