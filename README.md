@@ -77,6 +77,60 @@ npx ppm launch my-profile --load-extensions /path/to/ext1 --devtools
 npx ppm launch my-profile --no-autofill-stop-on-success  # Disable default stop-on-success behavior
 npx ppm launch my-profile --autofill-enforce-mode       # Continue monitoring for race conditions
 npx ppm launch my-profile --autofill-min-fields 3 --autofill-cooldown 60000  # Custom thresholds
+
+# Headless automation mode - Complete automated workflow
+npx ppm launch my-profile --headless-automation --auto-close-on-success
+npx ppm launch my-profile --headless --headless-automation --auto-close-on-success
+```
+
+### Headless Automation Mode
+
+The system supports complete headless automation workflows that can:
+1. **Autofill forms** using the autofill hook system
+2. **Perform human-like interactions** (scrolling, mouse movement, delays)
+3. **Click submit buttons** automatically
+4. **Monitor for success responses** using request capture
+5. **Auto-close browser** when success is detected
+
+```bash
+# Basic headless automation
+npx ppm launch my-profile --headless-automation
+
+# Headless automation with auto-close
+npx ppm launch my-profile --headless-automation --auto-close-on-success
+
+# Headless automation with template (perfect for multi-account workflows)
+npx ppm launch-template vpn-fresh user1 --headless-automation --auto-close-on-success
+
+# Run multiple automated instances
+npx ppm launch-template vpn-fresh user1 --headless-automation --auto-close-on-success --temp
+npx ppm launch-template vpn-fresh user2 --headless-automation --auto-close-on-success --temp
+npx ppm launch-template vpn-fresh user3 --headless-automation --auto-close-on-success --temp
+```
+
+**Headless Automation Features:**
+- **🤖 Complete Automation**: No manual intervention required
+- **🕐 Smart Timing**: Human-like delays and interactions
+- **🎯 Success Detection**: Monitors specific API responses for completion
+- **🚪 Auto-Close**: Automatically closes browser when workflow completes
+- **🔄 Retry Logic**: Built-in retry mechanisms for failed workflows
+- **📊 Progress Monitoring**: Real-time status updates and logging
+- **🛡️ Stealth Integration**: Works with all stealth and fingerprinting features
+
+**Automation Workflow:**
+1. **Launch** browser with profile/template
+2. **Navigate** to target signup page
+3. **Wait** for autofill system to complete form filling
+4. **Perform** human-like interactions (scrolling, mouse movement)
+5. **Click** submit button with realistic delays
+6. **Monitor** network requests for success indicators
+7. **Close** browser automatically when success is detected
+
+**Perfect for:**
+- Multi-account creation workflows
+- Automated signup processes
+- Batch profile generation
+- Unattended automation tasks
 ```
 
 ### Launch from template with fingerprint randomization
@@ -255,6 +309,121 @@ profiles/
     ├── profile-id-1/     # Profile user data
     ├── profile-id-2/
     └── ...
+```
+
+## Automation Hooks System 🤖
+
+The automation system uses configurable JavaScript hooks to define complete automation workflows for different websites and forms.
+
+### How Automation Hooks Work
+
+Automation hooks are JavaScript configuration files that define step-by-step workflows for automated form filling, submission, and success monitoring.
+
+### Hook Structure
+
+```javascript
+export default {
+    name: 'site-automation',
+    description: 'Complete automation workflow for a site',
+    
+    // URL patterns to match
+    urlPatterns: [
+        'https://example.com/signup*',
+        '*example.com*signup*'
+    ],
+    
+    // Step-by-step workflow
+    workflow: {
+        // Step 1: Wait for autofill
+        wait_for_autofill: {
+            type: 'wait_for_autofill',
+            timeout: 15000,
+            minFilledFields: 2,
+            expectedFields: ['input[name="email"]', 'input[name="password"]'],
+            required: true
+        },
+        
+        // Step 2: Human-like interactions
+        human_interactions: {
+            type: 'human_interactions',
+            interactions: ['scroll', 'move_mouse', 'random_delay'],
+            delay: { min: 500, max: 2000 },
+            required: false
+        },
+        
+        // Step 3: Click submit
+        click_submit: {
+            type: 'click_submit',
+            selectors: ['button[type="submit"]', '.submit-btn'],
+            required: true
+        },
+        
+        // Step 4: Monitor success
+        monitor_success: {
+            type: 'monitor_success',
+            timeout: 30000,
+            successUrls: ['api.example.com/user/profile'],
+            successStatuses: [200, 201],
+            required: true
+        }
+    }
+};
+```
+
+### Available Step Types
+
+1. **`wait_for_autofill`** - Wait for form fields to be automatically filled
+2. **`human_interactions`** - Perform human-like scrolling, mouse movement, delays
+3. **`click_submit`** - Find and click submit button with human-like timing
+4. **`monitor_success`** - Monitor network requests for success indicators
+5. **`custom_script`** - Execute custom JavaScript functions
+
+### Built-in Automation Hooks
+
+- **`vidiq.js`** - Complete VidIQ signup automation workflow
+- **`generic-signup.js`** - Template for general signup form automation
+
+### Creating Custom Automation Hooks
+
+1. Create a JavaScript file in `./automation-hooks/`
+2. Export default object with hook configuration
+3. Define URL patterns and workflow steps
+4. Test with `--headless-automation` flag
+
+### Example: Custom Site Hook
+
+```javascript
+// ./automation-hooks/my-site.js
+export default {
+    name: 'my-site-automation',
+    urlPatterns: ['https://mysite.com/register*'],
+    workflow: {
+        wait_for_autofill: {
+            type: 'wait_for_autofill',
+            timeout: 10000,
+            minFilledFields: 3,
+            expectedFields: [
+                'input[name="username"]',
+                'input[name="email"]', 
+                'input[name="password"]'
+            ]
+        },
+        human_interactions: {
+            type: 'human_interactions',
+            interactions: ['random_delay', 'scroll'],
+            delay: { min: 1000, max: 3000 }
+        },
+        click_submit: {
+            type: 'click_submit',
+            selectors: ['#register-btn', '.signup-button']
+        },
+        monitor_success: {
+            type: 'monitor_success',
+            successUrls: ['mysite.com/dashboard'],
+            timeout: 20000
+        }
+    }
+};
 ```
 
 ## API Reference

@@ -902,3 +902,158 @@ npx ppm launch-template vpn-fresh account3  # Different fingerprint
 - **Template data copying**: Full profile data inheritance
 
 This provides the perfect balance of **authenticity and variation** for template-based multi-account automation while maintaining the highest possible detection resistance.
+
+---
+
+Implemented and verified headless end-to-end automation with auto-close on success.
+
+Changes:
+- Reordered capture startup to avoid race:
+  - Request capture now starts before automation/autofill in [src/ProfileLauncher.js](src/ProfileLauncher.js).
+- Headless auto-close fallback:
+  - Auto-close loop also checks RequestCapture for VidIQ success endpoints (subscriptions/active and stripe/next-subscription) in [src/ProfileLauncher.js](src/ProfileLauncher.js).
+- Autofill bypass for pages without fields (extension_install/login_success):
+  - Added allowProceedWithoutFields and bypassAfterAttempts in wait_for_autofill step in [src/AutomationHookSystem.js](src/AutomationHookSystem.js).
+- VidIQ hook enhancements:
+  - Added URL patterns for extension_install and login_success.
+  - Made click_submit optional and expanded submit selectors for continue/next flows.
+  - Extended success endpoints to include subscriptions/stripe/next-subscription and increased timeout to 45s in [automation-hooks/vidiq.js](automation-hooks/vidiq.js).
+
+Verification:
+- Headless profile run auto-closed after detecting VidIQ success via capture:
+  - Command: npx ppm launch viq1 --headless --headless-automation --auto-close-on-success
+  - Observed:
+    - Autofill executed and verified
+    - Submit clicked
+sponses: 200 subscriptions/active and 200 stripe/next-subscription
+    - Log: “Success response detected via capture; auto-closing browser…”
+    - Context close + browser disconnect handled cleanly with cleanup messages
+
+Notes:
+- Earlier template test was SIGKILL-terminated by the environment mid-run; the follow-up run validated the full flow including autofill, submission, capture-based detection, and auto-close.
+- The automation system now proceeds even when no fields are present (extension_install), matching manual-flow behavior by waiting for autofill subsystem, then acting.
+
+Usage:
+- Headless automation with auto-close:
+  - npx ppm launch my-profile --headless --headless-automation --auto-close-on-success
+  - npx ppm launch-template vidiq-clean userX --headless-automation --auto-close-on-success --temp
+
+This completes the requested automation behavior: headless launch, autofill, human-like interactions, submit, detect success from captured requests, and auto-close.
+
+---
+
+
+## 🔧 What I've Done
+
+1. **✅ Added EventBus to ProfileLauncher**: 
+   - Imported `ProfileEventBus` and `EVENTS`
+   - Created EventBus instance in constructor
+   - Passed EventBus to both autofill and automation systems
+
+2. **✅ Updated AutofillHookSystem**:
+   - Added EventBus support in constructor
+   - Added event emission when autofill starts (`AUTOFILL_STARTED`)
+   - Added event emission when autofill completes (`AUTOFILL_COMPLETED`)
+   - Events include critical field status (email/password filled)
+
+3. **⚠️ Attempted AutomationHookSystem Update** (has syntax errors):
+   - Tried to replace polling with event listening
+   - AutomationHookSystem should wait for `AUTOFILL_COMPLETED` event
+   - No more race conditions from premature polling
+
+## 🎯 The Correct Event-Driven Flow
+
+### Before (Race Condition):
+```
+1. Autofill starts filling fields
+2. Automation polls status every 500ms
+3. ❌ Automation sees "2 fields filled" (counting duplicates)
+4. ❌ Automation proceeds to submit while password still filling
+5. 💥 Race condition - submit before password complete
+```
+
+### After (Event-Driven):
+```
+1. Autofill starts filling fields
+2. 📡 Autofill emits AUTOFILL_STARTED event
+3. 🔄 Autofill continues filling ALL fields
+4. ✅ Autofill emits AUTOFILL_COMPLETED event (only when truly done)
+5. 📡 Automation receives completion event
+6. ✅ Automation proceeds to next step (human interactions, then submit)
+7. 🎯 Perfect coordination - no race conditions
+```
+
+## 🛠️ What Needs to be Fixed
+
+The AutomationHookSystem file has syntax errors from my changes. The correct approach is:
+
+1. **Fix the syntax errors** in AutomationHookSystem.js
+2. **Replace the `waitForAutofill` method** with event-driven approach:
+   ```javascript
+   // Instead of polling, listen for events:
+   this.eventBus.onSessionEvent(sessionId, EVENTS.AUTOFILL_COMPLETED, (event) => {
+       // Only proceed when autofill is truly complete
+       if (event.emailFilled && event.passwordFilled) {
+           continueAutomation();
+       }
+   });
+   ```
+
+3. **Remove all the complex polling logic** that causes race conditions
+
+## 🎉 Expected Result
+
+With proper EventBus integration:
+- ✅ **No more race conditions**: Automation waits for proper completion event
+- ✅ **Guaranteed field filling**: Event only fired when ALL critical fields are filled
+- ✅ **Clean coordination**: Event-driven communication between systems
+- ✅ **Reliable automation**: Submit only happens after forms are completely filled
+
+The EventBus you created is the **perfect solution** - we just need to use it properly instead of the error-prone polling approach.
+
+---
+
+I’ll harden the coordination so automation only proceeds once email/password are truly filled and stable, and pause autofill right before the click.
+
+Plan:
+- Tighten the “install flow” bypass logic so we don’t skip waiting when fields actually exist.
+- Add pre-submit verification and stability checks for email/password before clicking submit.
+- Pause the autofill monitor for the session right before the click to avoid last-moment interference.
+- Keep the “worst case” option in mind: we can disable autofill when automation is running and move filling into automation if needed.
+
+What I changed:
+- AutomationHookSystem
+  - Bypass logic: only bypass `wait_for_autofill` for extension install pages if a quick probe confirms there are no input fields on the page. If fields are detected, do not bypass and wait properly.
+  - Pre-submit safety: `click_submit` now:
+    - Verifies required selectors (email + password) have values.
+    - Validates email (contains @) and password min length.
+    - Checks value stability across multiple reads to avoid racing with in-flight autofill.
+    - Optionally pauses autofill monitoring for the session before clicking (to eliminate interference at the moment of click).
+- VidIQ automation hook
+  - Enabled `pauseAutofill: true` on the click step.
+  - Already uses strict `verifySelectors`, stability tries, and min delays — these now feed the stronger checks above.
+
+Why this should fix it:
+- Your earlier run bypassed the wait on an extension install URL even though form fields were present, so automation moved to click while the password was still being filled. With the probe-based bypass and the new stability + pause checks, automation will wait until both fields are filled and stable and then pause autofill for the final click.
+
+Next steps:
+- Re-run your scenario and watch the logs for the new guards:
+  - “Fields detected on install flow; not bypassing autofill wait”
+  - “Pre-submit check: …” messages
+  - “Paused autofill monitoring before submit click”
+
+Example:
+```bash
+npx ppm launch-template vidiq-clean auto-nonheadless-4 --temp --devtools
+```
+
+Optional “worst case” path:
+- If you want, I can add an option to run “automation-autofill-only”:
+  - Skip starting the AutofillHookSystem while automation is active.
+  - Add an `automation_fill` step that deterministically fills email/password inside the AutomationHookSystem with the same selectors (and a simple safe data generator), then proceeds to submit.
+  - CLI/option gating so it’s opt-in.
+
+Want me to implement that “automation-autofill-only” option as a toggle?
+
+Made changes.
+

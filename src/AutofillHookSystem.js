@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { RandomDataGenerator } from './RandomDataGenerator.js';
+import { EVENTS } from './ProfileEventBus.js';
 
 /**
  * AutofillHookSystem - A generalized system for handling form autofill based on URL patterns
@@ -14,6 +15,10 @@ export class AutofillHookSystem {
         this.activeMonitors = new Map(); // Track active page monitors per session
         this.completedSessions = new Map(); // Track sessions that have successfully completed autofill
         this.sessionFieldCounts = new Map(); // Track successful field fills per session
+        this.activeFillOperations = new Map(); // Track active fill operations per session
+        
+        // EventBus for coordinating with other systems
+        this.eventBus = options.eventBus || null;
         
         // Autofill behavior options
         this.options = {
@@ -413,9 +418,9 @@ export class AutofillHookSystem {
                 const firstField = field.first();
                 
                 // Wait for field to be visible and enabled
-                await firstField.waitFor({ 
-                    state: 'visible', 
-                    timeout: 2000 
+                await firstField.waitFor({
+                    state: 'visible',
+                    timeout: 2000
                 }).catch(() => {
                     console.log(`⚠️  Field not visible: ${selector}`);
                 });
@@ -435,15 +440,59 @@ export class AutofillHookSystem {
                 
                 console.log(`📝 Filling field (attempt ${attempt}): ${fieldConfig.description || selector}`);
                 
+                // Bring field into view and perform small human-like cursor movement
+                try {
+                    await firstField.scrollIntoViewIfNeeded();
+                    const box = await firstField.boundingBox().catch(() => null);
+                    if (box) {
+                        const jitterX = (Math.random() - 0.5) * Math.min(10, box.width / 5);
+                        const jitterY = (Math.random() - 0.5) * Math.min(6, box.height / 5);
+                        const tgtX = box.x + box.width / 2 + jitterX;
+                        const tgtY = box.y + box.height / 2 + jitterY;
+                        await page.mouse.move(tgtX, tgtY, { steps: 3 + Math.floor(Math.random() * 4) });
+                        await page.waitForTimeout(120 + Math.floor(Math.random() * 220));
+                        await firstField.hover().catch(() => {});
+                    }
+                } catch (_) {}
+                
                 // Focus the field first to ensure it's active
                 await firstField.focus();
-                await page.waitForTimeout(50); // Small delay after focus
+                await page.waitForTimeout(80 + Math.floor(Math.random() * 140)); // Small randomized delay after focus
                 
-                // Clear field with multiple methods for better reliability
-                await this.clearFieldSafely(firstField);
+                // If value already correct, skip to avoid churn
+                const existingValue = await firstField.inputValue().catch(() => '');
+                if (existingValue === value) {
+                    console.log(`ℹ️  Field already has correct value, skipping: ${selector}`);
+                    return true;
+                }
                 
-                // Fill the value
-                await firstField.fill(value);
+                // Determine if this is a password field
+                let isPasswordField = false;
+                try {
+                    const attrType = await firstField.getAttribute('type');
+                    isPasswordField = (attrType && attrType.toLowerCase() === 'password') || /password/i.test(selector);
+                } catch (_) {
+                    isPasswordField = /password/i.test(selector);
+                }
+                
+                if (isPasswordField) {
+                    // For password fields, avoid clearing aggressively; type human-like
+                    if (existingValue && existingValue.length > 0) {
+                        await this.clearFieldSafely(firstField);
+                        await page.waitForTimeout(60 + Math.floor(Math.random() * 120));
+                    }
+                    const perCharDelay = 40 + Math.floor(Math.random() * 80); // 40-120ms
+                    await firstField.pressSequentially(value, { delay: perCharDelay });
+                } else {
+                    // Non-password fields: clear only if necessary
+                    if (existingValue && existingValue !== value) {
+                        await this.clearFieldSafely(firstField);
+                        await page.waitForTimeout(40 + Math.floor(Math.random() * 100));
+                    }
+                    // Prefer human-like typing to reduce bot signals on recaptcha pages
+                    const perCharDelay = 20 + Math.floor(Math.random() * 60); // 20-80ms
+                    await firstField.pressSequentially(value, { delay: perCharDelay });
+                }
                 
                 // Verify the value was actually set
                 const actualValue = await firstField.inputValue().catch(() => '');
@@ -455,14 +504,19 @@ export class AutofillHookSystem {
                     console.log(`⚠️  Value mismatch (attempt ${attempt}). Expected: "${value}", Got: "${actualValue}"`);
                     
                     if (attempt < maxRetries) {
-                        // Try alternative filling method
+                        // Try alternative method: re-focus, gentle clear (if any) and retype
                         await firstField.focus();
-                        await this.clearFieldSafely(firstField);
-                        await firstField.pressSequentially(value, { delay: 10 });
+                        if (!isPasswordField) {
+                            // Avoid overly aggressive clears on recaptcha-protected pages
+                            await this.clearFieldSafely(firstField);
+                            await page.waitForTimeout(40 + Math.floor(Math.random() * 100));
+                        }
+                        const perCharDelay2 = 25 + Math.floor(Math.random() * 70);
+                        await firstField.pressSequentially(value, { delay: perCharDelay2 });
                         
                         const retryValue = await firstField.inputValue().catch(() => '');
                         if (retryValue === value) {
-                            console.log(`✅ Field filled with pressSequentially: ${value.length > 50 ? value.substring(0, 47) + '...' : value}`);
+                            console.log(`✅ Field filled on retry: ${value.length > 50 ? value.substring(0, 47) + '...' : value}`);
                             return true;
                         }
                         
@@ -563,13 +617,62 @@ export class AutofillHookSystem {
     }
 
     /**
+     * Check if autofill is actively running for a session
+     * @param {string} sessionId - Session ID
+     * @returns {boolean} Whether autofill is actively running
+     */
+    isAutofillActive(sessionId) {
+        const activeOps = this.activeFillOperations.get(sessionId);
+        return activeOps && activeOps.size > 0;
+    }
+
+    /**
+     * Mark autofill operation as started
+     * @param {string} sessionId - Session ID
+     * @param {string} operationId - Operation identifier
+     */
+    startFillOperation(sessionId, operationId) {
+        if (!this.activeFillOperations.has(sessionId)) {
+            this.activeFillOperations.set(sessionId, new Set());
+        }
+        this.activeFillOperations.get(sessionId).add(operationId);
+    }
+
+    /**
+     * Mark autofill operation as completed
+     * @param {string} sessionId - Session ID
+     * @param {string} operationId - Operation identifier
+     */
+    completeFillOperation(sessionId, operationId) {
+        const activeOps = this.activeFillOperations.get(sessionId);
+        if (activeOps) {
+            activeOps.delete(operationId);
+            if (activeOps.size === 0) {
+                this.activeFillOperations.delete(sessionId);
+            }
+        }
+    }
+
+    /**
      * Execute autofill for a specific hook and page
      * @param {Object} hook - Hook configuration
      * @param {Object} page - Playwright page
      * @param {string} sessionId - Session ID
      */
     async executeAutofill(hook, page, sessionId) {
-        console.log(`🚀 Executing autofill: ${hook.name}`);
+        const operationId = `${hook.name}-${Date.now()}`;
+        this.startFillOperation(sessionId, operationId);
+        
+        console.log(`🚀 Executing autofill: ${hook.name} (${operationId})`);
+        
+        // Emit autofill started event
+        if (this.eventBus) {
+            this.eventBus.emitSessionEvent(sessionId, EVENTS.AUTOFILL_STARTED, {
+                hookName: hook.name,
+                operationId,
+                url: page.url()
+            });
+        }
         
         try {
             // Generate dynamic data if needed
@@ -592,6 +695,12 @@ export class AutofillHookSystem {
                 fieldRetryDelay: 100,     // Delay between field retries
                 verifyFill: true,         // Verify field values after filling
                 autoSubmit: false,
+                // Enhanced race condition prevention defaults
+                stabilityChecks: 2,       // Default stability checks
+                stabilityDelay: 250,      // Default stability delay
+                minFieldsForSuccess: 2,   // Default minimum fields
+                fillSequentially: false,  // Default parallel filling
+                sequentialDelay: 300,     // Default sequential delay
                 ...hook.execution
             };
             
@@ -634,16 +743,88 @@ export class AutofillHookSystem {
             await page.waitForTimeout(settings.waitAfterFill);
             
             // Fill fields with improved race condition handling
+            // PRIORITIZE fields to minimize race with submit: email -> password -> names -> others
+            const selectorsOriginal = Object.keys(hook.fields);
+            const priorityOrder = (sel) => {
+                if (/type=["']?email|name=["']?email|\[type="email"]|\[name="email"]|form-input-email|placeholder.*email/i.test(sel)) return 1;
+                if (/type=["']?password|name=["']?password|form-input-password/i.test(sel)) return 2;
+                if (/first|last|full.*name|placeholder.*name/i.test(sel)) return 3;
+                return 4;
+            };
+            const orderedSelectors = selectorsOriginal.sort((a, b) => priorityOrder(a) - priorityOrder(b));
+            
             let filledCount = 0;
-            for (const [selector, fieldConfig] of Object.entries(hook.fields)) {
-                try {
-                    const fieldValue = this.resolveFieldValue(fieldConfig, userData);
-                    const success = await this.fillFieldSafely(page, selector, fieldValue, fieldConfig, settings);
-                    if (success) {
-                        filledCount++;
+            
+            if (settings.fillSequentially) {
+                console.log(`📝 Filling fields sequentially to prevent race conditions...`);
+                
+                // Sequential filling - wait for each field to complete before moving to next
+                for (const selector of orderedSelectors) {
+                    const fieldConfig = hook.fields[selector];
+                    try {
+                        console.log(`🎯 Filling field: ${selector.substring(0, 50)}...`);
+                        
+                        const fieldValue = this.resolveFieldValue(fieldConfig, userData);
+                        const success = await this.fillFieldSafely(page, selector, fieldValue, fieldConfig, settings);
+                        
+                        if (success) {
+                            filledCount++;
+                            console.log(`✅ Field filled successfully (${filledCount} total)`);
+                            
+                            // Stability check after each field
+                            if (settings.stabilityChecks > 0) {
+                                await page.waitForTimeout(settings.stabilityDelay);
+                                
+                                // Verify field is still filled
+                                try {
+                                    const element = await page.locator(selector).first();
+                                    const currentValue = await element.inputValue();
+                                    if (!currentValue || currentValue.trim() !== fieldValue.trim()) {
+                                        console.log(`⚠️  Field ${selector} was cleared, retrying...`);
+                                        await this.fillFieldSafely(page, selector, fieldValue, fieldConfig, settings);
+                                    }
+                                } catch (_) {}
+                            }
+                            
+                            // Sequential delay before next field
+                            if (settings.sequentialDelay > 0) {
+                                await page.waitForTimeout(settings.sequentialDelay + Math.floor(Math.random() * 200));
+                            }
+                        }
+                    } catch (error) {
+                        console.log(`⚠️  Could not fill field ${selector}: ${error.message}`);
                     }
-                } catch (error) {
-                    console.log(`⚠️  Could not fill field ${selector}: ${error.message}`);
+                }
+            } else {
+                console.log(`📝 Filling fields with parallel approach...`);
+                
+                // Original parallel approach with enhanced timing
+                for (const selector of orderedSelectors) {
+                    const fieldConfig = hook.fields[selector];
+                    try {
+                        // Randomized inter-field human-like delay and occasional micro scroll/mouse movement
+                        const interDelay = 120 + Math.floor(Math.random() * 320); // 120-440ms
+                        if (Math.random() < 0.15) { // Reduced probability to avoid disruption
+                            const dy = 30 + Math.floor(Math.random() * 80);
+                            await page.mouse.wheel(0, dy);
+                        }
+                        if (Math.random() < 0.25) { // Reduced probability
+                            const x = 100 + Math.floor(Math.random() * 800);
+                            const y = 120 + Math.floor(Math.random() * 500);
+                            await page.mouse.move(x, y, { steps: 2 + Math.floor(Math.random() * 4) });
+                        }
+                        await page.waitForTimeout(interDelay);
+                        
+                        const fieldValue = this.resolveFieldValue(fieldConfig, userData);
+                        const success = await this.fillFieldSafely(page, selector, fieldValue, fieldConfig, settings);
+                        if (success) {
+                            filledCount++;
+                            // Small randomized pause after successful fill
+                            await page.waitForTimeout(120 + Math.floor(Math.random() * 240));
+                        }
+                    } catch (error) {
+                        console.log(`⚠️  Could not fill field ${selector}: ${error.message}`);
+                    }
                 }
             }
             
@@ -671,16 +852,80 @@ export class AutofillHookSystem {
                 }
             }
             
-            // Check if we've achieved success and should mark completion
-            if (finalFilledCount >= this.options.minFieldsForSuccess) {
+            // Enhanced completion logic - verify critical fields before marking complete
+            let criticalFieldsFilled = 0;
+            const criticalFieldSelectors = [
+                'input[data-testid="form-input-email"]',
+                'input[name="email"]', 
+                'input[type="email"]'
+            ];
+            const passwordFieldSelectors = [
+                'input[data-testid="form-input-password"]',
+                'input[name="password"]',
+                'input[type="password"]'
+            ];
+            
+            // Check email fields
+            let emailFilled = false;
+            for (const selector of criticalFieldSelectors) {
+                try {
+                    const element = await page.locator(selector).first();
+                    if (await element.count() > 0) {
+                        const value = await element.inputValue();
+                        if (value && value.includes('@') && value.length > 5) {
+                            emailFilled = true;
+                            criticalFieldsFilled++;
+                            break;
+                        }
+                    }
+                } catch (_) {}
+            }
+            
+            // Check password fields
+            let passwordFilled = false;
+            for (const selector of passwordFieldSelectors) {
+                try {
+                    const element = await page.locator(selector).first();
+                    if (await element.count() > 0) {
+                        const value = await element.inputValue();
+                        if (value && value.length >= 8) {
+                            passwordFilled = true;
+                            criticalFieldsFilled++;
+                            break;
+                        }
+                    }
+                } catch (_) {}
+            }
+            
+            console.log(`🔍 Critical fields status: email=${emailFilled}, password=${passwordFilled}, total filled=${finalFilledCount}`);
+            
+            // Only mark completion if both critical fields are filled OR we have enough non-critical fields
+            const shouldMarkComplete = (emailFilled && passwordFilled) || 
+                                      (finalFilledCount >= this.options.minFieldsForSuccess && criticalFieldsFilled >= 1);
+            
+            if (shouldMarkComplete) {
                 this.markSessionCompleted(sessionId, hook.name, finalFilledCount);
+                
+                console.log(`✅ Autofill completion marked: ${finalFilledCount} fields (email: ${emailFilled}, password: ${passwordFilled})`);
+                
+                // Emit autofill completed event
+                if (this.eventBus) {
+                    this.eventBus.emitSessionEvent(sessionId, EVENTS.AUTOFILL_COMPLETED, {
+                        hookName: hook.name,
+                        operationId,
+                        fieldsFilledCount: finalFilledCount,
+                        emailFilled,
+                        passwordFilled,
+                        url: page.url()
+                    });
+                }
                 
                 // If stop on success is enabled, we can stop monitoring this hook for this session
                 if (this.options.stopOnSuccess && !this.options.enforceMode) {
                     console.log(`🛑 Autofill goal achieved for ${hook.name} - stopping further attempts`);
                 }
             } else if (finalFilledCount > 0) {
-                console.log(`⚠️  Partial success (${finalFilledCount}/${this.options.minFieldsForSuccess} required fields), will retry if page changes`);
+                console.log(`⚠️  Partial success (${finalFilledCount}/${this.options.minFieldsForSuccess} fields, critical: ${criticalFieldsFilled}), will retry if page changes`);
             }
             
             // Detect submit buttons (but don't click unless autoSubmit is enabled)
@@ -724,6 +969,10 @@ export class AutofillHookSystem {
             // Remove from processed pages on error for retry
             const pageKey = `${sessionId}-${page.url()}-${hook.name}`;
             this.processedPages.delete(pageKey);
+        } finally {
+            // Always mark operation as completed
+            this.completeFillOperation(sessionId, operationId);
+            console.log(`✅ Autofill operation completed: ${operationId}`);
         }
     }
 
@@ -798,6 +1047,7 @@ export class AutofillHookSystem {
             activeSessions: this.activeMonitors.size,
             processedPages: this.processedPages.size,
             completedSessions: this.completedSessions.size,
+            activeFillOperations: Array.from(this.activeFillOperations.entries()).reduce((total, [sessionId, ops]) => total + ops.size, 0),
             options: {
                 stopOnSuccess: this.options.stopOnSuccess,
                 enforceMode: this.options.enforceMode,

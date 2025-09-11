@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import { AutofillHookSystem } from './AutofillHookSystem.js';
 import { RequestCaptureSystem } from './RequestCaptureSystem.js';
 import { StealthManager } from './StealthManager.js';
+import { AutomationHookSystem } from './AutomationHookSystem.js';
+import { ProfileEventBus, EVENTS } from './ProfileEventBus.js';
 
 export class ProfileLauncher {
     constructor(profileManager, options = {}) {
@@ -14,10 +16,14 @@ export class ProfileLauncher {
         this.automationTasks = new Map(); // Track automation tasks per session
         this.processedPages = new Map(); // Track processed pages to avoid duplicates
         
+        // Initialize EventBus for coordinating between systems
+        this.eventBus = new ProfileEventBus();
+        
         // Initialize the autofill hook system with tracking enabled
         this.autofillSystem = new AutofillHookSystem({
             enableTracking: true,
             trackingDbPath: './profiles/data/generated_names.db',
+            eventBus: this.eventBus,
             usePrefix: false,
             usePostfix: true,
             // Pass through autofill behavior options
@@ -35,8 +41,18 @@ export class ProfileLauncher {
             maxCaptureSize: 1000
         });
         
+        // Initialize the automation hook system
+        this.automationSystem = new AutomationHookSystem({
+            maxRetries: 3,
+            defaultTimeout: 30000,
+            humanDelayMin: 500,
+            humanDelayMax: 2000,
+            eventBus: this.eventBus
+        });
+        
         this.initializeAutofillSystem();
         this.initializeRequestCaptureSystem();
+        this.initializeAutomationSystem();
         
         // Initialize stealth manager
         this.stealthManager = new StealthManager();
@@ -60,9 +76,21 @@ export class ProfileLauncher {
     async initializeRequestCaptureSystem() {
         try {
             await this.requestCaptureSystem.loadHooks('./capture-hooks');
-            console.log(`🕸️  Request capture system initialized with ${this.requestCaptureSystem.getStatus().totalHooks} hooks`);
+            console.log(`� Request capture system initialized with ${this.requestCaptureSystem.getStatus().totalHooks} hooks`);
         } catch (error) {
-            console.warn(`⚠️  Could not initialize request capture system: ${error.message}`);
+            console.error('❌ Failed to initialize request capture system:', error.message);
+        }
+    }
+
+    /**
+     * Initialize the automation hook system
+     */
+    async initializeAutomationSystem() {
+        try {
+            await this.automationSystem.loadHooks('./automation-hooks');
+            console.log(`🤖 Automation system initialized with ${this.automationSystem.getStatus().hooksLoaded} hooks`);
+        } catch (error) {
+            console.error('❌ Failed to initialize automation system:', error.message);
         }
     }
 
@@ -570,6 +598,13 @@ export class ProfileLauncher {
 
             // For Chromium persistent context, use the existing page; for others, create new page
             const page = browserType === 'chromium' ? context.pages()[0] : await context.newPage();
+
+            // Start request capture monitoring if enabled (start early to avoid missing initial responses)
+            if (enableRequestCapture) {
+                await this.requestCaptureSystem.startMonitoring(sessionId, context, {
+                    profileName: profile.name
+                });
+            }
             
             // Setup automation if enabled
             if (enableAutomation) {
@@ -578,6 +613,16 @@ export class ProfileLauncher {
             
             // Start autofill monitoring
             await this.autofillSystem.startMonitoring(sessionId, context);
+            
+            // Start automation if enabled
+            if (enableAutomation) {
+                await this.automationSystem.startAutomation(sessionId, context, this.requestCaptureSystem, this.autofillSystem);
+                
+                // Setup auto-close monitoring for headless automation
+                if (options.headlessAutomation && options.autoCloseOnSuccess) {
+                    this.setupAutoCloseMonitoring(sessionId, browserInfo);
+                }
+            }
             
             // Setup VidIQ device ID spoofing for this profile
             await this.setupVidiqDeviceIdSpoofing(context, profile.name);
@@ -592,12 +637,7 @@ export class ProfileLauncher {
                 await this.stealthManager.applyStealthScripts(context, presetConfig);
             }
             
-            // Start request capture monitoring if enabled
-            if (enableRequestCapture) {
-                await this.requestCaptureSystem.startMonitoring(sessionId, context, {
-                    profileName: profile.name
-                });
-            }
+            // (moved earlier) Request capture already started above to avoid missing initial responses
             
             return {
                 browser,
@@ -646,6 +686,11 @@ export class ProfileLauncher {
         this.cleanupInProgress.add(sessionId);
 
         try {
+            // Clear auto-close monitoring interval if it exists
+            if (browserInfo.autoCloseInterval) {
+                clearInterval(browserInfo.autoCloseInterval);
+            }
+
             // Proactively prepare for clean shutdown
             if (browserInfo.browserType === 'chromium') {
                 await this.prepareCleanShutdown(browserInfo);
@@ -705,6 +750,16 @@ export class ProfileLauncher {
             // Stop autofill monitoring
             this.autofillSystem.stopMonitoring(sessionId);
             
+            // Stop automation monitoring
+            await this.automationSystem.cleanup(sessionId);
+
+            // Export captured requests before stopping capture (best-effort)
+            try {
+                await this.requestCaptureSystem.exportCapturedRequests(sessionId, 'jsonl');
+            } catch (error) {
+                console.warn(`⚠️  Could not export captured requests: ${error.message}`);
+            }
+            
             // Stop request capture monitoring
             await this.requestCaptureSystem.cleanup(sessionId);
             
@@ -763,6 +818,92 @@ export class ProfileLauncher {
                 }
             });
         }
+    }
+
+    /**
+     * Set up auto-close monitoring for headless automation
+     * @param {string} sessionId - Session ID
+     * @param {Object} browserInfo - Browser information object
+     */
+    setupAutoCloseMonitoring(sessionId, browserInfo) {
+        console.log(`🤖 Setting up auto-close monitoring for session: ${sessionId}`);
+        
+        // Check automation completion every 2 seconds
+        const checkInterval = setInterval(async () => {
+            try {
+                // Check if session still exists
+                if (!this.activeBrowsers.has(sessionId)) {
+                    clearInterval(checkInterval);
+                    return;
+                }
+                
+                // Get automation status
+                const automationStatus = this.automationSystem.getStatus();
+                const sessionCompletions = Array.from(this.automationSystem.completedAutomations.values())
+                    .filter(completion => completion.sessionId === sessionId && completion.status === 'success');
+                
+                if (sessionCompletions.length > 0) {
+                    console.log(`🎉 Automation completed successfully! Auto-closing browser...`);
+                    clearInterval(checkInterval);
+                    
+                    // Wait a moment to ensure everything is captured
+                    setTimeout(async () => {
+                        try {
+                            // Export captured requests before closing
+                            try {
+                                await this.requestCaptureSystem.exportCapturedRequests(sessionId, 'jsonl');
+                            } catch (e) {
+                                console.warn(`⚠️  Error exporting captured requests before auto-close: ${e.message}`);
+                            }
+                            await this.closeBrowser(sessionId, { clearCache: false });
+                            console.log(`✅ Browser closed automatically for session: ${sessionId}`);
+                        } catch (error) {
+                            console.error(`❌ Error auto-closing browser: ${error.message}`);
+                        }
+                    }, 2000); // 2 second delay
+                } else {
+                    // Fallback: detect success via request capture directly (VidIQ endpoints)
+                    try {
+                        const captured = this.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                        const successDetected = captured.some(req =>
+                            req.type === 'response' &&
+                            [200, 201].includes(req.status) &&
+                            (
+                                (typeof req.url === 'string' && req.url.includes('api.vidiq.com/subscriptions/active')) ||
+                                (typeof req.url === 'string' && req.url.includes('api.vidiq.com/subscriptions/stripe/next-subscription'))
+                            )
+                        );
+                        
+                        if (successDetected) {
+                            console.log(`🎯 Success response detected via capture; auto-closing browser...`);
+                            clearInterval(checkInterval);
+                            
+                            setTimeout(async () => {
+                                try {
+                                    // Export captured requests before closing
+                                    try {
+                                        await this.requestCaptureSystem.exportCapturedRequests(sessionId, 'jsonl');
+                                    } catch (e) {
+                                        console.warn(`⚠️  Error exporting captured requests before auto-close: ${e.message}`);
+                                    }
+                                    await this.closeBrowser(sessionId, { clearCache: false });
+                                    console.log(`✅ Browser closed automatically for session: ${sessionId}`);
+                                } catch (error) {
+                                    console.error(`❌ Error auto-closing browser: ${error.message}`);
+                                }
+                            }, 2000);
+                        }
+                    } catch (e) {
+                        // Ignore capture inspection errors in auto-close loop
+                    }
+                }
+            } catch (error) {
+                console.error(`❌ Error checking automation completion: ${error.message}`);
+            }
+        }, 2000); // Check every 2 seconds
+        
+        // Store interval for cleanup
+        browserInfo.autoCloseInterval = checkInterval;
     }
 
     /**

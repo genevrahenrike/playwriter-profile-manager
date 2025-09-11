@@ -474,6 +474,8 @@ program
     .option('--no-automation', 'Disable automation capabilities (enabled by default)')
     .option('--no-max-stealth', 'Disable maximum stealth mode (enabled by default)')
     .option('--automation-tasks <tasks...>', 'Specify custom automation tasks')
+    .option('--headless-automation', 'Enable headless automation mode (autofill + submit + monitor success)')
+    .option('--auto-close-on-success', 'Automatically close browser when success is detected (use with --headless-automation)')
     .option('--no-capture', 'Disable request capture (enabled by default)')
     .option('--capture-format <format>', 'Request capture output format (jsonl, json, csv)', 'jsonl')
     .option('--capture-dir <dir>', 'Request capture output directory', './captured-requests')
@@ -519,14 +521,16 @@ program
             // Prepare launch options
             const launchOptions = {
                 browserType: options.browser,
-                headless: options.headless,
+                headless: options.headless, // Enable headless for headless automation
                 devtools: options.devtools,
                 loadExtensions: options.loadExtensions || [],
                 autoLoadExtensions: options.autoExtensions !== false, // True by default, disable with --no-auto-extensions
                 enableAutomation: options.automation !== false, // True by default, disable with --no-automation
                 enableRequestCapture: options.capture !== false, // True by default, disable with --no-capture
                 maxStealth: options.maxStealth !== false, // True by default, disable with --no-max-stealth
-                automationTasks: options.automationTasks || []
+                automationTasks: options.automationTasks || [],
+                headlessAutomation: options.headlessAutomation || false,
+                autoCloseOnSuccess: options.autoCloseOnSuccess || false
             };
 
             // Show extension-related info
@@ -541,6 +545,12 @@ program
             // Show automation and stealth status
             if (launchOptions.enableAutomation) {
                 console.log(chalk.green('🤖 Automation enabled - Browser will be connected to automation API'));
+                if (launchOptions.headlessAutomation) {
+                    console.log(chalk.cyan('🔄 Headless automation mode - Will auto-fill, submit, and monitor for success'));
+                    if (launchOptions.autoCloseOnSuccess) {
+                        console.log(chalk.cyan('🚪 Auto-close enabled - Browser will close automatically on success'));
+                    }
+                }
             } else {
                 console.log(chalk.yellow('⚠️  Automation disabled - Running in manual mode only'));
             }
@@ -631,6 +641,8 @@ program
     .option('--load-extensions <paths...>', 'Load additional extensions')
     .option('--no-auto-extensions', 'Disable automatic extension loading')
     .option('--no-automation', 'Disable automation features')
+    .option('--headless-automation', 'Enable headless automation mode (autofill + submit + monitor success)')
+    .option('--auto-close-on-success', 'Automatically close browser when success is detected (use with --headless-automation)')
     .option('--no-capture', 'Disable request capture')
     .option('--no-autofill-stop-on-success', 'Disable stopping autofill after success (default: enabled)')
     .option('--autofill-enforce-mode', 'Continue autofill monitoring even after success for race condition protection')
@@ -673,7 +685,7 @@ program
             
             const launchOptions = {
                 browserType: options.browser,
-                headless: options.headless,
+                headless: options.headless, // Enable headless for headless automation
                 devtools: options.devtools,
                 randomizeFingerprint: options.randomizeFingerprint !== false,
                 varyScreenResolution: options.varyScreenResolution || false,
@@ -682,7 +694,9 @@ program
                 autoLoadExtensions: options.autoExtensions !== false,
                 enableAutomation: options.automation !== false,
                 enableRequestCapture: options.capture !== false,
-                isTemporary: options.temp || false // Only temporary if --temp flag is used
+                isTemporary: options.temp || false, // Only temporary if --temp flag is used
+                headlessAutomation: options.headlessAutomation || false,
+                autoCloseOnSuccess: options.autoCloseOnSuccess || false
             };
 
             const result = await templateProfileLauncher.launchFromTemplate(template, instanceName, launchOptions);
@@ -695,6 +709,17 @@ program
             
             if (result.fingerprintRandomized) {
                 console.log(chalk.blue('🎲 Fingerprint randomized for uniqueness'));
+            }
+            
+            // Show automation status
+            if (launchOptions.enableAutomation) {
+                console.log(chalk.green('🤖 Automation enabled'));
+                if (launchOptions.headlessAutomation) {
+                    console.log(chalk.cyan('🔄 Headless automation mode active'));
+                    if (launchOptions.autoCloseOnSuccess) {
+                        console.log(chalk.cyan('🚪 Auto-close enabled'));
+                    }
+                }
             }
             
             if (options.temp) {

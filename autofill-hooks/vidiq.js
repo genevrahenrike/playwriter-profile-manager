@@ -87,11 +87,20 @@ export default {
     execution: {
         maxAttempts: 8,           // More attempts for dynamic forms
         pollInterval: 1500,       // Longer polling interval
-        waitAfterFill: 600,       // More time for fields to stabilize
-        fieldRetries: 3,          // Retries per field
-        fieldRetryDelay: 150,     // Delay between field retries
+        waitAfterFill: 800,       // More time for fields to stabilize
+        fieldRetries: 4,          // Increased retries per field
+        fieldRetryDelay: 200,     // Slightly longer delay between field retries
         verifyFill: true,         // Verify field values after filling
-        autoSubmit: false         // Never auto-submit for safety
+        autoSubmit: false,        // Never auto-submit for safety
+        
+        // Enhanced race condition prevention
+        stabilityChecks: 3,       // Check field stability multiple times
+        stabilityDelay: 300,      // Delay between stability checks
+        minFieldsForSuccess: 2,   // Require both email and password minimum
+        
+        // Custom field priority for sequential filling
+        fillSequentially: true,  // Fill fields one by one rather than in parallel
+        sequentialDelay: 400      // Delay between sequential field fills
     },
     
     // Custom execution logic (optional)
