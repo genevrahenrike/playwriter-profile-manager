@@ -135,7 +135,7 @@ export class RandomDataGenerator {
             // Privacy-focused providers
             { domain: 'protonmail.com', weight: 8 },
             { domain: 'tutanota.com', weight: 3 },
-            { domain: 'proton.me', weight: 5 },
+            { domain: 'proton.me', weight: 2 }, // Reduced from 5 to 2
             
             // Alternative providers
             { domain: 'icloud.com', weight: 6 },
@@ -145,7 +145,7 @@ export class RandomDataGenerator {
             { domain: 'zoho.com', weight: 1 },
             { domain: 'fastmail.com', weight: 1 },
             { domain: 'gmx.com', weight: 1 },
-            { domain: 'mailbox.org', weight: 1 }
+            { domain: 'mailbox.org', weight: 0.5 } // Reduced from 1 to 0.5
         ];
     }
     
