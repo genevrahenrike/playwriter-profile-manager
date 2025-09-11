@@ -35,8 +35,20 @@ export class AutofillHookSystem {
             usePrefix: options.usePrefix || false,
             usePostfix: options.usePostfix !== false, // default true
             postfixDigits: options.postfixDigits || 4,
+            
+            // New username generation options
+            usernameStyle: options.usernameStyle || 'auto', // 'auto', 'concatenated', 'separated', 'business'
+            usernamePattern: options.usernamePattern || 'random', // 'random', 'pattern_a', 'pattern_b'
+            separatorChars: options.separatorChars || ['.', '_', '-'],
+            businessMode: options.businessMode || false,
+            patternWeights: options.patternWeights, // {concatenated, separated, business}
+            businessUserFormat: options.businessUserFormat, // 'auto' | 'full' | 'alias'
+            businessFormatWeights: options.businessFormatWeights, // {full, alias}
+            businessAliasPatterns: options.businessAliasPatterns, // override alias set
+            
             emailProviders: options.emailProviders,
             customEmailProviders: options.customEmailProviders,
+            businessEmailProviders: options.businessEmailProviders,
             enableTracking: options.enableTracking || false,
             trackingDbPath: options.trackingDbPath || './profiles/data/generated_names.db',
             passwordLength: options.passwordLength,
@@ -268,6 +280,14 @@ export class AutofillHookSystem {
             usePostfix: hook.generationOptions?.usePostfix,
             currentIndex: this.getSessionIndex(sessionId),
             password: hook.generationOptions?.password,
+            // Allow per-hook overrides for username generation patterns
+            usernameStyle: hook.generationOptions?.usernameStyle,
+            usernamePattern: hook.generationOptions?.usernamePattern,
+            businessMode: hook.generationOptions?.businessMode,
+            patternWeights: hook.generationOptions?.patternWeights,
+            businessUserFormat: hook.generationOptions?.businessUserFormat,
+            businessFormatWeights: hook.generationOptions?.businessFormatWeights,
+            businessAliasPatterns: hook.generationOptions?.businessAliasPatterns,
             sessionId: sessionId,
             siteUrl: siteUrl,
             hookName: hook.name

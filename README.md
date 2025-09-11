@@ -151,12 +151,20 @@ npx ppm batch --template vidiq-clean \
     --count 3 \
     --prefix auto-headless \
     --headless
+
+# Resume from existing prefix lineage (skip used indices)
+npx ppm batch --template vidiq-clean \
+    --count 3 \
+    --prefix auto-run \
+    --resume
 ```
 
 Batch options:
 - `--template <name>`: Template profile to clone from (e.g., `vidiq-clean`).
 - `--count <n>`: Number of profiles to create (default: 1).
 - `--prefix <prefix>`: Profile name prefix (timestamp + index appended).
+- `--prefix <prefix>`: Profile name prefix (timestamp + index appended).
+- `--resume`: Continue numbering by skipping indices already used by profiles with the same prefix. Useful to re-run batches later without name conflicts while keeping the same prefix lineage.
 - `--timeout <ms>`: Per-run success timeout (default: 120000).
 - `--captcha-grace <ms>`: Extra grace time if CAPTCHA detected (default: 45000).
 - `--headless`: Run in headless mode (default: headed).

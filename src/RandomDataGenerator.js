@@ -14,9 +14,35 @@ export class RandomDataGenerator {
             usePostfix: options.usePostfix !== false, // default true
             postfixDigits: options.postfixDigits || 4,
             
+            // Username style options - NEW
+            usernameStyle: options.usernameStyle || 'auto', // 'auto', 'concatenated', 'separated', 'business'
+            usernamePattern: options.usernamePattern || 'random', // 'random', 'pattern_a', 'pattern_b'
+            separatorChars: options.separatorChars || ['.', '_', '-'],
+            businessMode: options.businessMode || false, // Generate business-style usernames
+
+            // Weighted selection across the 3 patterns (concatenated/pattern_a, separated/pattern_b, business)
+            patternWeights: {
+                concatenated: 1,
+                separated: 1,
+                business: 1,
+                ...(options.patternWeights || {})
+            },
+
+            // Business username formatting (no digits by default)
+            // 'auto' chooses between 'full' and 'alias' using businessFormatWeights
+            businessUserFormat: options.businessUserFormat || 'auto', // 'auto' | 'full' | 'alias'
+            businessFormatWeights: {
+                full: 1,
+                alias: 1,
+                ...(options.businessFormatWeights || {})
+            },
+            // Optional override of alias patterns array (strings from supported set)
+            businessAliasPatterns: options.businessAliasPatterns || null, // e.g., ['flast','f.last','first.l','fl','lf']
+            
             // Email options
             emailProviders: options.emailProviders || this.getDefaultEmailProviders(),
             customEmailProviders: options.customEmailProviders || [],
+            businessEmailProviders: options.businessEmailProviders || this.getDefaultBusinessEmailProviders(),
             
             // Password options
             passwordLength: { min: 12, max: 20, ...options.passwordLength },
@@ -42,6 +68,18 @@ export class RandomDataGenerator {
         if (this.config.enableTracking) {
             this.initializeDatabase();
         }
+    }
+
+    weightedChoice(weightsObj) {
+        const entries = Object.entries(weightsObj).filter(([, w]) => typeof w === 'number' && w > 0);
+        if (entries.length === 0) return null;
+        const total = entries.reduce((s, [, w]) => s + w, 0);
+        let r = Math.random() * total;
+        for (const [key, w] of entries) {
+            r -= w;
+            if (r <= 0) return key;
+        }
+        return entries[0][0];
     }
     
     /**
@@ -69,6 +107,574 @@ export class RandomDataGenerator {
             { domain: 'fastmail.com', weight: 1 },
             { domain: 'gmx.com', weight: 1 },
             { domain: 'mailbox.org', weight: 1 }
+        ];
+    }
+    
+    /**
+     * Get default business email providers for professional domains
+     */
+    getDefaultBusinessEmailProviders() {
+        return [
+            // Major tech companies
+            { domain: 'google.com', weight: 10 },
+            { domain: 'microsoft.com', weight: 10 },
+            { domain: 'apple.com', weight: 10 },
+            { domain: 'amazon.com', weight: 10 },
+            { domain: 'meta.com', weight: 8 },
+            { domain: 'facebook.com', weight: 8 },
+            { domain: 'tesla.com', weight: 8 },
+            { domain: 'ibm.com', weight: 7 },
+            { domain: 'oracle.com', weight: 7 },
+            { domain: 'intel.com', weight: 7 },
+            { domain: 'nvidia.com', weight: 7 },
+            { domain: 'adobe.com', weight: 6 },
+            { domain: 'salesforce.com', weight: 6 },
+            { domain: 'cisco.com', weight: 6 },
+            { domain: 'dell.com', weight: 6 },
+            { domain: 'hp.com', weight: 6 },
+            { domain: 'hpe.com', weight: 5 },
+            { domain: 'sap.com', weight: 5 },
+            { domain: 'qualcomm.com', weight: 5 },
+            { domain: 'broadcom.com', weight: 5 },
+            { domain: 'paypal.com', weight: 5 },
+            { domain: 'uber.com', weight: 5 },
+            { domain: 'lyft.com', weight: 4 },
+            { domain: 'airbnb.com', weight: 4 },
+            { domain: 'netflix.com', weight: 4 },
+            { domain: 'spotify.com', weight: 4 },
+            { domain: 'twitter.com', weight: 4 },
+            { domain: 'snap.com', weight: 3 },
+            { domain: 'dropbox.com', weight: 3 },
+            { domain: 'slack.com', weight: 3 },
+            { domain: 'atlassian.com', weight: 3 },
+            { domain: 'zoom.us', weight: 3 },
+            { domain: 'shopify.com', weight: 3 },
+            { domain: 'squareup.com', weight: 3 },
+            { domain: 'block.xyz', weight: 2 },
+            { domain: 'stripe.com', weight: 3 },
+            { domain: 'cloudflare.com', weight: 2 },
+            { domain: 'okta.com', weight: 2 },
+            { domain: 'zendesk.com', weight: 2 },
+            { domain: 'workday.com', weight: 2 },
+            { domain: 'palantir.com', weight: 2 },
+            { domain: 'datadog.com', weight: 2 },
+            { domain: 'snowflake.com', weight: 2 },
+            { domain: 'servicenow.com', weight: 2 },
+            { domain: 'splunk.com', weight: 2 },
+            { domain: 'twilio.com', weight: 2 },
+            { domain: 'mongodb.com', weight: 2 },
+            { domain: 'redhat.com', weight: 2 },
+            { domain: 'vmware.com', weight: 2 },
+            { domain: 'bitdefender.com', weight: 1 },
+            { domain: 'fortinet.com', weight: 1 },
+            { domain: 'paloaltonetworks.com', weight: 1 },
+            { domain: 'crowdstrike.com', weight: 1 },
+            { domain: 'zscaler.com', weight: 1 },
+
+            // Global tech & enterprise SaaS additions
+            { domain: 'linkedin.com', weight: 3 },
+            { domain: 'github.com', weight: 3 },
+            { domain: 'gitlab.com', weight: 2 },
+            { domain: 'bitbucket.org', weight: 1 },
+            { domain: 'notion.so', weight: 2 },
+            { domain: 'asana.com', weight: 2 },
+            { domain: 'monday.com', weight: 2 },
+            { domain: 'figma.com', weight: 2 },
+            { domain: 'miro.com', weight: 2 },
+            { domain: 'canva.com', weight: 2 },
+            { domain: 'box.com', weight: 2 },
+            { domain: 'docusign.com', weight: 2 },
+            { domain: 'adp.com', weight: 3 },
+            
+            { domain: 'sage.com', weight: 2 },
+            { domain: 'intuit.com', weight: 3 },
+            { domain: 'xero.com', weight: 2 },
+            { domain: 'blackbaud.com', weight: 1 },
+            { domain: 'servicemax.com', weight: 1 },
+            { domain: 'confluent.io', weight: 1 },
+            { domain: 'elastic.co', weight: 2 },
+            { domain: 'hashicorp.com', weight: 1 },
+            
+            { domain: 'newrelic.com', weight: 1 },
+            { domain: 'snyk.io', weight: 1 },
+            { domain: 'suse.com', weight: 1 },
+            { domain: 'jetbrains.com', weight: 1 },
+
+            // Global consulting & Big 4
+            { domain: 'accenture.com', weight: 4 },
+            { domain: 'deloitte.com', weight: 4 },
+            { domain: 'kpmg.com', weight: 4 },
+            { domain: 'ey.com', weight: 4 },
+            { domain: 'pwc.com', weight: 4 },
+            { domain: 'mckinsey.com', weight: 3 },
+            { domain: 'bcg.com', weight: 3 },
+            { domain: 'bain.com', weight: 3 },
+
+            // Global banks & payments
+            { domain: 'visa.com', weight: 4 },
+            { domain: 'mastercard.com', weight: 4 },
+            { domain: 'americanexpress.com', weight: 4 },
+            { domain: 'chase.com', weight: 4 },
+            { domain: 'citi.com', weight: 4 },
+            { domain: 'usbank.com', weight: 3 },
+            { domain: 'pncbank.com', weight: 3 },
+            { domain: 'truist.com', weight: 3 },
+            { domain: 'capitalone.com', weight: 4 },
+            { domain: 'discover.com', weight: 3 },
+            { domain: 'barclays.com', weight: 3 },
+            { domain: 'hsbc.com', weight: 3 },
+            { domain: 'santander.com', weight: 3 },
+            { domain: 'bnpparibas.com', weight: 2 },
+            { domain: 'credit-suisse.com', weight: 2 },
+            { domain: 'ubs.com', weight: 3 },
+            { domain: 'bbva.com', weight: 2 },
+            { domain: 'ing.com', weight: 2 },
+            { domain: 'societegenerale.com', weight: 2 },
+
+            // Insurance
+            { domain: 'progressive.com', weight: 3 },
+            { domain: 'allstate.com', weight: 3 },
+            { domain: 'geico.com', weight: 3 },
+            { domain: 'aig.com', weight: 3 },
+            { domain: 'chubb.com', weight: 3 },
+            { domain: 'travelers.com', weight: 2 },
+            { domain: 'prudential.com', weight: 3 },
+            { domain: 'manulife.com', weight: 2 },
+            { domain: 'sunlife.com', weight: 2 },
+            { domain: 'axa.com', weight: 3 },
+            { domain: 'zurich.com', weight: 2 },
+            
+
+            // Telecom
+            { domain: 'att.com', weight: 4 },
+            { domain: 't-mobile.com', weight: 4 },
+            { domain: 'sprint.com', weight: 2 },
+            { domain: 'bt.com', weight: 2 },
+            { domain: 'vodafone.com', weight: 3 },
+            { domain: 'orange.com', weight: 2 },
+            { domain: 'telefonica.com', weight: 2 },
+            { domain: 'comcast.com', weight: 3 },
+            { domain: 'charter.com', weight: 2 },
+
+            // Transportation & logistics
+            { domain: 'fedex.com', weight: 4 },
+            { domain: 'ups.com', weight: 4 },
+            { domain: 'dhl.com', weight: 3 },
+            { domain: 'maersk.com', weight: 3 },
+            
+            { domain: 'cnhindustrial.com', weight: 2 },
+            { domain: 'man.com', weight: 1 },
+            { domain: 'cummins.com', weight: 3 },
+            { domain: 'volvo.com', weight: 3 },
+            
+            { domain: 'ryder.com', weight: 2 },
+            { domain: 'xpo.com', weight: 2 },
+
+            // Airlines & travel
+            { domain: 'delta.com', weight: 3 },
+            { domain: 'aa.com', weight: 3 },
+            { domain: 'united.com', weight: 3 },
+            { domain: 'southwest.com', weight: 3 },
+            { domain: 'jetblue.com', weight: 2 },
+            { domain: 'alaskaair.com', weight: 2 },
+            { domain: 'ba.com', weight: 2 },
+            { domain: 'airfrance.com', weight: 2 },
+            { domain: 'lufthansa.com', weight: 2 },
+            { domain: 'emirates.com', weight: 2 },
+            { domain: 'qatarairways.com', weight: 2 },
+            { domain: 'singaporeair.com', weight: 2 },
+
+            // Retail & e-commerce
+            { domain: 'target.com', weight: 4 },
+            { domain: 'bestbuy.com', weight: 4 },
+            { domain: 'homedepot.com', weight: 4 },
+            { domain: 'lowes.com', weight: 4 },
+            { domain: 'nordstrom.com', weight: 3 },
+            { domain: 'macys.com', weight: 3 },
+            { domain: 'kohls.com', weight: 3 },
+            { domain: 'gap.com', weight: 2 },
+            { domain: 'nike.com', weight: 3 },
+            { domain: 'adidas.com', weight: 2 },
+            { domain: 'lululemon.com', weight: 2 },
+            { domain: 'zara.com', weight: 2 },
+            { domain: 'hm.com', weight: 2 },
+            { domain: 'shein.com', weight: 2 },
+            { domain: 'temu.com', weight: 1 },
+            { domain: 'alibaba.com', weight: 2 },
+            { domain: 'aliexpress.com', weight: 1 },
+
+            // Food & beverage
+            { domain: 'starbucks.com', weight: 4 },
+            { domain: 'mcdonalds.com', weight: 4 },
+            { domain: 'chipotle.com', weight: 3 },
+            { domain: 'dominos.com', weight: 3 },
+            { domain: 'yum.com', weight: 2 },
+            { domain: 'restaurantbrandsintl.com', weight: 1 },
+            
+            { domain: 'ab-inbev.com', weight: 2 },
+            { domain: 'heineken.com', weight: 2 },
+            { domain: 'diageo.com', weight: 2 },
+
+            // Media & entertainment
+            { domain: 'disney.com', weight: 4 },
+            { domain: 'warnerbros.com', weight: 3 },
+            { domain: 'paramount.com', weight: 3 },
+            { domain: 'nbcuni.com', weight: 2 },
+            { domain: 'fox.com', weight: 2 },
+            { domain: 'sonypictures.com', weight: 2 },
+            { domain: 'univision.com', weight: 1 },
+
+            // Pharma & healthcare systems
+            { domain: 'unitedhealthgroup.com', weight: 7 },
+            { domain: 'cvshealth.com', weight: 7 },
+            { domain: 'anthem.com', weight: 5 },
+            { domain: 'hcahealthcare.com', weight: 3 },
+            { domain: 'tenethealth.com', weight: 2 },
+            
+            { domain: 'cardinalhealth.com', weight: 6 },
+            { domain: 'medtronic.com', weight: 3 },
+            { domain: 'bostonscientific.com', weight: 2 },
+            { domain: 'stryker.com', weight: 3 },
+            { domain: 'bd.com', weight: 2 },
+            { domain: 'edwards.com', weight: 1 },
+
+            // Energy & utilities additions
+            { domain: 'bp.com', weight: 3 },
+            { domain: 'shell.com', weight: 3 },
+            { domain: 'totalenergies.com', weight: 2 },
+            { domain: 'eni.com', weight: 2 },
+            { domain: 'aramco.com', weight: 2 },
+            { domain: 'pge.com', weight: 2 },
+            { domain: 'nationalgrid.com', weight: 2 },
+
+            // Manufacturing & industrial
+            { domain: '3m.com', weight: 4 },
+            { domain: 'siemens.com', weight: 4 },
+            { domain: 'schneider-electric.com', weight: 4 },
+            { domain: 'bosch.com', weight: 3 },
+            { domain: 'honeywell.com', weight: 4 },
+            { domain: 'rockwellautomation.com', weight: 4 },
+            { domain: 'emerson.com', weight: 4 },
+            { domain: 'abb.com', weight: 4 },
+            { domain: 'ge.com', weight: 4 },
+
+            // Universities and research (common professional domains)
+            { domain: 'harvard.edu', weight: 1 },
+            { domain: 'stanford.edu', weight: 1 },
+            { domain: 'mit.edu', weight: 1 },
+            { domain: 'berkeley.edu', weight: 1 },
+            { domain: 'ox.ac.uk', weight: 1 },
+            { domain: 'cam.ac.uk', weight: 1 },
+            { domain: 'ethz.ch', weight: 1 },
+            { domain: 'tum.de', weight: 1 },
+            { domain: 'nus.edu.sg', weight: 1 },
+
+            // Government portals (lower weight, but seen)
+            { domain: 'usa.gov', weight: 1 },
+            { domain: 'europa.eu', weight: 1 },
+            { domain: 'gov.uk', weight: 1 },
+
+            // Fortune 500 companies (sample, add more as needed)
+            { domain: 'walmart.com', weight: 8 },
+            { domain: 'exxonmobil.com', weight: 7 },
+            { domain: 'chevron.com', weight: 7 },
+            { domain: 'mckesson.com', weight: 7 },
+            { domain: 'cvshealth.com', weight: 7 },
+            { domain: 'unitedhealthgroup.com', weight: 7 },
+            { domain: 'berkshirehathaway.com', weight: 7 },
+            { domain: 'amerisourcebergen.com', weight: 6 },
+            { domain: 'alphabet.com', weight: 6 },
+            { domain: 'ford.com', weight: 6 },
+            { domain: 'generalmotors.com', weight: 6 },
+            { domain: 'cardinalhealth.com', weight: 6 },
+            { domain: 'costco.com', weight: 6 },
+            { domain: 'cigna.com', weight: 6 },
+            { domain: 'marathonpetroleum.com', weight: 5 },
+            { domain: 'kroger.com', weight: 5 },
+            { domain: 'walgreens.com', weight: 5 },
+            { domain: 'verizon.com', weight: 5 },
+            { domain: 'jpmorganchase.com', weight: 5 },
+            { domain: 'bankofamerica.com', weight: 5 },
+            { domain: 'wellsfargo.com', weight: 5 },
+            { domain: 'citigroup.com', weight: 5 },
+            { domain: 'anthem.com', weight: 5 },
+            { domain: 'fannie.com', weight: 4 },
+            { domain: 'phillips66.com', weight: 4 },
+            { domain: 'valero.com', weight: 4 },
+            { domain: 'statefarm.com', weight: 4 },
+            { domain: 'freddiemac.com', weight: 4 },
+            { domain: 'johnsonandjohnson.com', weight: 4 },
+            { domain: 'procterandgamble.com', weight: 4 },
+            { domain: 'humana.com', weight: 4 },
+            { domain: 'metlife.com', weight: 4 },
+            { domain: 'pepsico.com', weight: 4 },
+            { domain: 'intel.com', weight: 4 },
+            { domain: 'caterpillar.com', weight: 4 },
+            { domain: 'lockheedmartin.com', weight: 4 },
+            { domain: 'boeing.com', weight: 4 },
+            { domain: 'raytheon.com', weight: 4 },
+            { domain: 'morganstanley.com', weight: 4 },
+            { domain: 'goldmansachs.com', weight: 4 },
+            { domain: 'pfizer.com', weight: 4 },
+            { domain: 'merck.com', weight: 4 },
+            { domain: 'abbvie.com', weight: 4 },
+            { domain: 'abbott.com', weight: 4 },
+            { domain: 'bms.com', weight: 4 },
+            { domain: 'amgen.com', weight: 4 },
+            { domain: 'gilead.com', weight: 4 },
+            { domain: 'regeneron.com', weight: 4 },
+            { domain: 'biogen.com', weight: 4 },
+            { domain: 'moderna.com', weight: 4 },
+            { domain: 'novartis.com', weight: 4 },
+            { domain: 'sanofi.com', weight: 4 },
+            { domain: 'astrazeneca.com', weight: 4 },
+            { domain: 'bayer.com', weight: 4 },
+            { domain: 'roche.com', weight: 4 },
+            { domain: 'glaxosmithkline.com', weight: 4 },
+            { domain: 'unilever.com', weight: 4 },
+            { domain: 'nestle.com', weight: 4 },
+            { domain: 'cocacola.com', weight: 4 },
+            { domain: 'pepsico.com', weight: 4 },
+            { domain: 'kraftheinzcompany.com', weight: 4 },
+            { domain: 'mondelezinternational.com', weight: 4 },
+            { domain: 'generalmills.com', weight: 4 },
+            { domain: 'kelloggcompany.com', weight: 4 },
+            { domain: 'conagrabrands.com', weight: 4 },
+            { domain: 'tyson.com', weight: 4 },
+            { domain: 'whirlpoolcorp.com', weight: 4 },
+            { domain: 'paccar.com', weight: 4 },
+            { domain: 'johnsoncontrols.com', weight: 4 },
+            { domain: '3m.com', weight: 4 },
+            { domain: 'dupont.com', weight: 4 },
+            { domain: 'dow.com', weight: 4 },
+            { domain: 'exeloncorp.com', weight: 4 },
+            { domain: 'dominionenergy.com', weight: 4 },
+            { domain: 'pg.com', weight: 4 },
+            { domain: 'ge.com', weight: 4 },
+            { domain: 'honeywell.com', weight: 4 },
+            { domain: 'halliburton.com', weight: 4 },
+            { domain: 'schlumberger.com', weight: 4 },
+            { domain: 'conocophillips.com', weight: 4 },
+            { domain: 'bakerhughes.com', weight: 4 },
+            { domain: 'marathon.com', weight: 4 },
+            { domain: 'devonenergy.com', weight: 4 },
+            { domain: 'pioneer.com', weight: 4 },
+            { domain: 'chevron.com', weight: 4 },
+            { domain: 'exxonmobil.com', weight: 4 },
+            { domain: 'valero.com', weight: 4 },
+            { domain: 'phillips66.com', weight: 4 },
+            { domain: 'coned.com', weight: 4 },
+            { domain: 'southerncompany.com', weight: 4 },
+            { domain: 'duke-energy.com', weight: 4 },
+            { domain: 'aep.com', weight: 4 },
+            { domain: 'nexteraenergy.com', weight: 4 },
+            { domain: 'pplweb.com', weight: 4 },
+            { domain: 'xcelenergy.com', weight: 4 },
+            { domain: 'firstenergycorp.com', weight: 4 },
+            { domain: 'entergy.com', weight: 4 },
+            { domain: 'centerpointenergy.com', weight: 4 },
+            { domain: 'nisource.com', weight: 4 },
+            { domain: 'duquesne.com', weight: 4 },
+            { domain: 'alliantenergy.com', weight: 4 },
+            { domain: 'blackhillsenergy.com', weight: 4 },
+            { domain: 'clevelandcliffs.com', weight: 4 },
+            { domain: 'alcoa.com', weight: 4 },
+            { domain: 'newmont.com', weight: 4 },
+            { domain: 'freeport-mcmoran.com', weight: 4 },
+            { domain: 'nucor.com', weight: 4 },
+            { domain: 'ussteel.com', weight: 4 },
+            { domain: 'internationalpaper.com', weight: 4 },
+            { domain: 'westrock.com', weight: 4 },
+            { domain: 'domtar.com', weight: 4 },
+            { domain: 'kimberly-clark.com', weight: 4 },
+            { domain: 'georgia-pacific.com', weight: 4 },
+            { domain: 'ball.com', weight: 4 },
+            { domain: 'owenscorning.com', weight: 4 },
+            { domain: 'masco.com', weight: 4 },
+            { domain: 'stanleyblackanddecker.com', weight: 4 },
+            { domain: 'sherwin-williams.com', weight: 4 },
+            { domain: 'pulte.com', weight: 4 },
+            { domain: 'lennar.com', weight: 4 },
+            { domain: 'drhorton.com', weight: 4 },
+            { domain: 'kbhome.com', weight: 4 },
+            { domain: 'tollbrothers.com', weight: 4 },
+            { domain: 'centurycommunities.com', weight: 4 },
+            { domain: 'mohawkind.com', weight: 4 },
+            { domain: 'armstrongflooring.com', weight: 4 },
+            { domain: 'shawinc.com', weight: 4 },
+            { domain: 'beazer.com', weight: 4 },
+            { domain: 'masonite.com', weight: 4 },
+            { domain: 'pgtinnovations.com', weight: 4 },
+            { domain: 'jeld-wen.com', weight: 4 },
+            { domain: 'andersenwindows.com', weight: 4 },
+            { domain: 'pella.com', weight: 4 },
+            { domain: 'simpsonmfg.com', weight: 4 },
+            { domain: 'trex.com', weight: 4 },
+            { domain: 'azekco.com', weight: 4 },
+            { domain: 'bmc.com', weight: 4 },
+            { domain: 'bluelinxco.com', weight: 4 },
+            { domain: 'buildersfirstsource.com', weight: 4 },
+            { domain: 'gms.com', weight: 4 },
+            { domain: 'homedepot.com', weight: 4 },
+            { domain: 'lowes.com', weight: 4 },
+            { domain: 'menards.com', weight: 4 },
+            { domain: 'acehardware.com', weight: 4 },
+            { domain: 'truevalue.com', weight: 4 },
+            { domain: 'grainger.com', weight: 4 },
+            { domain: 'fastenal.com', weight: 4 },
+            { domain: 'mcmaster.com', weight: 4 },
+            { domain: 'ferguson.com', weight: 4 },
+            { domain: 'watsco.com', weight: 4 },
+            { domain: 'carrier.com', weight: 4 },
+            { domain: 'trane.com', weight: 4 },
+            { domain: 'lennox.com', weight: 4 },
+            { domain: 'goodmanmfg.com', weight: 4 },
+            { domain: 'daikin.com', weight: 4 },
+            { domain: 'york.com', weight: 4 },
+            { domain: 'rheem.com', weight: 4 },
+            { domain: 'aosmith.com', weight: 4 },
+            { domain: 'pentair.com', weight: 4 },
+            { domain: 'watts.com', weight: 4 },
+            { domain: 'zurn.com', weight: 4 },
+            { domain: 'muellerindustries.com', weight: 4 },
+            { domain: 'emerson.com', weight: 4 },
+            { domain: 'rockwellautomation.com', weight: 4 },
+            { domain: 'hubbell.com', weight: 4 },
+            { domain: 'eaton.com', weight: 4 },
+            { domain: 'schneider-electric.com', weight: 4 },
+            { domain: 'siemens.com', weight: 4 },
+            { domain: 'abb.com', weight: 4 },
+            { domain: 'mitsubishielectric.com', weight: 4 },
+            { domain: 'toshiba.com', weight: 4 },
+            { domain: 'panasonic.com', weight: 4 },
+            { domain: 'sony.com', weight: 4 },
+            { domain: 'lg.com', weight: 4 },
+            { domain: 'samsung.com', weight: 4 },
+            { domain: 'hitachi.com', weight: 4 },
+            { domain: 'fujitsu.com', weight: 4 },
+            { domain: 'nec.com', weight: 4 },
+            { domain: 'sharp.com', weight: 4 },
+            { domain: 'kyocera.com', weight: 4 },
+            { domain: 'canon.com', weight: 4 },
+            { domain: 'ricoh.com', weight: 4 },
+            { domain: 'xerox.com', weight: 4 },
+            { domain: 'brother.com', weight: 4 },
+            { domain: 'epson.com', weight: 4 },
+            { domain: 'lenovo.com', weight: 4 },
+            { domain: 'asus.com', weight: 4 },
+            { domain: 'acer.com', weight: 4 },
+            { domain: 'msi.com', weight: 4 },
+            { domain: 'gigabyte.com', weight: 4 },
+            { domain: 'foxconn.com', weight: 4 },
+            { domain: 'quanta.com', weight: 4 },
+            { domain: 'wistron.com', weight: 4 },
+            { domain: 'compal.com', weight: 4 },
+            { domain: 'inventec.com', weight: 4 },
+            { domain: 'pegatron.com', weight: 4 },
+            { domain: 'flex.com', weight: 4 },
+            { domain: 'jabil.com', weight: 4 },
+            { domain: 'celestica.com', weight: 4 },
+            { domain: 'sanmina.com', weight: 4 },
+            { domain: 'benchmark.com', weight: 4 },
+            { domain: 'plexus.com', weight: 4 },
+            { domain: 'ttm.com', weight: 4 },
+            { domain: 'viasystems.com', weight: 4 },
+            { domain: 'onsemi.com', weight: 4 },
+            { domain: 'microchip.com', weight: 4 },
+            { domain: 'analog.com', weight: 4 },
+            { domain: 'texasinstruments.com', weight: 4 },
+            { domain: 'st.com', weight: 4 },
+            { domain: 'infineon.com', weight: 4 },
+            { domain: 'nxp.com', weight: 4 },
+            { domain: 'renesas.com', weight: 4 },
+            { domain: 'marvell.com', weight: 4 },
+            { domain: 'skyworksinc.com', weight: 4 },
+            { domain: 'qorvo.com', weight: 4 },
+            { domain: 'ams.com', weight: 4 },
+            { domain: 'te.com', weight: 4 },
+            { domain: 'molex.com', weight: 4 },
+            { domain: 'tycoelectronics.com', weight: 4 },
+            { domain: 'delphi.com', weight: 4 },
+            { domain: 'lear.com', weight: 4 },
+            { domain: 'adient.com', weight: 4 },
+            { domain: 'magna.com', weight: 4 },
+            { domain: 'faurecia.com', weight: 4 },
+            { domain: 'valeoservice.com', weight: 4 },
+            { domain: 'denso.com', weight: 4 },
+            { domain: 'aisin.com', weight: 4 },
+            { domain: 'toyota.com', weight: 4 },
+            { domain: 'honda.com', weight: 4 },
+            { domain: 'nissanusa.com', weight: 4 },
+            { domain: 'mazdausa.com', weight: 4 },
+            { domain: 'subaru.com', weight: 4 },
+            { domain: 'mitsubishicars.com', weight: 4 },
+            { domain: 'hyundaiusa.com', weight: 4 },
+            { domain: 'kia.com', weight: 4 },
+            { domain: 'volkswagen.com', weight: 4 },
+            { domain: 'bmw.com', weight: 4 },
+            { domain: 'mercedes-benz.com', weight: 4 },
+            { domain: 'audi.com', weight: 4 },
+            { domain: 'porsche.com', weight: 4 },
+            { domain: 'jaguar.com', weight: 4 },
+            { domain: 'landrover.com', weight: 4 },
+            { domain: 'fiat.com', weight: 4 },
+            { domain: 'ferrari.com', weight: 4 },
+            { domain: 'lamborghini.com', weight: 4 },
+            { domain: 'maserati.com', weight: 4 },
+            { domain: 'astonmartin.com', weight: 4 },
+            { domain: 'bentleymotors.com', weight: 4 },
+            { domain: 'rolls-roycemotorcars.com', weight: 4 },
+            { domain: 'tesla.com', weight: 4 },
+            { domain: 'lucidmotors.com', weight: 4 },
+            { domain: 'rivian.com', weight: 4 },
+            { domain: 'polestar.com', weight: 4 },
+            { domain: 'volvocars.com', weight: 4 },
+            { domain: 'saicmotor.com', weight: 4 },
+            { domain: 'geely.com', weight: 4 },
+            { domain: 'byd.com', weight: 4 },
+            { domain: 'greatwall.com.cn', weight: 4 },
+            { domain: 'cheryinternational.com', weight: 4 },
+            { domain: 'tata.com', weight: 4 },
+            { domain: 'mahindra.com', weight: 4 },
+            { domain: 'marutisuzuki.com', weight: 4 },
+            { domain: 'baicintl.com', weight: 4 },
+            { domain: 'dongfeng-global.com', weight: 4 },
+            { domain: 'faw.com', weight: 4 },
+            { domain: 'gac.com.cn', weight: 4 },
+            { domain: 'changan.com.cn', weight: 4 },
+            { domain: 'jacen.com', weight: 4 },
+            { domain: 'haima.com', weight: 4 },
+            { domain: 'zotye.com', weight: 4 },
+            { domain: 'lifan.com', weight: 4 },
+            { domain: 'sgmw.com.cn', weight: 4 },
+            { domain: 'foton-global.com', weight: 4 },
+            { domain: 'sinotruk.com', weight: 4 },
+            { domain: 'weichaipower.com', weight: 4 },
+            { domain: 'yutong.com', weight: 4 },
+            { domain: 'kinglong.com.cn', weight: 4 },
+            { domain: 'higer.com', weight: 4 },
+            { domain: 'goldendragonbus.com', weight: 4 },
+            { domain: 'zhongtong.com', weight: 4 },
+            { domain: 'anhuijac.com', weight: 4 },
+            { domain: 'changan.com.cn', weight: 4 },
+            { domain: 'dongfeng-global.com', weight: 4 },
+            { domain: 'faw.com', weight: 4 },
+            { domain: 'gac.com.cn', weight: 4 },
+            { domain: 'jacen.com', weight: 4 },
+            { domain: 'haima.com', weight: 4 },
+            { domain: 'zotye.com', weight: 4 },
+            { domain: 'lifan.com', weight: 4 },
+            { domain: 'sgmw.com.cn', weight: 4 },
+            { domain: 'foton-global.com', weight: 4 },
+            { domain: 'sinotruk.com', weight: 4 },
+            { domain: 'weichaipower.com', weight: 4 },
+            { domain: 'yutong.com', weight: 4 },
+            { domain: 'kinglong.com.cn', weight: 4 },
+            { domain: 'higer.com', weight: 4 },
+            { domain: 'goldendragonbus.com', weight: 4 },
+            { domain: 'zhongtong.com', weight: 4 },
+            { domain: 'anhuijac.com', weight: 4 }
+            // ...add more F500 as needed
         ];
     }
     
@@ -110,6 +716,9 @@ export class RandomDataGenerator {
                     email_provider TEXT,
                     password TEXT NOT NULL,
                     password_length INTEGER,
+                    username_style TEXT,
+                    username_pattern TEXT,
+                    business_mode INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     exported_at DATETIME,
                     notes TEXT
@@ -133,12 +742,12 @@ export class RandomDataGenerator {
             'astrid', 'ingrid', 'freya', 'saga', 'linnea', 'elsa', 'anna', 'maja', 'elin', 'ida',
             'axel', 'felix', 'oscar', 'emil', 'anton', 'isak', 'noah', 'liam', 'theo', 'hugo',
             'saga', 'alva', 'vera', 'nova', 'cleo', 'iris', 'luna', 'mira', 'nora', 'lea',
-            
+
             // Germanic names
             'franz', 'hans', 'klaus', 'werner', 'wolfgang', 'helmut', 'gunther', 'dieter', 'jurgen', 'rolf',
             'greta', 'helga', 'brunhilde', 'liesel', 'ursula', 'ingeborg', 'margarete', 'christa', 'petra', 'sabine',
             'maximilian', 'sebastian', 'alexander', 'konstantin', 'leopold', 'friedrich', 'wilhelm', 'gottfried', 'siegfried', 'adalbert',
-            
+
             // Romance language names (Italian/Spanish/Portuguese)
             'alessandro', 'giovanni', 'francesco', 'antonio', 'mario', 'giuseppe', 'luigi', 'carlo', 'paolo', 'marco',
             'giulia', 'francesca', 'chiara', 'valentina', 'alessandra', 'elena', 'sara', 'martina', 'giorgia', 'silvia',
@@ -146,32 +755,44 @@ export class RandomDataGenerator {
             'maria', 'carmen', 'josefa', 'isabel', 'dolores', 'pilar', 'teresa', 'ana', 'francisca', 'antonia',
             'pedro', 'joao', 'antonio', 'jose', 'manuel', 'francisco', 'carlos', 'paulo', 'luis', 'miguel',
             'ana', 'maria', 'manuela', 'isabel', 'patricia', 'carla', 'sofia', 'beatriz', 'rita', 'sandra',
-            
+
             // Slavic names
             'vladimir', 'dmitri', 'sergei', 'alexei', 'nikolai', 'pavel', 'andrei', 'mikhail', 'ivan', 'boris',
             'natasha', 'olga', 'irina', 'svetlana', 'elena', 'marina', 'tatiana', 'anna', 'galina', 'vera',
             'aleksandar', 'stefan', 'milan', 'marko', 'petar', 'nikola', 'jovana', 'milica', 'ana', 'marija',
             'karel', 'jan', 'petr', 'josef', 'pavel', 'tomas', 'martin', 'jana', 'eva', 'marie',
-            
+
             // Celtic names
             'aiden', 'brendan', 'cian', 'declan', 'eoin', 'finn', 'kieran', 'liam', 'niall', 'oisin',
             'aoife', 'ciara', 'emer', 'fiona', 'grainne', 'maeve', 'niamh', 'orla', 'roisin', 'siobhan',
             'alasdair', 'angus', 'callum', 'duncan', 'hamish', 'iain', 'morag', 'aileas', 'caoimhe', 'isla',
-            
+
             // Eastern European
             'artur', 'bartosz', 'damian', 'grzegorz', 'jakub', 'kamil', 'lukasz', 'marcin', 'pawel', 'piotr',
             'agnieszka', 'anna', 'beata', 'ewa', 'joanna', 'katarzyna', 'magdalena', 'malgorzata', 'monika', 'teresa',
             'adam', 'daniel', 'david', 'jakub', 'jan', 'josef', 'lukas', 'martin', 'michal', 'tomas',
-            
+
             // Dutch/Flemish
             'adriaan', 'anton', 'bas', 'daan', 'erik', 'floris', 'jan', 'kees', 'lars', 'maarten',
             'anna', 'daan', 'emma', 'eva', 'isa', 'julia', 'lotte', 'marie', 'noa', 'sophie',
-            
+
             // Modern international variants
             'adrian', 'andre', 'bruno', 'cesar', 'diego', 'eduardo', 'fernando', 'gabriel', 'hugo', 'ignacio',
             'adriana', 'beatriz', 'camila', 'diana', 'elena', 'fabiola', 'gabriela', 'helena', 'irene', 'julia',
             'luca', 'marco', 'matteo', 'nicola', 'paolo', 'riccardo', 'stefano', 'tommaso', 'valerio', 'vincenzo',
-            'alice', 'bianca', 'caterina', 'diana', 'eleonora', 'federica', 'giada', 'ilaria', 'laura', 'michela'
+            'alice', 'bianca', 'caterina', 'diana', 'eleonora', 'federica', 'giada', 'ilaria', 'laura', 'michela',
+
+            // Rare Western first names (English, French, German, etc.)
+            'algernon', 'basil', 'clement', 'dorian', 'eustace', 'fenton', 'giles', 'horatio', 'ignatius', 'jasper',
+            'leander', 'montague', 'octavius', 'percy', 'quentin', 'rupert', 'septimus', 'tarquin', 'ulysses', 'vernon',
+            'wilfred', 'xavier', 'yancy', 'zebulon', 'ambrose', 'barnaby', 'cedric', 'darwin', 'edmund', 'fabian',
+            'godfrey', 'hamish', 'isidore', 'jolyon', 'kenelm', 'lorcan', 'marmaduke', 'norbert', 'oswin', 'phineas', 'quincy',
+            'randolph', 'simeon', 'thaddeus', 'urban', 'valentine', 'wystan', 'althea', 'berenice', 'celeste', 'daphne',
+            'eulalia', 'fenella', 'ginevra', 'honoria', 'isolde', 'jacinta', 'kerensa', 'lilith', 'melisande', 'nerissa',
+            'ophelia', 'perdita', 'quintina', 'rosamund', 'sibyl', 'theodosia', 'ursula', 'verena', 'winifred', 'xanthe',
+            'yvaine', 'zelda', 'agatha', 'blanche', 'clarimond', 'drusilla', 'evadne', 'florence', 'gwendolen', 'hermione',
+            'iolanthe', 'jocasta', 'katherina', 'leocadia', 'mirabel', 'norah', 'ottilie', 'petronella', 'rowena', 'seraphina',
+            'tamsin', 'undine', 'vivienne', 'wilhelmina', 'zenobia'
         ];
     }
     
@@ -184,55 +805,118 @@ export class RandomDataGenerator {
             'andersson', 'johansson', 'karlsson', 'nilsson', 'eriksson', 'larsson', 'olsson', 'persson', 'svensson', 'gustafsson',
             'petersen', 'hansen', 'nielsen', 'jensen', 'christensen', 'andersen', 'sorensen', 'rasmussen', 'jorgensen', 'madsen',
             'lindqvist', 'bergstrom', 'lundgren', 'hedberg', 'forsberg', 'sandberg', 'henriksson', 'danielsson', 'petersson', 'abrahamsson',
-            
+
             // Germanic surnames
             'mueller', 'schmidt', 'schneider', 'fischer', 'weber', 'meyer', 'wagner', 'becker', 'schulz', 'hoffmann',
             'koch', 'richter', 'klein', 'wolf', 'schroeder', 'neumann', 'schwarz', 'zimmermann', 'braun', 'krueger',
             'hartmann', 'lange', 'schmitt', 'werner', 'krause', 'meier', 'lehmann', 'schmid', 'schulze', 'maier',
             'koehler', 'herrmann', 'walter', 'koenig', 'otto', 'gross', 'haas', 'berger', 'fuchs', 'schuster',
-            
+
             // Italian surnames
             'rossi', 'russo', 'ferrari', 'esposito', 'bianchi', 'romano', 'colombo', 'ricci', 'marino', 'greco',
             'bruno', 'gallo', 'conti', 'de luca', 'mancini', 'costa', 'giordano', 'rizzo', 'lombardi', 'moretti',
             'barbieri', 'fontana', 'santoro', 'mariani', 'rinaldi', 'caruso', 'ferrari', 'galli', 'martini', 'leone',
             'longo', 'gentile', 'martinelli', 'vitale', 'lombardo', 'serra', 'coppola', 'de santis', 'damico', 'palumbo',
-            
+
             // Spanish surnames
             'garcia', 'rodriguez', 'gonzalez', 'fernandez', 'lopez', 'martinez', 'sanchez', 'perez', 'gomez', 'martin',
             'jimenez', 'ruiz', 'hernandez', 'diaz', 'moreno', 'alvarez', 'muñoz', 'romero', 'alonso', 'gutierrez',
             'navarro', 'torres', 'dominguez', 'vazquez', 'ramos', 'gil', 'ramirez', 'serrano', 'blanco', 'suarez',
             'molina', 'morales', 'ortega', 'delgado', 'castro', 'ortiz', 'rubio', 'marin', 'sanz', 'iglesias',
-            
+
             // Portuguese surnames
             'silva', 'santos', 'ferreira', 'pereira', 'oliveira', 'costa', 'rodrigues', 'martins', 'jesus', 'sousa',
             'fernandes', 'goncalves', 'gomes', 'lopes', 'marques', 'alves', 'almeida', 'ribeiro', 'pinto', 'carvalho',
             'teixeira', 'moreira', 'correia', 'mendes', 'nunes', 'soares', 'vieira', 'monteiro', 'cardoso', 'rocha',
-            
+
             // Slavic surnames
             'novak', 'svoboda', 'novotny', 'dvorak', 'cerny', 'prochazka', 'krejci', 'hajek', 'kralova', 'nemec',
             'pokorny', 'pospisil', 'hruska', 'jelinek', 'kratky', 'fiala', 'urban', 'horak', 'benes', 'kolar',
             'petrov', 'ivanov', 'smirnov', 'kuznetsov', 'popov', 'volkov', 'sokolov', 'lebedev', 'kozlov', 'novikov',
             'morozov', 'petrov', 'volkov', 'solovyov', 'vasiliev', 'zaytsev', 'pavlov', 'semenov', 'golubev', 'vinogradov',
-            
+
             // Polish surnames
             'nowak', 'kowalski', 'wisniewski', 'wojcik', 'kowalczyk', 'kaminski', 'lewandowski', 'zielinski', 'szymanski', 'wozniak',
             'dabrowski', 'kozlowski', 'jankowski', 'mazur', 'kwiatkowski', 'krawczyk', 'piotrowski', 'grabowski', 'nowakowski', 'pawlowski',
             'michalski', 'nowicki', 'adamczyk', 'dudek', 'zajac', 'wieczorek', 'jablonski', 'krol', 'majewski', 'olszewski',
-            
+
             // Dutch surnames
             'de jong', 'jansen', 'de vries', 'van den berg', 'van dijk', 'bakker', 'janssen', 'visser', 'smit', 'meijer',
             'de boer', 'mulder', 'de groot', 'bos', 'vos', 'peters', 'hendriks', 'van leeuwen', 'dekker', 'brouwer',
             'de wit', 'dijkstra', 'smits', 'de graaf', 'van der meer', 'van der laan', 'adriaanse', 'vermeulen', 'van den brink', 'de haan',
-            
+
             // French surnames
             'martin', 'bernard', 'thomas', 'petit', 'robert', 'richard', 'durand', 'dubois', 'moreau', 'laurent',
             'simon', 'michel', 'lefebvre', 'leroy', 'roux', 'david', 'bertrand', 'morel', 'fournier', 'girard',
             'bonnet', 'dupont', 'lambert', 'fontaine', 'rousseau', 'vincent', 'muller', 'lefevre', 'faure', 'andre',
-            
+
             // Modern compound surnames
             'bergmann', 'hoffmeister', 'steinberg', 'rosenberg', 'goldstein', 'silverstein', 'rothschild', 'einstein', 'weinstein', 'bernstein',
             'anderberg', 'lindberg', 'blomberg', 'stromberg', 'hedstrom', 'backstrom', 'engstrom', 'holmberg', 'carlberg', 'palmberg',
-            'blackwood', 'whitewood', 'redwood', 'greenwood', 'ironwood', 'thornwood', 'wildwood', 'brightwood', 'darkwood', 'silverwood'
+            'blackwood', 'whitewood', 'redwood', 'greenwood', 'ironwood', 'thornwood', 'wildwood', 'brightwood', 'darkwood', 'silverwood',
+
+            // Rare Western surnames (expanded)
+            'alabaster', 'ashdown', 'bardsley', 'beauchamp', 'belvoir', 'blakeslee', 'blandford', 'blaylock', 'blythe', 'brackenridge',
+            'bramwell', 'branscombe', 'brassington', 'braybrooke', 'breckinridge', 'brinsmead', 'bromfield', 'broughton', 'buckminster', 'burberry',
+            'cattermole', 'chadbourne', 'chamberlayne', 'chillingworth', 'clutterbuck', 'coleridge', 'colville', 'corbett', 'corbyn', 'cotswold',
+            'crabtree', 'crake', 'cranshaw', 'crutchley', 'dalrymple', 'davenport', 'dewhurst', 'dorrington', 'draycott', 'drummond',
+            'duxbury', 'eldridge', 'elphinstone', 'elstone', 'farnsworth', 'featherstone', 'fenwick', 'fothergill', 'frobisher', 'gainsborough',
+            'galliford', 'garroway', 'gillingham', 'girdlestone', 'glanville', 'goddard', 'gorey', 'grimsdell', 'grosvenor', 'hatherleigh',
+            'hawtrey', 'hazeldine', 'heathcote', 'higginbotham', 'holroyd', 'hotham', 'hurlstone', 'ingledew', 'jesson', 'kingswell',
+            'lambourne', 'langstroth', 'lavington', 'leveson', 'liddell', 'ludlow', 'maddock', 'maddox', 'maitland', 'malkin',
+            'mallinson', 'massingberd', 'mawson', 'micklethwait', 'milbank', 'milbourne', 'milburn', 'milner', 'molyneux', 'montague',
+            'mowbray', 'murgatroyd', 'nash', 'nethercott', 'newcombe', 'newdigate', 'niblock', 'nokes', 'ormesby', 'orpwood',
+            'osbaldeston', 'osgood', 'oswald', 'pakenham', 'palliser', 'parslow', 'pemberton', 'penhaligon', 'pennington', 'popham',
+            'portman', 'poyntz', 'prendergast', 'prestwick', 'pridmore', 'quarles', 'quayle', 'quincey', 'radclyffe', 'rainsford',
+            'rampling', 'rathbone', 'ravenscroft', 'redgrave', 'redman', 'redshaw', 'ribblesdale', 'rickman', 'rotherham', 'rowntree',
+            'rucker', 'rushbrooke', 'sackville', 'salter', 'scarisbrick', 'scrope', 'seagrave', 'searle', 'shadwell', 'sharples',
+            'shuttleworth', 'siddons', 'skelton', 'skinner', 'slingsby', 'smalley', 'smethurst', 'spens', 'spofforth', 'stainforth',
+            'stanhope', 'stanier', 'stapylton', 'stewartson', 'stourton', 'strangways', 'streatfeild', 'strelley', 'strickland', 'stukeley',
+            'swinburne', 'syers', 'tattershall', 'tavistock', 'tewksbury', 'thistlethwaite', 'thorburn', 'thorley', 'thurston', 'tredgold',
+            'tredwell', 'tresham', 'trowbridge', 'tunstall', 'twisleton', 'tyack', 'tyldesley', 'urquhart', 'vanstone', 'verrall',
+            'vickers', 'viner', 'vivers', 'waddington', 'waghorn', 'wainwright', 'wakefield', 'waldegrave', 'wallinger', 'waltham',
+            'warboys', 'warburton', 'wardle', 'warfield', 'warham', 'warhurst', 'warrender', 'warrington', 'warwick', 'washbourne',
+            'waterfield', 'waterhouse', 'wathen', 'wathes', 'wathley', 'wattley', 'waugh', 'waynflete', 'weatherby', 'weatherhead',
+            'webberley', 'wedderburn', 'weldon', 'wemyss', 'wensley', 'wetherell', 'whalley', 'wharton', 'wheatley', 'wheble',
+            'wheldon', 'wherrett', 'whiffin', 'whinney', 'whitaker', 'whitbread', 'whitcombe', 'whitfield', 'whitlam', 'whitlock',
+            'whitmore', 'whitrow', 'whittingham', 'whitworth', 'whorwood', 'wickham', 'widdrington', 'wigan', 'wigglesworth', 'wigley',
+            'wigram', 'wilbraham', 'wilcocks', 'wildblood', 'wilding', 'wilkes', 'willcocks', 'willoughby', 'wilmot', 'wilmshurst',
+            'wilshaw', 'wiltshire', 'winchcombe', 'windebank', 'windle', 'windsor', 'wingfield', 'winstanley', 'winterburn', 'winthrop',
+            'wiseman', 'withers', 'wodehouse', 'wolstenholme', 'woodforde', 'woodhouse', 'woodroffe', 'woolcombe', 'woolley', 'woolnough',
+            'worsley', 'wotton', 'wraxall', 'wreford', 'wrigley', 'wyatt', 'wybergh', 'wycliffe', 'wykeham', 'wynn',
+            'yarde', 'yaxley', 'yeatman', 'yeo', 'yewdall', 'yonge', 'yoxall', 'yule',
+        ];
+    }
+    
+    /**
+     * Business/Company name components for professional usernames
+     */
+    getBusinessPrefixes() {
+        return [
+            'global', 'united', 'international', 'premier', 'advanced', 'innovative', 'strategic', 'dynamic',
+            'progressive', 'modern', 'digital', 'smart', 'elite', 'prime', 'apex', 'vertex', 'nexus',
+            'synergy', 'fusion', 'quantum', 'matrix', 'vector', 'alpha', 'beta', 'gamma', 'delta',
+            'omega', 'sigma', 'phoenix', 'titan', 'atlas', 'orion', 'nova', 'stellar', 'cosmic',
+            'metro', 'urban', 'central', 'capital', 'summit', 'peak', 'crown', 'royal', 'imperial',
+            'platinum', 'diamond', 'gold', 'silver', 'crystal', 'azure', 'crimson', 'emerald'
+        ];
+    }
+    
+    getBusinessSuffixes() {
+        return [
+            'solutions', 'systems', 'technologies', 'innovations', 'dynamics', 'enterprises', 'ventures',
+            'partners', 'associates', 'consulting', 'services', 'group', 'corporation', 'industries',
+            'holdings', 'capital', 'investments', 'development', 'management', 'operations', 'logistics',
+            'networks', 'communications', 'media', 'digital', 'analytics', 'intelligence', 'research',
+            'labs', 'studios', 'works', 'forge', 'craft', 'design', 'creative', 'agency', 'collective'
+        ];
+    }
+    
+    getBusinessDomains() {
+        return [
+            'tech', 'bio', 'nano', 'cyber', 'data', 'cloud', 'ai', 'ml', 'iot', 'blockchain',
+            'fintech', 'medtech', 'edtech', 'cleantech', 'agtech', 'proptech', 'legaltech',
+            'marketing', 'sales', 'hr', 'finance', 'ops', 'dev', 'design', 'product', 'strategy'
         ];
     }
     
@@ -253,8 +937,15 @@ export class RandomDataGenerator {
     /**
      * Select weighted random email provider
      */
-    getRandomEmailProvider() {
-        const providers = [...this.config.emailProviders, ...this.config.customEmailProviders];
+    getRandomEmailProvider(businessMode = false) {
+        let providers;
+        
+        if (businessMode) {
+            providers = [...this.config.businessEmailProviders, ...this.config.customEmailProviders];
+        } else {
+            providers = [...this.config.emailProviders, ...this.config.customEmailProviders];
+        }
+        
         const totalWeight = providers.reduce((sum, p) => sum + (p.weight || 1), 0);
         let random = Math.random() * totalWeight;
         
@@ -310,31 +1001,14 @@ export class RandomDataGenerator {
     }
     
     /**
-     * Generate a unique name combination
+     * Generate username using Pattern A (Concatenated Style)
+     * Examples: erikmueller2847, mariasantos1234, lucaferrari9876
      */
-    generateUniqueName(options = {}) {
-        const firstNames = this.getFirstNames();
-        const lastNames = this.getLastNames();
-        
+    generatePatternA(firstName, lastName, options = {}) {
         const usePrefix = options.usePrefix !== undefined ? options.usePrefix : this.config.usePrefix;
         const usePostfix = options.usePostfix !== undefined ? options.usePostfix : this.config.usePostfix;
         const currentIndex = options.currentIndex || 1;
         
-        let attempts = 0;
-        let firstName, lastName, fullName;
-        
-        // Try to find unused combination
-        while (attempts < this.config.maxAttempts) {
-            firstName = this.randomChoice(firstNames);
-            lastName = this.randomChoice(lastNames);
-            
-            if (!this.isNameUsed(firstName, lastName)) {
-                break;
-            }
-            attempts++;
-        }
-        
-        // Build full name with prefix/postfix
         let nameParts = [firstName, lastName];
         
         if (usePrefix) {
@@ -347,12 +1021,155 @@ export class RandomDataGenerator {
             nameParts.push(postfix);
         }
         
-        fullName = nameParts.join('');
+        return nameParts.join('').toLowerCase();
+    }
+    
+    /**
+     * Generate username using Pattern B (Separator-based Style)
+     * Examples: erik.mueller.47, maria_santos_12, luca-ferrari-98
+     */
+    generatePatternB(firstName, lastName, options = {}) {
+        const usePrefix = options.usePrefix !== undefined ? options.usePrefix : this.config.usePrefix;
+        const usePostfix = options.usePostfix !== undefined ? options.usePostfix : this.config.usePostfix;
+        const currentIndex = options.currentIndex || 1;
+        const separator = this.randomChoice(this.config.separatorChars);
+        
+        let nameParts = [firstName, lastName];
+        
+        if (usePrefix) {
+            const prefix = String(currentIndex).padStart(2, '0');
+            nameParts.unshift(prefix);
+        }
+        
+        if (usePostfix) {
+            // Shorter postfix for separated style to avoid overly long usernames
+            const postfix = this.randomInt(10, 99).toString();
+            nameParts.push(postfix);
+        }
+        
+        return nameParts.join(separator).toLowerCase();
+    }
+    
+    /**
+     * Generate business-style username
+     * Examples: jdoe, j.mueller, erik.s, md, ds
+     */
+    generateBusinessUsername(firstName, lastName, options = {}) {
+        const separator = this.randomChoice(this.config.separatorChars);
+
+        // Choose user part style: full name or alias, no digits for business usernames
+        const formatPref = options.businessUserFormat || this.config.businessUserFormat || 'auto';
+        let chosenFormat = formatPref;
+        if (formatPref === 'auto') {
+            chosenFormat = this.weightedChoice(this.config.businessFormatWeights) || 'alias';
+        }
+
+        const first = firstName.toLowerCase();
+        const last = lastName.toLowerCase();
+        const f = first.charAt(0);
+        const l = last.charAt(0);
+
+        const supportedAlias = this.config.businessAliasPatterns || [
+            'flast',     // jdoe
+            'f.last',    // j.doe
+            'first.l',   // john.d
+            'fl',        // jd (highly abbreviated)
+            'lf'         // dj (highly abbreviated)
+        ];
+
+        let userPart;
+        if (chosenFormat === 'full') {
+            userPart = `${first}${separator}${last}`;
+        } else {
+            // alias
+            const alias = this.randomChoice(supportedAlias);
+            switch (alias) {
+                case 'flast':
+                    userPart = `${f}${last}`; break;
+                case 'f.last':
+                    userPart = `${f}${separator}${last}`; break;
+                case 'first.l':
+                    userPart = `${first}${separator}${l}`; break;
+                case 'fl':
+                    userPart = `${f}${l}`; break;
+                case 'lf':
+                    userPart = `${l}${f}`; break;
+                default:
+                    userPart = `${f}${last}`; // sensible fallback
+            }
+        }
+
+        return userPart.toLowerCase();
+    }
+    
+    /**
+     * Generate a unique name combination with new pattern support
+     */
+    generateUniqueName(options = {}) {
+        const firstNames = this.getFirstNames();
+        const lastNames = this.getLastNames();
+        
+        let attempts = 0;
+        let firstName, lastName, fullName, usernameStyle, usernamePattern;
+
+        // Determine username style and pattern with weighted selection
+        const forceBusiness = options.businessMode !== undefined ? options.businessMode : this.config.businessMode;
+        const configStyle = options.usernameStyle || this.config.usernameStyle;
+        const configPattern = options.usernamePattern || this.config.usernamePattern;
+
+        if (forceBusiness) {
+            usernameStyle = 'business';
+            usernamePattern = 'business';
+        } else if (configStyle === 'auto') {
+            // Weighted choice among 3 patterns
+            const chosen = this.weightedChoice(this.config.patternWeights) || 'concatenated';
+            if (chosen === 'business') {
+                usernameStyle = 'business';
+                usernamePattern = 'business';
+            } else if (chosen === 'concatenated') {
+                usernameStyle = 'concatenated';
+                usernamePattern = 'pattern_a';
+            } else {
+                usernameStyle = 'separated';
+                usernamePattern = 'pattern_b';
+            }
+        } else {
+            usernameStyle = configStyle;
+            if (usernameStyle === 'business') {
+                usernamePattern = 'business';
+            } else if (configPattern === 'random') {
+                usernamePattern = Math.random() < 0.5 ? 'pattern_a' : 'pattern_b';
+            } else {
+                usernamePattern = configPattern;
+            }
+        }
+        
+        // Try to find unused combination
+        while (attempts < this.config.maxAttempts) {
+            firstName = this.randomChoice(firstNames);
+            lastName = this.randomChoice(lastNames);
+            
+            if (!this.isNameUsed(firstName, lastName)) {
+                break;
+            }
+            attempts++;
+        }
+        
+        // Generate username based on selected pattern
+        if (usernameStyle === 'business') {
+            fullName = this.generateBusinessUsername(firstName, lastName, options);
+        } else if (usernamePattern === 'pattern_a' || usernameStyle === 'concatenated') {
+            fullName = this.generatePatternA(firstName, lastName, options);
+        } else {
+            fullName = this.generatePatternB(firstName, lastName, options);
+        }
         
         return {
             firstName,
             lastName,
-            fullName: fullName.toLowerCase(),
+            fullName,
+            usernameStyle,
+            usernamePattern,
             attempts
         };
     }
@@ -417,10 +1234,11 @@ export class RandomDataGenerator {
         try {
             const stmt = this.db.prepare(`
                 INSERT INTO user_data_exports (
-                    session_id, site_url, hook_name, first_name, last_name, 
-                    full_name, email, email_provider, password, password_length
+                    session_id, site_url, hook_name, first_name, last_name,
+                    full_name, email, email_provider, password, password_length,
+                    username_style, username_pattern, business_mode
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
             
             stmt.run(
@@ -433,10 +1251,13 @@ export class RandomDataGenerator {
                 userData.email,
                 userData.emailProvider,
                 userData.password,
-                userData.password.length
+                userData.password.length,
+                userData.usernameStyle || 'unknown',
+                userData.usernamePattern || 'unknown',
+                userData.businessMode ? 1 : 0
             );
             
-            console.log(`📊 User data recorded for export: ${userData.email}`);
+            console.log(`📊 User data recorded for export: ${userData.email} (${userData.usernameStyle}/${userData.usernamePattern})`);
         } catch (error) {
             console.error('❌ Error recording user data for export:', error.message);
         }
@@ -446,8 +1267,9 @@ export class RandomDataGenerator {
      * Generate complete random user data
      */
     generateUserData(options = {}) {
-        const nameData = this.generateUniqueName(options);
-        const emailProvider = this.getRandomEmailProvider();
+    const nameData = this.generateUniqueName(options);
+    const businessModeUsed = (options.businessMode !== undefined ? options.businessMode : this.config.businessMode) || (nameData.usernameStyle === 'business');
+    const emailProvider = this.getRandomEmailProvider(businessModeUsed);
         const email = `${nameData.fullName}@${emailProvider}`;
         const password = this.generatePassword(options.password);
         
@@ -461,6 +1283,9 @@ export class RandomDataGenerator {
             email,
             password,
             emailProvider,
+            usernameStyle: nameData.usernameStyle,
+            usernamePattern: nameData.usernamePattern,
+            businessMode: businessModeUsed,
             generationAttempts: nameData.attempts,
             timestamp: new Date().toISOString()
         };
@@ -468,7 +1293,7 @@ export class RandomDataGenerator {
         // Record for export if tracking enabled
         this.recordUserDataForExport(userData, options.sessionId, options.siteUrl, options.hookName);
         
-        console.log(`🎲 Generated user data: ${userData.fullName} (${userData.email})`);
+        console.log(`🎲 Generated user data: ${userData.fullName} (${userData.email}) [${userData.usernameStyle}/${userData.usernamePattern}]`);
         
         return userData;
     }

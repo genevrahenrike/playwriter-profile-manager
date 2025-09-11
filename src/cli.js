@@ -783,6 +783,7 @@ program
     .requiredOption('-t, --template <name>', 'Template profile to clone from (e.g., vidiq-clean)')
     .option('-c, --count <number>', 'Number of profiles to create', '1')
     .option('-p, --prefix <prefix>', 'Profile name prefix', 'auto')
+    .option('--resume', 'Continue numbering from existing profiles with the same prefix')
     .option('--timeout <ms>', 'Per-run success timeout (ms)', '120000')
     .option('--captcha-grace <ms>', 'Extra grace if CAPTCHA detected (ms)', '45000')
     .option('--headless', 'Run in headless mode (default: headed)')
@@ -799,6 +800,7 @@ program
         const captchaGrace = parseInt(options.captchaGrace, 10) || 45000;
     const runHeadless = !!options.headless;
     const deleteOnFailure = !!options.deleteOnFailure;
+    const resume = !!options.resume;
 
         const resultsDir = pathMod.resolve('./automation-results');
         await fsx.ensureDir(resultsDir);
@@ -873,18 +875,40 @@ program
 
         const pmLocal = new ProfileManager();
 
+        // Determine starting index when resuming: find highest existing numeric suffix for this prefix
+        let startIndex = 1;
+        if (resume) {
+            try {
+                const existing = await pmLocal.listProfiles();
+                const indices = existing
+                    .filter(p => typeof p.name === 'string' && p.name.startsWith(`${prefix}-`))
+                    .map(p => {
+                        const m = p.name.match(/-(\d{1,})$/);
+                        return m ? parseInt(m[1], 10) : null;
+                    })
+                    .filter(n => Number.isInteger(n));
+                if (indices.length > 0) {
+                    startIndex = Math.max(...indices) + 1;
+                }
+            } catch (_) {
+                // ignore and default to 1
+            }
+        }
+
         console.log(chalk.cyan(`🚀 Starting batch: template=${template}, count=${total}, prefix=${prefix}`));
         console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
 
     let created = 0;
     let successes = 0;
 
-        for (let i = 1; i <= total; i++) {
-            const name = generateName(i);
+        let scheduled = 0;
+        for (let idx = startIndex; scheduled < total; idx++) {
+            const name = generateName(idx);
+            const runNo = scheduled + 1;
             const runId = uuidv4();
             let profileRecord = null;
 
-            console.log(chalk.blue(`\n▶️  Run ${i}/${total}: ${name}`));
+            console.log(chalk.blue(`\n▶️  Run ${runNo}/${total}: ${name}`));
             const launcher = new ProfileLauncher(pmLocal, {});
             try {
                 const runRes = await launcher.launchFromTemplate(template, name, {
@@ -907,7 +931,7 @@ program
                 await launcher.closeBrowser(runRes.sessionId, { clearCache: false }).catch(() => {});
 
                 await writeResult({
-                    run: i,
+                    run: runNo,
                     batchId,
                     runId,
                     profileId: profileRecord?.id,
@@ -928,12 +952,14 @@ program
                         console.log(chalk.dim(`🧹 Deleted failed profile: ${name}`));
                     }
                 }
+                scheduled++;
             } catch (err) {
                 console.error(chalk.red(`💥 Batch run error: ${err.message}`));
                 if (profileRecord?.id && deleteOnFailure) {
                     try { await pmLocal.deleteProfile(profileRecord.id); } catch (_) {}
                 }
-                await writeResult({ run: i, batchId, runId, error: err.message });
+                await writeResult({ run: runNo, batchId, runId, error: err.message });
+                scheduled++;
             } finally {
                 try { await launcher.closeAllBrowsers({}); } catch (_) {}
             }
