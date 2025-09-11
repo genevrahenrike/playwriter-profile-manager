@@ -95,3 +95,17 @@ try {
 }
 
 console.log('\n✅ Username pattern testing completed!');
+
+// Extra: Pattern C Handle Demo
+console.log('\n=== PATTERN C: Short Syllabic Handle ===');
+const generatorC = new RandomDataGenerator({
+    usernameStyle: 'handle',
+    usernamePattern: 'pattern_c',
+    handleSyllables: 4,
+    enableTracking: false
+});
+
+for (let i = 0; i < 10; i++) {
+    const userData = generatorC.generateUserData();
+    console.log(`${i + 1}. ${userData.fullName} → ${userData.email}`);
+}

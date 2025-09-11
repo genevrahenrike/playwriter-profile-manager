@@ -15,16 +15,17 @@ export class RandomDataGenerator {
             postfixDigits: options.postfixDigits || 4,
             
             // Username style options - NEW
-            usernameStyle: options.usernameStyle || 'auto', // 'auto', 'concatenated', 'separated', 'business'
-            usernamePattern: options.usernamePattern || 'random', // 'random', 'pattern_a', 'pattern_b'
+            usernameStyle: options.usernameStyle || 'auto', // 'auto', 'concatenated', 'separated', 'business', 'handle'
+            usernamePattern: options.usernamePattern || 'random', // 'random', 'pattern_a', 'pattern_b', 'pattern_c'
             separatorChars: options.separatorChars || ['.', '_', '-'],
             businessMode: options.businessMode || false, // Generate business-style usernames
 
-            // Weighted selection across the 3 patterns (concatenated/pattern_a, separated/pattern_b, business)
+            // Weighted selection across patterns (concatenated/pattern_a, separated/pattern_b, business, handle/pattern_c)
             patternWeights: {
                 concatenated: 1,
                 separated: 1,
                 business: 1,
+                handle: 1,
                 ...(options.patternWeights || {})
             },
 
@@ -59,10 +60,15 @@ export class RandomDataGenerator {
             trackingDbPath: options.trackingDbPath || './profiles/data/generated_names.db',
             
             // Uniqueness options
-            maxAttempts: options.maxAttempts || 50
+            maxAttempts: options.maxAttempts || 50,
+
+            // Handle (Pattern C) options
+            handleSyllables: options.handleSyllables || 4, // number of syllables (3-4 recommended)
+            handleBlocklist: options.handleBlocklist || ['admin','support','test','user','service','root','system']
         };
         
         this.usedNames = new Set();
+    this.usedHandles = new Set();
         this.db = null;
         
         if (this.config.enableTracking) {
@@ -724,6 +730,17 @@ export class RandomDataGenerator {
                     notes TEXT
                 )
             `);
+
+            // Create table to track generated short handles (Pattern C)
+            this.db.exec(`
+                CREATE TABLE IF NOT EXISTS generated_handles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    handle TEXT NOT NULL UNIQUE,
+                    email TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    used_count INTEGER DEFAULT 1
+                )
+            `);
             
             console.log(`📊 Name tracking database initialized: ${this.config.trackingDbPath}`);
         } catch (error) {
@@ -1101,6 +1118,87 @@ export class RandomDataGenerator {
 
         return userPart.toLowerCase();
     }
+
+    /**
+     * Generate username using Pattern C (Short Syllabic Handle)
+     * - Distinctively short, pronounceable, no digits or separators
+     * - High uniqueness via randomness in syllable selection
+     * Examples: larimo, venaro, melodu, rastemi
+     */
+    generatePatternCHandle(options = {}) {
+        const syllables = this.getHandleSyllables(); // curated latin-like syllables
+        const count = Math.max(3, Math.min(6, options.handleSyllables || this.config.handleSyllables || 4));
+        const blocklist = (options.handleBlocklist || this.config.handleBlocklist || []).map(s => s.toLowerCase());
+
+        // Try multiple times to avoid blocklist and ensure uniqueness if tracking is enabled
+        for (let attempt = 0; attempt < 25; attempt++) {
+            let handle = '';
+            for (let i = 0; i < count; i++) {
+                handle += syllables[this.randomInt(0, syllables.length - 1)];
+            }
+            handle = handle.toLowerCase();
+            if (blocklist.includes(handle)) continue;
+            if (this.isHandleUsed(handle)) continue;
+            return handle;
+        }
+        // Fallback
+        return 'lanero';
+    }
+
+    /**
+     * Curated set of 32 latin-like syllables for pronounceable handles
+     */
+    getHandleSyllables() {
+        return [
+            'la','le','li','lo','lu',
+            'ra','re','ri','ro','ru',
+            'na','ne','ni','no','nu',
+            'ma','me','mi','mo','mu',
+            'sa','se','si','so','su',
+            'ta','te','ti','to','tu',
+            'ca','co','ci','ce',
+            'da','de','di','do','du'
+        ];
+    }
+
+    /**
+     * Check if a short handle has been used (if tracking enabled)
+     */
+    isHandleUsed(handle) {
+        if (!this.config.enableTracking || !this.db) {
+            return this.usedHandles.has(handle);
+        }
+        try {
+            const stmt = this.db.prepare('SELECT id FROM generated_handles WHERE handle = ?');
+            const result = stmt.get(handle);
+            return !!result;
+        } catch (error) {
+            console.error('❌ Error checking handle usage:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Record handle usage (if tracking enabled)
+     */
+    recordHandleUsage(handle, email = null) {
+        if (!this.config.enableTracking || !this.db) {
+            this.usedHandles.add(handle);
+            return;
+        }
+        try {
+            const stmt = this.db.prepare(`
+                INSERT INTO generated_handles (handle, email)
+                VALUES (?, ?)
+                ON CONFLICT(handle) DO UPDATE SET
+                    used_count = used_count + 1,
+                    email = COALESCE(excluded.email, email)
+            `);
+            stmt.run(handle, email);
+        } catch (error) {
+            console.error('❌ Error recording handle usage:', error.message);
+        }
+    }
     
     /**
      * Generate a unique name combination with new pattern support
@@ -1109,8 +1207,8 @@ export class RandomDataGenerator {
         const firstNames = this.getFirstNames();
         const lastNames = this.getLastNames();
         
-        let attempts = 0;
-        let firstName, lastName, fullName, usernameStyle, usernamePattern;
+    let attempts = 0;
+    let firstName, lastName, fullName, usernameStyle, usernamePattern;
 
         // Determine username style and pattern with weighted selection
         const forceBusiness = options.businessMode !== undefined ? options.businessMode : this.config.businessMode;
@@ -1121,7 +1219,7 @@ export class RandomDataGenerator {
             usernameStyle = 'business';
             usernamePattern = 'business';
         } else if (configStyle === 'auto') {
-            // Weighted choice among 3 patterns
+            // Weighted choice among patterns
             const chosen = this.weightedChoice(this.config.patternWeights) || 'concatenated';
             if (chosen === 'business') {
                 usernameStyle = 'business';
@@ -1129,6 +1227,9 @@ export class RandomDataGenerator {
             } else if (chosen === 'concatenated') {
                 usernameStyle = 'concatenated';
                 usernamePattern = 'pattern_a';
+            } else if (chosen === 'handle') {
+                usernameStyle = 'handle';
+                usernamePattern = 'pattern_c';
             } else {
                 usernameStyle = 'separated';
                 usernamePattern = 'pattern_b';
@@ -1137,7 +1238,10 @@ export class RandomDataGenerator {
             usernameStyle = configStyle;
             if (usernameStyle === 'business') {
                 usernamePattern = 'business';
+            } else if (usernameStyle === 'handle') {
+                usernamePattern = 'pattern_c';
             } else if (configPattern === 'random') {
+                // Random between A and B when not handle/business
                 usernamePattern = Math.random() < 0.5 ? 'pattern_a' : 'pattern_b';
             } else {
                 usernamePattern = configPattern;
@@ -1158,6 +1262,8 @@ export class RandomDataGenerator {
         // Generate username based on selected pattern
         if (usernameStyle === 'business') {
             fullName = this.generateBusinessUsername(firstName, lastName, options);
+        } else if (usernameStyle === 'handle' || usernamePattern === 'pattern_c') {
+            fullName = this.generatePatternCHandle(options);
         } else if (usernamePattern === 'pattern_a' || usernameStyle === 'concatenated') {
             fullName = this.generatePatternA(firstName, lastName, options);
         } else {
@@ -1275,6 +1381,9 @@ export class RandomDataGenerator {
         
         // Record usage if tracking enabled
         this.recordNameUsage(nameData.firstName, nameData.lastName, nameData.fullName, email);
+        if (nameData.usernameStyle === 'handle' || nameData.usernamePattern === 'pattern_c') {
+            this.recordHandleUsage(nameData.fullName, email);
+        }
         
         const userData = {
             firstName: nameData.firstName,

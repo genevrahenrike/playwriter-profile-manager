@@ -37,14 +37,16 @@ export class AutofillHookSystem {
             postfixDigits: options.postfixDigits || 4,
             
             // New username generation options
-            usernameStyle: options.usernameStyle || 'auto', // 'auto', 'concatenated', 'separated', 'business'
-            usernamePattern: options.usernamePattern || 'random', // 'random', 'pattern_a', 'pattern_b'
+            usernameStyle: options.usernameStyle || 'auto', // 'auto', 'concatenated', 'separated', 'business', 'handle'
+            usernamePattern: options.usernamePattern || 'random', // 'random', 'pattern_a', 'pattern_b', 'pattern_c'
             separatorChars: options.separatorChars || ['.', '_', '-'],
             businessMode: options.businessMode || false,
-            patternWeights: options.patternWeights, // {concatenated, separated, business}
+            patternWeights: options.patternWeights, // {concatenated, separated, business, handle}
             businessUserFormat: options.businessUserFormat, // 'auto' | 'full' | 'alias'
             businessFormatWeights: options.businessFormatWeights, // {full, alias}
             businessAliasPatterns: options.businessAliasPatterns, // override alias set
+            handleSyllables: options.handleSyllables,
+            handleBlocklist: options.handleBlocklist,
             
             emailProviders: options.emailProviders,
             customEmailProviders: options.customEmailProviders,
@@ -288,6 +290,8 @@ export class AutofillHookSystem {
             businessUserFormat: hook.generationOptions?.businessUserFormat,
             businessFormatWeights: hook.generationOptions?.businessFormatWeights,
             businessAliasPatterns: hook.generationOptions?.businessAliasPatterns,
+            handleSyllables: hook.generationOptions?.handleSyllables,
+            handleBlocklist: hook.generationOptions?.handleBlocklist,
             sessionId: sessionId,
             siteUrl: siteUrl,
             hookName: hook.name

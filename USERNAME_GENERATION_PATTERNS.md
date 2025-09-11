@@ -32,6 +32,18 @@ The enhanced `RandomDataGenerator` now supports multiple username generation pat
   - More readable and modern appearance
   - Different visual pattern from Pattern A
 
+### Pattern C: Short Syllabic Handle
+- Format: pronounceable random handle from curated syllables
+- Examples:
+  - `larimo`
+  - `venaro`
+  - `melodu`
+- Characteristics:
+  - Short, no digits or separators
+  - High uniqueness via random syllable sequences
+  - Latin-like phonetics for a Western handle feel
+  - Configurable syllable count and blocklist
+
 ### Business Mode
 - **User Formats**: `full` or `alias` (no digits by default)
 - **Format (full)**: `business_name + separator + first + separator + last`
@@ -53,19 +65,22 @@ The enhanced `RandomDataGenerator` now supports multiple username generation pat
 ```javascript
 const generator = new RandomDataGenerator({
     usernameStyle: 'auto',        // 'auto', 'concatenated', 'separated', 'business'
-    usernamePattern: 'random',    // 'random', 'pattern_a', 'pattern_b'
+    usernamePattern: 'random',    // 'random', 'pattern_a', 'pattern_b', 'pattern_c'
     separatorChars: ['.', '_', '-'],
     businessMode: false,
     usePrefix: false,
     usePostfix: true,
   postfixDigits: 4,
-  // NEW: weighted selection across all three patterns
-  patternWeights: { concatenated: 1, separated: 1, business: 1 },
+  // NEW: weighted selection across all four patterns
+  patternWeights: { concatenated: 1, separated: 1, business: 1, handle: 1 },
   // NEW: business user portion formatting
   businessUserFormat: 'auto', // 'auto' | 'full' | 'alias'
   businessFormatWeights: { full: 1, alias: 1 },
   // Optional: restrict alias patterns
   // businessAliasPatterns: ['flast','f.last','first.l']
+  // NEW: handle options for Pattern C
+  handleSyllables: 4, // 3-6 supported, 4 default
+  handleBlocklist: ['admin','support','test','user','service','root','system']
 });
 ```
 
@@ -77,10 +92,12 @@ const autofillSystem = new AutofillHookSystem({
     businessMode: false,
     separatorChars: ['.', '_', '-'],
   // Propagates to RandomDataGenerator
-  patternWeights: { concatenated: 1, separated: 1, business: 1 },
+  patternWeights: { concatenated: 1, separated: 1, business: 1, handle: 1 },
   businessUserFormat: 'auto',
   businessFormatWeights: { full: 1, alias: 1 },
   // businessAliasPatterns: ['flast','f.last','first.l'],
+  handleSyllables: 4,
+  handleBlocklist: ['admin','support']
     businessEmailProviders: [
         { domain: 'company.com', weight: 20 },
         { domain: 'corp.com', weight: 15 }
@@ -155,6 +172,18 @@ const userData = generator.generateUserData();
 // Result: erik.mueller.47@yahoo.com
 ```
 
+### Pattern C (Short Handle)
+```javascript
+const generator = new RandomDataGenerator({
+  usernameStyle: 'handle',
+  usernamePattern: 'pattern_c',
+  handleSyllables: 4 // optional, default 4
+});
+
+const userData = generator.generateUserData();
+// Result: larimo@gmail.com (no digits, short and unique)
+```
+
 ### Business Mode (Full and Alias)
 ```javascript
 // Full name style (no digits)
@@ -180,13 +209,14 @@ const userAlias = generatorAlias.generateUserData();
 const generator = new RandomDataGenerator({
     usernameStyle: 'auto',
   usernamePattern: 'random',
-  patternWeights: { concatenated: 1, separated: 1, business: 1 }
+  patternWeights: { concatenated: 1, separated: 1, business: 1, handle: 1 }
 });
 
 // Randomly selects between the three patterns by weight
 const userData1 = generator.generateUserData(); // Could be Pattern A
 const userData2 = generator.generateUserData(); // Could be Pattern B
 const userData3 = generator.generateUserData(); // Could be Business
+const userData4 = generator.generateUserData(); // Could be Short Handle (C)
 ```
 
 ## Database Schema Updates
@@ -200,6 +230,18 @@ CREATE TABLE user_data_exports (
     username_pattern TEXT,      -- 'pattern_a', 'pattern_b', 'business'
     business_mode INTEGER DEFAULT 0,
     -- ... existing fields ...
+);
+```
+
+New table for short handles (Pattern C):
+
+```sql
+CREATE TABLE generated_handles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  handle TEXT NOT NULL UNIQUE,
+  email TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  used_count INTEGER DEFAULT 1
 );
 ```
 
@@ -232,6 +274,7 @@ This will demonstrate:
 - Pattern A and B generation
 - Business mode functionality
 - Auto mode random selection
+- Pattern C short-handle generation
 - Uniqueness validation (100% unique in typical usage)
 
 ## Migration
@@ -241,5 +284,6 @@ Existing configurations will continue to work with default settings. To enable n
 1. Update configuration to specify `usernameStyle` and `usernamePattern`
 2. Add `businessEmailProviders` if using business mode
 3. Configure `separatorChars` for Pattern B customization
+4. Optionally enable Pattern C in auto mode via `patternWeights.handle` or use `usernameStyle: 'handle'`
 
 The system is backward compatible and will default to automatic pattern selection if no specific configuration is provided.
