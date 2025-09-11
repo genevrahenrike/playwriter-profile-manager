@@ -1,0 +1,56 @@
+[
+  {
+    "name": "auto-run",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!fc7178cc-829a-4cb0-860a-4894174ea3b5!86eeed07-c615-46aa-9a21-88a5188fd2d3",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "758967a7-5779-46e4-ae6c-b88829c32d4d",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "auto-run-test2",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!47df5722-18cd-49a3-a4fd-3b2cab7dff87!9a58c68c-56ba-486a-a748-e6a430b5523f",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "600b0a6f-4b36-4b62-97e2-02a47b29d1b5",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "auto-run2",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!3fa1b204-7831-42d1-9b02-1e6a2213970f!1a440989-66bf-40a6-9268-a4b84d9fe726",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "a2fc5149-f68f-4084-9549-46508824e0ea",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  }
+]

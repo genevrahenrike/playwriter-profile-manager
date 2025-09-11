@@ -170,8 +170,11 @@ These headers are unique to extension requests:
 # Extract minimal headers from a session (validates session first)
 node request-extractor-cli.js headers <profile-name-or-session-id>
 
-# Extract headers for multiple profiles
+# Extract headers for multiple profiles with prefix
 node request-extractor-cli.js bulk-headers <prefix>
+
+# Extract headers for ALL profiles (no prefix filter)
+node request-extractor-cli.js all-headers
 
 # Full reconstruction with analysis
 node request-extractor-cli.js reconstruct <profile-name-or-session-id>
@@ -220,6 +223,11 @@ $ node request-extractor-cli.js bulk-headers viq
     }
   }
 ]
+
+# Extract headers for ALL profiles (no filter)
+$ node request-extractor-cli.js all-headers
+[... 115 profiles extracted ...]
+✅ Saved 115 profiles to ./output/all-profiles.json
 ```
 
 ### Session Validation in Action

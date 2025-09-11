@@ -644,26 +644,30 @@ export class RequestExtractor {
             try {
                 const headerResult = await this.generateHeadersObject(profile.sessionId, opts);
                 
-                // Create headers in the exact order requested, with accept-language first, then authorization
+                // Create headers in the exact order as real extension requests
                 const orderedHeaders = {};
                 
-                // First: accept-language
+                // First: accept
+                orderedHeaders['accept'] = headerResult.extensionHeaders['accept'];
+                
+                // Second: accept-language  
                 orderedHeaders['accept-language'] = headerResult.extensionHeaders['accept-language'];
                 
-                // Second: authorization (immediately after accept-language)
+                // Third: authorization
                 if (headerResult.extensionHeaders['authorization']) {
                     orderedHeaders['authorization'] = headerResult.extensionHeaders['authorization'];
                 }
                 
-                // Then add the rest in a consistent order
+                // Then add the rest in the exact order as real extension
                 const remainingHeadersOrder = [
-                    'accept',
                     'priority', 
                     'sec-fetch-dest',
                     'sec-fetch-mode',
                     'sec-fetch-site',
-                    'x-vidiq-client',
-                    'x-amplitude-device-id'
+                    'user-agent',
+                    'x-amplitude-device-id',
+                    'x-client-location',
+                    'x-vidiq-client'
                 ];
                 
                 remainingHeadersOrder.forEach(key => {

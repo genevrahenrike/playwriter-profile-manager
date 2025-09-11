@@ -184,6 +184,53 @@ program
         }
     });
 
+// All headers command: outputs array of ALL profile objects with extension headers
+program
+    .command('all-headers')
+    .description('Output extension headers for ALL profiles (no prefix filter)')
+    .option('--no-randomize', 'Do not randomize x-amplitude-device-id, use captured values')
+    .action(async (options) => {
+        try {
+            const extractor = new RequestExtractor({ quiet: true });
+            
+            // Use empty string as prefix to get all profiles
+            const results = await extractor.generateHeadersForProfiles('', {
+                randomizeDeviceId: options.randomize !== false,
+                includeContentType: false,
+                quiet: true
+            });
+            
+            if (results.length === 0) {
+                console.error(chalk.red(`❌ No profiles found`));
+                process.exit(1);
+            }
+            
+            const jsonOutput = JSON.stringify(results, null, 2);
+            
+            // Ensure output directory exists
+            const outputDir = './output';
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+            
+            const filename = `all-profiles.json`;
+            const filepath = path.join(outputDir, filename);
+            
+            // Write to file
+            fs.writeFileSync(filepath, jsonOutput + '\n');
+            
+            // Also output to stdout
+            process.stdout.write(jsonOutput + '\n');
+            
+            // Log success message to stderr so it doesn't interfere with stdout
+            console.error(chalk.green(`✅ Saved ${results.length} profiles to ${filepath}`));
+            
+        } catch (error) {
+            console.error(chalk.red('❌ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
 // Analysis command
 program
     .command('analyze')
