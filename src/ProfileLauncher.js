@@ -433,7 +433,7 @@ export class ProfileLauncher {
             args = [],
             loadExtensions = [],
             autoLoadExtensions = true,
-            enableAutomation = true, // Enable automation by default
+            enableAutomation = false, // Default OFF; enable via CLI flag
             enableRequestCapture = true, // Enable request capture by default
             maxStealth = true, // Enable maximum stealth by default
             automationTasks = [], // Array of automation tasks to run
@@ -599,6 +599,17 @@ export class ProfileLauncher {
             // For Chromium persistent context, use the existing page; for others, create new page
             const page = browserType === 'chromium' ? context.pages()[0] : await context.newPage();
 
+            // Configure autofill behavior based on automation mode
+            try {
+                if (enableAutomation) {
+                    this.autofillSystem.options.minimalInterference = false;
+                    this.autofillSystem.options.fillStrategy = 'type';
+                } else {
+                    this.autofillSystem.options.minimalInterference = true;
+                    this.autofillSystem.options.fillStrategy = 'paste';
+                }
+            } catch (_) {}
+
             // Start request capture monitoring if enabled (start early to avoid missing initial responses)
             if (enableRequestCapture) {
                 await this.requestCaptureSystem.startMonitoring(sessionId, context, {
@@ -618,8 +629,15 @@ export class ProfileLauncher {
             if (enableAutomation) {
                 await this.automationSystem.startAutomation(sessionId, context, this.requestCaptureSystem, this.autofillSystem);
                 
-                // Setup auto-close monitoring for headless automation
-                if (options.headlessAutomation && options.autoCloseOnSuccess) {
+                // Store auto-close options for the monitor
+                browserInfo.autoClose = {
+                    onSuccess: !!options.autoCloseOnSuccess,
+                    onFailure: !!options.autoCloseOnFailure,
+                    timeoutMs: options.autoCloseTimeout || this.automationSystem.options.globalTimeout || 120000,
+                    captchaGraceMs: options.captchaGraceMs || 45000
+                };
+                // Setup auto-close monitoring when any auto-close mode is requested
+                if (browserInfo.autoClose.onSuccess || browserInfo.autoClose.onFailure || browserInfo.autoClose.timeoutMs > 0) {
                     this.setupAutoCloseMonitoring(sessionId, browserInfo);
                 }
             }
@@ -841,6 +859,8 @@ export class ProfileLauncher {
                 const automationStatus = this.automationSystem.getStatus();
                 const sessionCompletions = Array.from(this.automationSystem.completedAutomations.values())
                     .filter(completion => completion.sessionId === sessionId && completion.status === 'success');
+                const sessionFailures = Array.from(this.automationSystem.completedAutomations.values())
+                    .filter(completion => completion.sessionId === sessionId && completion.status === 'failure');
                 
                 if (sessionCompletions.length > 0) {
                     console.log(`🎉 Automation completed successfully! Auto-closing browser...`);
@@ -861,6 +881,46 @@ export class ProfileLauncher {
                             console.error(`❌ Error auto-closing browser: ${error.message}`);
                         }
                     }, 2000); // 2 second delay
+                } else if (sessionFailures.length > 0 && (browserInfo.autoClose?.onFailure)) {
+                    console.log(`❗ Automation reported failure. Auto-closing with snapshots...`);
+                    clearInterval(checkInterval);
+                    try {
+                        // Best-effort: capture screenshot and HTML snapshot before closing
+                        try {
+                            const pages = browserInfo.context.pages();
+                            let targetPage = pages.find(p => {
+                                const u = p.url();
+                                return u && u !== 'about:blank' && !u.startsWith('chrome://');
+                            }) || pages[0];
+                            if (targetPage) {
+                                const outDir = path.resolve('./automation-results');
+                                await fs.ensureDir(outDir);
+                                const ts = new Date().toISOString().replace(/[:.]/g, '-');
+                                const base = `${sessionId}-failure-${ts}`;
+                                const pngPath = path.join(outDir, `${base}.png`);
+                                const htmlPath = path.join(outDir, `${base}.html`);
+                                try { await targetPage.screenshot({ path: pngPath, fullPage: true }); } catch (_) {}
+                                try {
+                                    const html = await targetPage.content();
+                                    await fs.writeFile(htmlPath, `<!-- URL: ${targetPage.url()} -->\n${html}`);
+                                } catch (_) {}
+                                console.log(`📸 Saved failure screenshot: ${pngPath}`);
+                                console.log(`📝 Saved failure HTML snapshot: ${htmlPath}`);
+                            }
+                        } catch (snapErr) {
+                            console.warn(`⚠️  Snapshot capture failed: ${snapErr.message}`);
+                        }
+                        // Export captured requests before closing
+                        try {
+                            await this.requestCaptureSystem.exportCapturedRequests(sessionId, 'jsonl');
+                        } catch (e) {
+                            console.warn(`⚠️  Error exporting captured requests before auto-close: ${e.message}`);
+                        }
+                        await this.closeBrowser(sessionId, { clearCache: false });
+                        console.log(`✅ Browser closed automatically after failure for session: ${sessionId}`);
+                    } catch (error) {
+                        console.error(`❌ Error auto-closing browser on failure: ${error.message}`);
+                    }
                 } else {
                     // Fallback: detect success via request capture directly (VidIQ endpoints)
                     try {
@@ -892,6 +952,71 @@ export class ProfileLauncher {
                                     console.error(`❌ Error auto-closing browser: ${error.message}`);
                                 }
                             }, 2000);
+                        } else {
+                            // Failure/timeout path
+                            const ac = browserInfo.autoClose || {};
+                            const now = Date.now();
+                            const elapsed = now - new Date(browserInfo.startTime).getTime();
+                            const timeoutMs = ac.timeoutMs || 0;
+                            const onFailure = !!ac.onFailure;
+
+                            // Basic CAPTCHA heuristics: look for iframe with recaptcha, or DOM tokens
+                            let captchaLikely = false;
+                            try {
+                                const pages = browserInfo.context.pages();
+                                for (const p of pages) {
+                                    const hasRecaptcha = await p.locator('iframe[src*="recaptcha"], div.g-recaptcha').count().catch(() => 0);
+                                    const hasHCaptcha = await p.locator('iframe[src*="hcaptcha"], div.h-captcha').count().catch(() => 0);
+                                    if (hasRecaptcha > 0 || hasHCaptcha > 0) { captchaLikely = true; break; }
+                                }
+                            } catch (_) {}
+
+                            // If timeout exceeded (with optional extra grace for captchas), auto-close when enabled
+                            const captchaGraceMs = ac.captchaGraceMs || 0;
+                            const effectiveTimeout = captchaLikely ? (timeoutMs + captchaGraceMs) : timeoutMs;
+                            if (timeoutMs > 0 && elapsed >= effectiveTimeout && onFailure) {
+                                console.log(`⏰ No success detected after ${elapsed}ms${captchaLikely ? ` (captcha detected, grace applied)` : ''}; auto-closing as failure...`);
+                                clearInterval(checkInterval);
+                                try {
+                                    // Best-effort: capture screenshot and HTML snapshot before closing
+                                    try {
+                                        const pages = browserInfo.context.pages();
+                                        // Prefer the first non-about:blank page; fallback to first page
+                                        let targetPage = pages.find(p => {
+                                            const u = p.url();
+                                            return u && u !== 'about:blank' && !u.startsWith('chrome://');
+                                        }) || pages[0];
+                                        if (targetPage) {
+                                            const outDir = path.resolve('./automation-results');
+                                            await fs.ensureDir(outDir);
+                                            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+                                            const base = `${sessionId}-failure-${ts}`;
+                                            const pngPath = path.join(outDir, `${base}.png`);
+                                            const htmlPath = path.join(outDir, `${base}.html`);
+                                            try { await targetPage.screenshot({ path: pngPath, fullPage: true }); } catch (_) {}
+                                            try {
+                                                const html = await targetPage.content();
+                                                await fs.writeFile(htmlPath, `<!-- URL: ${targetPage.url()} -->\n${html}`);
+                                            } catch (_) {}
+                                            console.log(`📸 Saved failure screenshot: ${pngPath}`);
+                                            console.log(`📝 Saved failure HTML snapshot: ${htmlPath}`);
+                                        }
+                                    } catch (snapErr) {
+                                        console.warn(`⚠️  Snapshot capture failed: ${snapErr.message}`);
+                                    }
+
+                                    // Export captured requests before closing
+                                    try {
+                                        await this.requestCaptureSystem.exportCapturedRequests(sessionId, 'jsonl');
+                                    } catch (e) {
+                                        console.warn(`⚠️  Error exporting captured requests before auto-close: ${e.message}`);
+                                    }
+                                    await this.closeBrowser(sessionId, { clearCache: false });
+                                    console.log(`✅ Browser closed after timeout/failure for session: ${sessionId}`);
+                                } catch (error) {
+                                    console.error(`❌ Error auto-closing browser on failure: ${error.message}`);
+                                }
+                            }
                         }
                     } catch (e) {
                         // Ignore capture inspection errors in auto-close loop

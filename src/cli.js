@@ -475,7 +475,10 @@ program
     .option('--no-max-stealth', 'Disable maximum stealth mode (enabled by default)')
     .option('--automation-tasks <tasks...>', 'Specify custom automation tasks')
     .option('--headless-automation', 'Enable headless automation mode (autofill + submit + monitor success)')
-    .option('--auto-close-on-success', 'Automatically close browser when success is detected (use with --headless-automation)')
+    .option('--auto-close-on-success', 'Automatically close browser when success is detected (headed or headless)')
+    .option('--auto-close-on-failure', 'Automatically close browser on timeout/failure (headed or headless)')
+    .option('--auto-close-timeout <ms>', 'Timeout before treating as failure (ms)', '120000')
+    .option('--captcha-grace <ms>', 'Extra grace time if CAPTCHA is detected (ms)', '45000')
     .option('--no-capture', 'Disable request capture (enabled by default)')
     .option('--capture-format <format>', 'Request capture output format (jsonl, json, csv)', 'jsonl')
     .option('--capture-dir <dir>', 'Request capture output directory', './captured-requests')
@@ -525,12 +528,15 @@ program
                 devtools: options.devtools,
                 loadExtensions: options.loadExtensions || [],
                 autoLoadExtensions: options.autoExtensions !== false, // True by default, disable with --no-auto-extensions
-                enableAutomation: options.automation !== false, // True by default, disable with --no-automation
+                enableAutomation: !!options.automation, // Default OFF; enable with --automation
                 enableRequestCapture: options.capture !== false, // True by default, disable with --no-capture
                 maxStealth: options.maxStealth !== false, // True by default, disable with --no-max-stealth
                 automationTasks: options.automationTasks || [],
                 headlessAutomation: options.headlessAutomation || false,
-                autoCloseOnSuccess: options.autoCloseOnSuccess || false
+                autoCloseOnSuccess: options.autoCloseOnSuccess || false,
+                autoCloseOnFailure: options.autoCloseOnFailure || false,
+                autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
+                captchaGraceMs: parseInt(options.captchaGrace) || 45000
             };
 
             // Show extension-related info
@@ -547,9 +553,9 @@ program
                 console.log(chalk.green('🤖 Automation enabled - Browser will be connected to automation API'));
                 if (launchOptions.headlessAutomation) {
                     console.log(chalk.cyan('🔄 Headless automation mode - Will auto-fill, submit, and monitor for success'));
-                    if (launchOptions.autoCloseOnSuccess) {
-                        console.log(chalk.cyan('🚪 Auto-close enabled - Browser will close automatically on success'));
-                    }
+                }
+                if (launchOptions.autoCloseOnSuccess) {
+                    console.log(chalk.cyan('🚪 Auto-close enabled - Browser will close automatically on success'));
                 }
             } else {
                 console.log(chalk.yellow('⚠️  Automation disabled - Running in manual mode only'));
@@ -640,9 +646,12 @@ program
     .option('--stealth-preset <preset>', 'Stealth preset (minimal, balanced, maximum)', 'balanced')
     .option('--load-extensions <paths...>', 'Load additional extensions')
     .option('--no-auto-extensions', 'Disable automatic extension loading')
-    .option('--no-automation', 'Disable automation features')
+    .option('--automation', 'Enable automation features (default: off)')
     .option('--headless-automation', 'Enable headless automation mode (autofill + submit + monitor success)')
-    .option('--auto-close-on-success', 'Automatically close browser when success is detected (use with --headless-automation)')
+    .option('--auto-close-on-success', 'Automatically close browser when success is detected (headed or headless)')
+    .option('--auto-close-on-failure', 'Automatically close browser on timeout/failure (headed or headless)')
+    .option('--auto-close-timeout <ms>', 'Timeout before treating as failure (ms)', '120000')
+    .option('--captcha-grace <ms>', 'Extra grace time if CAPTCHA is detected (ms)', '45000')
     .option('--no-capture', 'Disable request capture')
     .option('--no-autofill-stop-on-success', 'Disable stopping autofill after success (default: enabled)')
     .option('--autofill-enforce-mode', 'Continue autofill monitoring even after success for race condition protection')
@@ -692,11 +701,14 @@ program
                 stealthPreset: options.stealthPreset,
                 loadExtensions: options.loadExtensions || [],
                 autoLoadExtensions: options.autoExtensions !== false,
-                enableAutomation: options.automation !== false,
+                enableAutomation: !!options.automation,
                 enableRequestCapture: options.capture !== false,
                 isTemporary: options.temp || false, // Only temporary if --temp flag is used
                 headlessAutomation: options.headlessAutomation || false,
-                autoCloseOnSuccess: options.autoCloseOnSuccess || false
+                autoCloseOnSuccess: options.autoCloseOnSuccess || false,
+                autoCloseOnFailure: options.autoCloseOnFailure || false,
+                autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
+                captchaGraceMs: parseInt(options.captchaGrace) || 45000
             };
 
             const result = await templateProfileLauncher.launchFromTemplate(template, instanceName, launchOptions);
@@ -716,9 +728,9 @@ program
                 console.log(chalk.green('🤖 Automation enabled'));
                 if (launchOptions.headlessAutomation) {
                     console.log(chalk.cyan('🔄 Headless automation mode active'));
-                    if (launchOptions.autoCloseOnSuccess) {
-                        console.log(chalk.cyan('🚪 Auto-close enabled'));
-                    }
+                }
+                if (launchOptions.autoCloseOnSuccess) {
+                    console.log(chalk.cyan('🚪 Auto-close enabled'));
                 }
             }
             

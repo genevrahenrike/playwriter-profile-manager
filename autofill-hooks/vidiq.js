@@ -1,7 +1,7 @@
 // VidIQ Autofill Hook Configuration with Dynamic Generation
 export default {
     name: 'vidiq-autofill',
-    description: 'Autofill VidIQ login and registration forms with dynamic data',
+    description: 'Autofill VidIQ login with minimal, reliable selectors only',
     enabled: true,
     
     // Enable dynamic data generation
@@ -25,82 +25,40 @@ export default {
     urlPatterns: [
         'https://app.vidiq.com/extension_install',
         'https://app.vidiq.com/login',
-        'https://app.vidiq.com/register',
-        'https://app.vidiq.com/signup',
         'https://app.vidiq.com/auth/signup'
     ],
     
     // Field mappings with dynamic values
     fields: {
-        // Primary email fields with dynamic generation
+        // Use only precise, known selectors to avoid redundant attempts
         'input[data-testid="form-input-email"]': {
             value: '{{email}}',
-            description: 'Email field for VidIQ forms (dynamic)'
+            description: 'Email field (VidIQ)'
         },
-        'input[name="email"]': {
-            value: '{{email}}',
-            description: 'Generic email field (dynamic)'
-        },
-        'input[type="email"]': {
-            value: '{{email}}',
-            description: 'Email input type (dynamic)'
-        },
-        'input[placeholder*="email" i]': {
-            value: '{{email}}',
-            description: 'Email field by placeholder (dynamic)'
-        },
-        
-        // Password fields with dynamic generation
         'input[data-testid="form-input-password"]': {
             value: '{{password}}',
-            description: 'Password field for VidIQ forms (dynamic)'
-        },
-        'input[name="password"]': {
-            value: '{{password}}',
-            description: 'Generic password field (dynamic)'
-        },
-        'input[type="password"]': {
-            value: '{{password}}',
-            description: 'Password input type (dynamic)'
-        },
-        
-        // Name fields (if present)
-        'input[name="firstName"]': {
-            value: '{{firstName}}',
-            description: 'First name field (dynamic)'
-        },
-        'input[name="lastName"]': {
-            value: '{{lastName}}',
-            description: 'Last name field (dynamic)'
-        },
-        'input[name="fullName"]': {
-            value: '{{fullName}}',
-            description: 'Full name field (dynamic)'
-        },
-        'input[placeholder*="name" i]': {
-            value: '{{fullName}}',
-            description: 'Name field by placeholder (dynamic)'
+            description: 'Password field (VidIQ)'
         }
     },
     
     // Execution settings optimized for race condition handling
     execution: {
-        maxAttempts: 8,           // More attempts for dynamic forms
-        pollInterval: 1500,       // Longer polling interval
-        waitAfterFill: 800,       // More time for fields to stabilize
-        fieldRetries: 4,          // Increased retries per field
-        fieldRetryDelay: 200,     // Slightly longer delay between field retries
-        verifyFill: true,         // Verify field values after filling
-        autoSubmit: false,        // Never auto-submit for safety
-        
-        // Enhanced race condition prevention
-        stabilityChecks: 3,       // Check field stability multiple times
-        stabilityDelay: 300,      // Delay between stability checks
-        minFieldsForSuccess: 2,   // Require both email and password minimum
-        
-        // Custom field priority for sequential filling
-        fillSequentially: true,  // Fill fields one by one rather than in parallel
-        sequentialDelay: 400      // Delay between sequential field fills
+        maxAttempts: 6,         // Slightly fewer attempts now that selectors are precise
+        pollInterval: 1000,     // Check a bit more frequently
+        waitAfterFill: 600,     // Stabilize after fill
+        fieldRetries: 2,        // Don’t hammer fields; avoid noisy logs
+        fieldRetryDelay: 150,   // Shorter delays
+        verifyFill: true,       // Verify field values after filling
+        autoSubmit: false,      // Never auto-submit
+
+        // Race condition prevention
+        stabilityChecks: 3,
+        stabilityDelay: 300,
+        minFieldsForSuccess: 2,
+
+        // Sequential fill remains to avoid churn
+        fillSequentially: true,
+        sequentialDelay: 300
     },
     
     // Custom execution logic (optional)
@@ -111,7 +69,7 @@ export default {
             console.log(`🎲 Using generated data: ${userData.email}`);
         }
         
-        // Check page content for VidIQ-specific elements
+        // Check page content for VidIQ-specific elements (non-blocking)
         try {
             const pageContent = await page.textContent('body');
             if (pageContent && pageContent.includes('extension')) {
@@ -131,29 +89,7 @@ export default {
                 console.log(`🔘 Found submit button: "${buttonText}" (not clicking for safety)`);
             }
             
-            // Check for additional form fields that might need dynamic data
-            const additionalFields = [
-                'input[name="username"]',
-                'input[placeholder*="username" i]',
-                'input[name="displayName"]',
-                'input[placeholder*="display name" i]'
-            ];
-            
-            for (const selector of additionalFields) {
-                const field = page.locator(selector);
-                if (await field.count() > 0) {
-                    console.log(`🔍 Found additional field: ${selector}`);
-                    if (userData) {
-                        try {
-                            await field.first().clear();
-                            await field.first().fill(userData.fullName);
-                            console.log(`✅ Filled additional field with: ${userData.fullName}`);
-                        } catch (error) {
-                            console.log(`⚠️  Could not fill additional field: ${error.message}`);
-                        }
-                    }
-                }
-            }
+            // Do not probe or fill optional/unknown fields to avoid noise
             
         } catch (error) {
             console.log(`⚠️  Could not analyze VidIQ page: ${error.message}`);

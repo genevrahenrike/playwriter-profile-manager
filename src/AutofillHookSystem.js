@@ -440,18 +440,20 @@ export class AutofillHookSystem {
                 
                 console.log(`📝 Filling field (attempt ${attempt}): ${fieldConfig.description || selector}`);
                 
-                // Bring field into view and perform small human-like cursor movement
+                // Bring field into view and skip mouse/hover jitter in minimal mode
                 try {
                     await firstField.scrollIntoViewIfNeeded();
-                    const box = await firstField.boundingBox().catch(() => null);
-                    if (box) {
-                        const jitterX = (Math.random() - 0.5) * Math.min(10, box.width / 5);
-                        const jitterY = (Math.random() - 0.5) * Math.min(6, box.height / 5);
-                        const tgtX = box.x + box.width / 2 + jitterX;
-                        const tgtY = box.y + box.height / 2 + jitterY;
-                        await page.mouse.move(tgtX, tgtY, { steps: 3 + Math.floor(Math.random() * 4) });
-                        await page.waitForTimeout(120 + Math.floor(Math.random() * 220));
-                        await firstField.hover().catch(() => {});
+                    if (!this.options.minimalInterference) {
+                        const box = await firstField.boundingBox().catch(() => null);
+                        if (box) {
+                            const jitterX = (Math.random() - 0.5) * Math.min(10, box.width / 5);
+                            const jitterY = (Math.random() - 0.5) * Math.min(6, box.height / 5);
+                            const tgtX = box.x + box.width / 2 + jitterX;
+                            const tgtY = box.y + box.height / 2 + jitterY;
+                            await page.mouse.move(tgtX, tgtY, { steps: 3 + Math.floor(Math.random() * 4) });
+                            await page.waitForTimeout(120 + Math.floor(Math.random() * 220));
+                            await firstField.hover().catch(() => {});
+                        }
                     }
                 } catch (_) {}
                 
@@ -475,23 +477,42 @@ export class AutofillHookSystem {
                     isPasswordField = /password/i.test(selector);
                 }
                 
-                if (isPasswordField) {
-                    // For password fields, avoid clearing aggressively; type human-like
-                    if (existingValue && existingValue.length > 0) {
-                        await this.clearFieldSafely(firstField);
-                        await page.waitForTimeout(60 + Math.floor(Math.random() * 120));
+                // Fill strategy: minimal paste-like or human-like typing
+                if (this.options && this.options.fillStrategy === 'paste') {
+                    try { await firstField.click({ clickCount: 3 }); } catch (_) {}
+                    try {
+                        await firstField.fill('');
+                        await firstField.fill(value);
+                    } catch (_) {
+                        try {
+                            await page.keyboard.insertText(value);
+                        } catch (_) {
+                            await firstField.evaluate((el, v) => {
+                                const set = (e, val) => {
+                                    e.value = val;
+                                    e.dispatchEvent(new Event('input', { bubbles: true }));
+                                    e.dispatchEvent(new Event('change', { bubbles: true }));
+                                };
+                                set(el, v);
+                            }, value);
+                        }
                     }
-                    const perCharDelay = 40 + Math.floor(Math.random() * 80); // 40-120ms
-                    await firstField.pressSequentially(value, { delay: perCharDelay });
                 } else {
-                    // Non-password fields: clear only if necessary
-                    if (existingValue && existingValue !== value) {
-                        await this.clearFieldSafely(firstField);
-                        await page.waitForTimeout(40 + Math.floor(Math.random() * 100));
+                    if (isPasswordField) {
+                        if (existingValue && existingValue.length > 0) {
+                            await this.clearFieldSafely(firstField);
+                            await page.waitForTimeout(60 + Math.floor(Math.random() * 120));
+                        }
+                        const perCharDelay = 40 + Math.floor(Math.random() * 80); // 40-120ms
+                        await firstField.pressSequentially(value, { delay: perCharDelay });
+                    } else {
+                        if (existingValue && existingValue !== value) {
+                            await this.clearFieldSafely(firstField);
+                            await page.waitForTimeout(40 + Math.floor(Math.random() * 100));
+                        }
+                        const perCharDelay = 20 + Math.floor(Math.random() * 60); // 20-80ms
+                        await firstField.pressSequentially(value, { delay: perCharDelay });
                     }
-                    // Prefer human-like typing to reduce bot signals on recaptcha pages
-                    const perCharDelay = 20 + Math.floor(Math.random() * 60); // 20-80ms
-                    await firstField.pressSequentially(value, { delay: perCharDelay });
                 }
                 
                 // Verify the value was actually set
@@ -802,16 +823,18 @@ export class AutofillHookSystem {
                 for (const selector of orderedSelectors) {
                     const fieldConfig = hook.fields[selector];
                     try {
-                        // Randomized inter-field human-like delay and occasional micro scroll/mouse movement
+                        // Inter-field delay; avoid extra scroll/mouse when minimalInterference is on
                         const interDelay = 120 + Math.floor(Math.random() * 320); // 120-440ms
-                        if (Math.random() < 0.15) { // Reduced probability to avoid disruption
-                            const dy = 30 + Math.floor(Math.random() * 80);
-                            await page.mouse.wheel(0, dy);
-                        }
-                        if (Math.random() < 0.25) { // Reduced probability
-                            const x = 100 + Math.floor(Math.random() * 800);
-                            const y = 120 + Math.floor(Math.random() * 500);
-                            await page.mouse.move(x, y, { steps: 2 + Math.floor(Math.random() * 4) });
+                        if (!this.options.minimalInterference) {
+                            if (Math.random() < 0.15) {
+                                const dy = 30 + Math.floor(Math.random() * 80);
+                                await page.mouse.wheel(0, dy);
+                            }
+                            if (Math.random() < 0.25) {
+                                const x = 100 + Math.floor(Math.random() * 800);
+                                const y = 120 + Math.floor(Math.random() * 500);
+                                await page.mouse.move(x, y, { steps: 2 + Math.floor(Math.random() * 4) });
+                            }
                         }
                         await page.waitForTimeout(interDelay);
                         
