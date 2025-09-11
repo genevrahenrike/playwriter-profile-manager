@@ -30,10 +30,12 @@
   "license": "MIT",
   "dependencies": {
     "@mix-visit/lite": "^1.0.14",
+    "axios": "^1.12.0",
     "better-sqlite3": "^9.6.0",
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
     "fs-extra": "^11.2.0",
+    "https-proxy-agent": "^7.0.6",
     "inquirer": "^9.2.0",
     "inquirer-autocomplete-prompt": "^3.0.1",
     "playwright": "^1.40.0",

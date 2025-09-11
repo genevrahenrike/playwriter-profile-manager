@@ -1,18 +1,82 @@
 [
   {
-    "label": "US",
+    "label": "US1",
     "host": "geo.floppydata.com",
     "port": 10080,
     "login": "YwbVgfpGYlcfFOfD",
     "password": "en6IYpoG4MQD8abe",
     "url": "http://YwbVgfpGYlcfFOfD:en6IYpoG4MQD8abe@geo.floppydata.com:10080",
     "status": "OK",
-    "lastChecked": "2025-09-07T09:01:31.299Z",
-    "avgLatencyMs": 2182,
+    "lastChecked": "2025-09-11T23:47:58.620Z",
+    "avgLatencyMs": 1628,
     "latenciesByEndpoint": {
-      "ipify": 2966,
-      "httpbin": 2389,
-      "google204": 1192
+      "google204": 74,
+      "ipify": 2075,
+      "httpbin": 2736
+    }
+  },
+  {
+    "label": "US2",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "1vnHige3lklVZkhm",
+    "password": "rjmAitpXG7qoBQ3q",
+    "url": "http://1vnHige3lklVZkhm:rjmAitpXG7qoBQ3q@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:03.458Z",
+    "avgLatencyMs": 1110,
+    "latenciesByEndpoint": {
+      "google204": 48,
+      "ipify": 1096,
+      "httpbin": 2185
+    }
+  },
+  {
+    "label": "US3",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "p5CVXTdELoMzJwuo",
+    "password": "qnIq4XlNCEeXNnvx",
+    "url": "http://p5CVXTdELoMzJwuo:qnIq4XlNCEeXNnvx@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:08.640Z",
+    "avgLatencyMs": 1225,
+    "latenciesByEndpoint": {
+      "google204": 24,
+      "ipify": 1506,
+      "httpbin": 2145
+    }
+  },
+  {
+    "label": "US4",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "Xwyv9cucEtKb5HON",
+    "password": "lIwR5u5unTwaua3U",
+    "url": "http://Xwyv9cucEtKb5HON:lIwR5u5unTwaua3U@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:13.262Z",
+    "avgLatencyMs": 1039,
+    "latenciesByEndpoint": {
+      "google204": 42,
+      "ipify": 1053,
+      "httpbin": 2022
+    }
+  },
+  {
+    "label": "US5",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "1VxZ9JJFBCjqg68C",
+    "password": "8lX93VV41JCYjFF1",
+    "url": "http://1VxZ9JJFBCjqg68C:8lX93VV41JCYjFF1@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:17.511Z",
+    "avgLatencyMs": 915,
+    "latenciesByEndpoint": {
+      "google204": 22,
+      "ipify": 1126,
+      "httpbin": 1596
     }
   },
   {
@@ -23,12 +87,12 @@
     "password": "egaWIc1BJhbSpt8S",
     "url": "http://KZYsnXsOFZQgPrNT:egaWIc1BJhbSpt8S@geo.floppydata.com:10080",
     "status": "OK",
-    "lastChecked": "2025-09-07T09:01:31.299Z",
-    "avgLatencyMs": 1101,
+    "lastChecked": "2025-09-11T23:48:21.557Z",
+    "avgLatencyMs": 847,
     "latenciesByEndpoint": {
-      "ipify": 1097,
-      "httpbin": 1358,
-      "google204": 848
+      "google204": 24,
+      "ipify": 1024,
+      "httpbin": 1493
     }
   },
   {
@@ -39,28 +103,92 @@
     "password": "8TPJcaqO09PLk3xk",
     "url": "http://7xRoG0h3EYFpwPZs:8TPJcaqO09PLk3xk@geo.floppydata.com:10080",
     "status": "OK",
-    "lastChecked": "2025-09-07T09:01:31.299Z",
-    "avgLatencyMs": 1084,
+    "lastChecked": "2025-09-11T23:48:26.094Z",
+    "avgLatencyMs": 1011,
     "latenciesByEndpoint": {
-      "ipify": 1058,
-      "httpbin": 1412,
-      "google204": 781
+      "google204": 18,
+      "ipify": 1129,
+      "httpbin": 1885
     }
   },
   {
-    "label": "France",
+    "label": "France1",
     "host": "geo.floppydata.com",
     "port": 10080,
     "login": "wgM87rfyxvGvPHyT",
     "password": "9yNiSW3eY2QKb87X",
     "url": "http://wgM87rfyxvGvPHyT:9yNiSW3eY2QKb87X@geo.floppydata.com:10080",
     "status": "OK",
-    "lastChecked": "2025-09-07T09:01:31.299Z",
-    "avgLatencyMs": 1237,
+    "lastChecked": "2025-09-11T23:48:32.944Z",
+    "avgLatencyMs": 1781,
     "latenciesByEndpoint": {
-      "ipify": 997,
-      "httpbin": 1889,
-      "google204": 825
+      "google204": 19,
+      "ipify": 2017,
+      "httpbin": 3308
+    }
+  },
+  {
+    "label": "France2",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "bg2K2eiqzk1z0yAq",
+    "password": "dgHZiHmenO6FTjqu",
+    "url": "http://bg2K2eiqzk1z0yAq:dgHZiHmenO6FTjqu@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:38.044Z",
+    "avgLatencyMs": 1198,
+    "latenciesByEndpoint": {
+      "google204": 44,
+      "ipify": 830,
+      "httpbin": 2721
+    }
+  },
+  {
+    "label": "France3",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "7VdCUN2zjQdkeF17",
+    "password": "M04dU8aWT1CjA83Q",
+    "url": "http://7VdCUN2zjQdkeF17:M04dU8aWT1CjA83Q@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:41.730Z",
+    "avgLatencyMs": 727,
+    "latenciesByEndpoint": {
+      "google204": 41,
+      "ipify": 827,
+      "httpbin": 1314
+    }
+  },
+  {
+    "label": "France4",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "cRHVZghJrZIQdayu",
+    "password": "QxtsI8ZEBQlp8jjr",
+    "url": "http://cRHVZghJrZIQdayu:QxtsI8ZEBQlp8jjr@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:45.602Z",
+    "avgLatencyMs": 789,
+    "latenciesByEndpoint": {
+      "google204": 22,
+      "ipify": 920,
+      "httpbin": 1425
+    }
+  },
+  {
+    "label": "France5",
+    "host": "geo-dc.floppydata.com",
+    "port": 10080,
+    "login": "V6QuQCGDnB6AK90v",
+    "password": "3XoEuAAgZq7PaHhb",
+    "url": "http://V6QuQCGDnB6AK90v:3XoEuAAgZq7PaHhb@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:50.127Z",
+    "avgLatencyMs": 1007,
+    "latenciesByEndpoint": {
+      "google204": 25,
+      "ipify": 835,
+      "httpbin": 2161
     }
   },
   {
@@ -71,12 +199,12 @@
     "password": "Sa36n36b53tLZHdK",
     "url": "http://ffeRKwuDS2AIA8IC:Sa36n36b53tLZHdK@geo.floppydata.com:10080",
     "status": "OK",
-    "lastChecked": "2025-09-07T09:01:31.299Z",
-    "avgLatencyMs": 5689,
+    "lastChecked": "2025-09-11T23:48:58.728Z",
+    "avgLatencyMs": 2366,
     "latenciesByEndpoint": {
-      "ipify": 3573,
-      "httpbin": 11816,
-      "google204": 1677
+      "google204": 26,
+      "ipify": 2653,
+      "httpbin": 4419
     }
   }
 ]
