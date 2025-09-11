@@ -1057,3 +1057,139 @@ Want me to implement that “automation-autofill-only” option as a toggle?
 
 Made changes.
 
+---
+
+I'll scan the codebase for the event bus and launcher return details, then implement a batch runner script and add a CLI command to orchestrate the loop with retries and profile management. 
+
+Searched text for `class ProfileEventBus|new ProfileEventBus|EVENTS =|CAPTURE_SUCCESS_DETECTED|launchFromTemplate\(|headlessAutomation|autoCloseOnSuccess|emitSessionEvent\(` (`**/src/**`), 20 results
+
+I'll search for profile deletion capabilities and how to create profiles from templates to wire cleanup and reuse properly. 
+
+Searched text for `class ProfileManager|deleteProfile|removeProfile|cloneProfile|createProfile|launchFromTemplate|getProfileByName|getProfile|delete` (`**/src/**`), 20 results
+
+I'll locate where success is emitted to wire batch controller reliably. 
+
+Searched text for `emitSessionEvent\(.*CAPTURE_SUCCESS_DETECTED|SUCCESS|autoCloseOnSuccess|SUCCESS_DETECTED` (`**/src/**`), 20 results
+
+I'll open key sections of ProfileLauncher.js around launch, auto-close monitoring, and return values to see how to detect success/failure. 
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/ProfileLauncher.js#600-600), lines 600 to 1000
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/ProfileLauncher.js#1000-1000), lines 1000 to 1400
+
+I'll inspect `AutomationHookSystem` around where it marks completion to see what event it emits for success/failure. 
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/AutomationHookSystem.js#230-230), lines 230 to 610
+
+I'll open `launchFromTemplate` to confirm clone behavior and whether it always deletes the temp profile. 
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/ProfileLauncher.js#330-330), lines 330 to 450
+
+I'll search for the request capture system to see available signals for success detection. 
+
+Searched text for `class RequestCaptureSystem|RequestCaptureSystem|CAPTURE_SUCCESS_DETECTED|exportCapturedRequests` (`**/src/**`), 20 results
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/RequestCaptureSystem.js#1-1), lines 1 to 501
+
+Searched text for `markAutomationCompleted|completedAutomations` (`**/src/AutomationHookSystem.js`), 20 results
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/AutomationHookSystem.js#870-870), lines 870 to 998
+
+I'll open package.json to see the CLI bin entry and dependencies for commander. 
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/package.json)
+
+Searched text for `constructor\(options\)\s*{[\s\S]*eventBus|eventBus` (`**/src/RequestCaptureSystem.js`), no results
+
+Searched text for `emitSessionEvent\(.*CAPTURE_SUCCESS_DETECTED` (`**/src/**`), no results
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/AutomationHookSystem.js#1-1), lines 1 to 121
+
+Next, I'll add a `batch` CLI command in cli.js to run repeated signups with retry logic, and write a minimal helper inside it to wait for success/failure and manage profiles. 
+
+Using "Apply Patch"
+
+I'll open cli.js to locate the launch command and identify where to insert the new `batch` command cleanly. 
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/cli.js)
+
+Searched text for `getCapturedRequests\(` (`**/src/RequestCaptureSystem.js`), 1 result
+
+Read [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/RequestCaptureSystem.js#1100-1100), lines 1100 to 1241
+
+I'll add a new `ppm batch` CLI command to run repeated signups with headless-first, headed retry, outcome logging, and profile cleanup. 
+
+Using "Apply Patch"
+
+
+```
+
+```
+
+
+Checked [](file:///Users/markzhu/Documents/playwriter-profile-manager/src/cli.js), no problems found
+
+Batch command added. I'll run a quick status check by listing available commands help and ensure new command shows in CLI. 
+
+Ran terminal command: node -e "const {Command}=require('commander');console.log('skip');"
+
+Ran terminal command: node src/cli.js --help | head -n 60
+
+Ran terminal command: node src/cli.js batch --help
+
+Great idea. Here’s a tight plan and an implementation that makes this operational.
+
+Plan
+- Add a CLI command to run repeated signups with headless-first, headed-retry, and profile reuse.
+- Detect success via automation completion and request-capture endpoints.
+- Log per-attempt results in JSONL and print concise status to stdout.
+- Preserve successful profiles; delete failed ones (configurable).
+- Stop after a double-fail for a profile (headless+headed) as requested.
+
+What I built
+- New CLI command: `ppm batch`
+  - Runs X times, headless first, retries headed on failure.
+  - Reuses the same profile for retry; profiles are permanent by default.
+  - Detects success via:
+    - Automation completion (`AutomationHookSystem.completedAutomations`)
+    - Captured responses: `api.vidiq.com/subscriptions/active` or `/subscriptions/stripe/next-subscription` with status 200/201.
+  - Outputs a JSONL results file and prints clear status lines per attempt.
+  - Deletes failed profiles after double-fail (unless `--keep-failed-profiles`).
+  - Stops the batch immediately on a double-fail (configurable).
+
+How to use
+- Basic run (5 signups, VidIQ template, preserve successes, delete double-fails):
+```bash
+npx ppm batch --template vidiq-clean --count 5 --prefix auto-run --timeout 120000 --captcha-grace 45000
+```
+- Keep failed profiles for debugging:
+```bash
+npx ppm batch --template vidiq-clean --count 5 --keep-failed-profiles
+```
+- Don’t stop the batch on double-fail:
+```bash
+npx ppm batch --template vidiq-clean --count 10 --no-stop-on-double-fail
+```
+
+Behavior
+- Naming: Profiles use `prefix-<timestamp>-NN` (e.g., `auto-run-2025-09-11T01-02-03-456Z-01`).
+- Headless first, then headed retry with the same profile/cookies.
+- Success → preserved profile. Double-fail → profile deleted by default.
+- Results file: `automation-results/batch-<prefix>-<timestamp>.jsonl` with lines like:
+  - `{ timestamp, batchId, run, runId, profileId, profileName, attempt: 1|2, headless: true|false, success: true|false, reason }`
+- Reasons: `automation_success`, `capture_success`, `timeout`, `timeout_with_captcha`.
+
+Notes
+- This uses your existing automation and request capture systems directly; no need to scan raw logs.
+- Auto-close is disabled in this mode; we manage closure and screenshots ourselves.
+- Profiles are created as permanent to enable retry reuse and preserving success state.
+
+Optional enhancements
+- Add `--json-stdout` to stream NDJSON to stdout in addition to the file.
+- Add `--concurrency <n>` for running multiple instances in parallel.
+- Add `--retry-only-headed` if you ever want headed-only retries without headless-first.
+- Add global stop condition variants (e.g., “stop after N double-fails overall”).
+
+Want me to add any of the enhancements (e.g., JSON to stdout or parallelism)?
+
+Made changes.

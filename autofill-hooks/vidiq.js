@@ -1,7 +1,7 @@
 // VidIQ Autofill Hook Configuration with Dynamic Generation
 export default {
     name: 'vidiq-autofill',
-    description: 'Autofill VidIQ login with minimal, reliable selectors only',
+    description: 'Autofill VidIQ login with reliable selectors (email + password only)',
     enabled: true,
     
     // Enable dynamic data generation
@@ -25,29 +25,55 @@ export default {
     urlPatterns: [
         'https://app.vidiq.com/extension_install',
         'https://app.vidiq.com/login',
+        'https://app.vidiq.com/register',
+        'https://app.vidiq.com/signup',
         'https://app.vidiq.com/auth/signup'
     ],
     
     // Field mappings with dynamic values
     fields: {
-        // Use only precise, known selectors to avoid redundant attempts
+        // Prefer VidIQ-specific selectors, but keep standard fallbacks
         'input[data-testid="form-input-email"]': {
             value: '{{email}}',
             description: 'Email field (VidIQ)'
         },
+        'input[name="email"]': {
+            value: '{{email}}',
+            description: 'Email field (name)'
+        },
+        'input[type="email"]': {
+            value: '{{email}}',
+            description: 'Email field (type)'
+        },
+        'input[placeholder*="email" i]': {
+            value: '{{email}}',
+            description: 'Email field (placeholder fallback)'
+        },
         'input[data-testid="form-input-password"]': {
             value: '{{password}}',
             description: 'Password field (VidIQ)'
+        },
+        'input[name="password"]': {
+            value: '{{password}}',
+            description: 'Password field (name)'
+        },
+        'input[type="password"]': {
+            value: '{{password}}',
+            description: 'Password field (type)'
+        },
+        'input[placeholder*="password" i]': {
+            value: '{{password}}',
+            description: 'Password field (placeholder fallback)'
         }
     },
     
     // Execution settings optimized for race condition handling
     execution: {
-        maxAttempts: 6,         // Slightly fewer attempts now that selectors are precise
-        pollInterval: 1000,     // Check a bit more frequently
-        waitAfterFill: 600,     // Stabilize after fill
-        fieldRetries: 2,        // Don’t hammer fields; avoid noisy logs
-        fieldRetryDelay: 150,   // Shorter delays
+    maxAttempts: 8,         // More attempts for dynamic forms
+    pollInterval: 1500,     // Longer polling interval
+    waitAfterFill: 800,     // More time for fields to stabilize
+    fieldRetries: 4,        // Increased retries per field
+    fieldRetryDelay: 200,   // Slightly longer delay between field retries
         verifyFill: true,       // Verify field values after filling
         autoSubmit: false,      // Never auto-submit
 
@@ -58,7 +84,7 @@ export default {
 
         // Sequential fill remains to avoid churn
         fillSequentially: true,
-        sequentialDelay: 300
+        sequentialDelay: 400
     },
     
     // Custom execution logic (optional)

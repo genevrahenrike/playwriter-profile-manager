@@ -133,6 +133,47 @@ npx ppm launch-template vpn-fresh user3 --headless-automation --auto-close-on-su
 - Unattended automation tasks
 ```
 
+### Batch Automation (headed by default)
+
+Run repeated automated signups with a single attempt per profile. Defaults to headed mode (recommended for higher success rates). Success is detected via automation completion and request capture; results are logged as JSONL for easy parsing.
+
+```bash
+# Headed (default), delete failed profiles automatically
+npx ppm batch --template vidiq-clean \
+    --count 5 \
+    --prefix auto-run \
+    --timeout 120000 \
+    --captcha-grace 45000 \
+    --delete-on-failure
+
+# Headless variant (optional), keep failed profiles
+npx ppm batch --template vidiq-clean \
+    --count 3 \
+    --prefix auto-headless \
+    --headless
+```
+
+Batch options:
+- `--template <name>`: Template profile to clone from (e.g., `vidiq-clean`).
+- `--count <n>`: Number of profiles to create (default: 1).
+- `--prefix <prefix>`: Profile name prefix (timestamp + index appended).
+- `--timeout <ms>`: Per-run success timeout (default: 120000).
+- `--captcha-grace <ms>`: Extra grace time if CAPTCHA detected (default: 45000).
+- `--headless`: Run in headless mode (default: headed).
+- `--delete-on-failure`: Delete the profile if the run fails.
+
+Behavior:
+- Single attempt per profile (no headed retry cycle).
+- Profiles are permanent by default; successful profiles are preserved.
+- On failure with `--delete-on-failure`, the profile is removed.
+- Writes a results file at `automation-results/batch-<prefix>-<timestamp>.jsonl` with per-attempt entries:
+    - `timestamp, batchId, run, runId, profileId, profileName, attempt, headless, success, reason`
+- Saves a best-effort screenshot on timeout to `automation-results/`.
+
+Success detection:
+- Automation completion events (from the automation hook system).
+- 200/201 responses for `api.vidiq.com/subscriptions/active` or `/subscriptions/stripe/next-subscription`.
+
 ### Launch from template with fingerprint randomization
 ```bash
 # Launch from template with randomized fingerprint (perfect for multi-account automation)

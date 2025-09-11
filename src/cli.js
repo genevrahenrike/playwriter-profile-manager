@@ -776,6 +776,173 @@ program
         }
     });
 
+// Batch automation command
+program
+    .command('batch')
+    .description('Run continuous automated signups with retry and profile management')
+    .requiredOption('-t, --template <name>', 'Template profile to clone from (e.g., vidiq-clean)')
+    .option('-c, --count <number>', 'Number of profiles to create', '1')
+    .option('-p, --prefix <prefix>', 'Profile name prefix', 'auto')
+    .option('--timeout <ms>', 'Per-run success timeout (ms)', '120000')
+    .option('--captcha-grace <ms>', 'Extra grace if CAPTCHA detected (ms)', '45000')
+    .option('--headless', 'Run in headless mode (default: headed)')
+    .option('--delete-on-failure', 'Delete the profile if the run fails')
+    .action(async (options) => {
+        const pathMod = (await import('path')).default;
+        const fsx = (await import('fs-extra')).default;
+        const { v4: uuidv4 } = await import('uuid');
+
+        const template = options.template;
+        const total = parseInt(options.count, 10) || 1;
+        const prefix = options.prefix || 'auto';
+        const perRunTimeout = parseInt(options.timeout, 10) || 120000;
+        const captchaGrace = parseInt(options.captchaGrace, 10) || 45000;
+    const runHeadless = !!options.headless;
+    const deleteOnFailure = !!options.deleteOnFailure;
+
+        const resultsDir = pathMod.resolve('./automation-results');
+        await fsx.ensureDir(resultsDir);
+        const batchId = new Date().toISOString().replace(/[:.]/g, '-');
+        const resultsFile = pathMod.join(resultsDir, `batch-${prefix}-${batchId}.jsonl`);
+
+        const writeResult = async (obj) => {
+            const line = JSON.stringify({ timestamp: new Date().toISOString(), ...obj });
+            await fsx.appendFile(resultsFile, line + '\n');
+        };
+
+        const generateName = (idx) => {
+            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+            return `${prefix}-${ts}-${String(idx).padStart(2, '0')}`;
+        };
+
+        const waitForOutcome = async (launcher, sessionId, context) => {
+            const start = Date.now();
+            const poll = 1500;
+
+            while (true) {
+                try {
+                    const comps = Array.from(launcher.automationSystem.completedAutomations.values())
+                        .filter(c => c.sessionId === sessionId && c.status === 'success');
+                    if (comps.length > 0) {
+                        return { success: true, reason: 'automation_success' };
+                    }
+                } catch (_) {}
+
+                try {
+                    const captured = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                    const successDetected = captured.some(r => r.type === 'response' && [200, 201].includes(r.status) && (
+                        (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/active')) ||
+                        (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/stripe/next-subscription'))
+                    ));
+                    if (successDetected) {
+                        return { success: true, reason: 'capture_success' };
+                    }
+                } catch (_) {}
+
+                const elapsed = Date.now() - start;
+                const pages = context?.pages?.() || [];
+                let captchaLikely = false;
+                try {
+                    for (const p of pages) {
+                        const a = await p.locator('iframe[src*="recaptcha"], div.g-recaptcha').count().catch(() => 0);
+                        const b = await p.locator('iframe[src*="hcaptcha"], div.h-captcha').count().catch(() => 0);
+                        if (a > 0 || b > 0) { captchaLikely = true; break; }
+                    }
+                } catch (_) {}
+
+                const effective = captchaLikely ? (perRunTimeout + captchaGrace) : perRunTimeout;
+                if (perRunTimeout > 0 && elapsed >= effective) {
+                    // Best-effort screenshot
+                    try {
+                        const p = pages.find(pg => {
+                            const u = pg.url();
+                            return u && u !== 'about:blank' && !u.startsWith('chrome://');
+                        }) || pages[0];
+                        if (p) {
+                            const outBase = `${sessionId}-timeout-${new Date().toISOString().replace(/[:.]/g,'-')}`;
+                            const png = pathMod.join(resultsDir, `${outBase}.png`);
+                            await p.screenshot({ path: png, fullPage: true }).catch(() => {});
+                        }
+                    } catch (_) {}
+                    return { success: false, reason: captchaLikely ? 'timeout_with_captcha' : 'timeout' };
+                }
+
+                await new Promise(r => setTimeout(r, poll));
+            }
+        };
+
+        const pmLocal = new ProfileManager();
+
+        console.log(chalk.cyan(`🚀 Starting batch: template=${template}, count=${total}, prefix=${prefix}`));
+        console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
+
+    let created = 0;
+    let successes = 0;
+
+        for (let i = 1; i <= total; i++) {
+            const name = generateName(i);
+            const runId = uuidv4();
+            let profileRecord = null;
+
+            console.log(chalk.blue(`\n▶️  Run ${i}/${total}: ${name}`));
+            const launcher = new ProfileLauncher(pmLocal, {});
+            try {
+                const runRes = await launcher.launchFromTemplate(template, name, {
+                    browserType: 'chromium',
+                    headless: runHeadless,
+                    enableAutomation: true,
+                    headlessAutomation: true,
+                    enableRequestCapture: true,
+                    autoCloseOnSuccess: false,
+                    autoCloseOnFailure: false,
+                    autoCloseTimeout: 0,
+                    isTemporary: false,
+                    stealth: true,
+                    stealthPreset: 'balanced'
+                });
+                created++;
+                profileRecord = runRes.profile;
+
+                const outcome = await waitForOutcome(launcher, runRes.sessionId, runRes.context);
+                await launcher.closeBrowser(runRes.sessionId, { clearCache: false }).catch(() => {});
+
+                await writeResult({
+                    run: i,
+                    batchId,
+                    runId,
+                    profileId: profileRecord?.id,
+                    profileName: profileRecord?.name,
+                    attempt: 1,
+                    headless: runHeadless,
+                    success: outcome.success,
+                    reason: outcome.reason
+                });
+
+                if (outcome.success) {
+                    successes++;
+                    console.log(chalk.green(`✅ Success: ${name}`));
+                } else {
+                    console.log(chalk.red(`❌ Failed: ${name} (${outcome.reason})`));
+                    if (deleteOnFailure && profileRecord?.id) {
+                        try { await pmLocal.deleteProfile(profileRecord.id); } catch (_) {}
+                        console.log(chalk.dim(`🧹 Deleted failed profile: ${name}`));
+                    }
+                }
+            } catch (err) {
+                console.error(chalk.red(`💥 Batch run error: ${err.message}`));
+                if (profileRecord?.id && deleteOnFailure) {
+                    try { await pmLocal.deleteProfile(profileRecord.id); } catch (_) {}
+                }
+                await writeResult({ run: i, batchId, runId, error: err.message });
+            } finally {
+                try { await launcher.closeAllBrowsers({}); } catch (_) {}
+            }
+        }
+
+        const summary = { batchId, template, totalRequested: total, created, successes, resultsFile };
+        console.log(chalk.cyan(`\n📊 Batch summary: ${JSON.stringify(summary)}`));
+    });
+
 // Clone profile command
 program
     .command('clone')
