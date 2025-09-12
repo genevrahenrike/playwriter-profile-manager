@@ -7,6 +7,8 @@ export class IPTracker {
         this.ipHistory = new Map(); // proxyLabel -> Set of IPs seen
         this.currentBatchIPs = new Map(); // proxyLabel -> current IP
         this.proxyUsageCount = new Map(); // proxyLabel -> usage count in current batch
+        this.globalIPUsage = new Map(); // IP -> usage count across all proxies
+        this.globalIPToProxies = new Map(); // IP -> Set of proxy labels using this IP
         this.maxProfilesPerIP = 5;
     }
 
@@ -131,35 +133,62 @@ export class IPTracker {
     }
 
     /**
-     * Check if we can use a proxy (hasn't hit the 5-profile limit)
+     * Check if we can use a proxy (hasn't hit the 5-profile limit per proxy OR globally per IP)
      */
     canUseProxy(proxyLabel) {
         const usageCount = this.proxyUsageCount.get(proxyLabel) || 0;
-        return usageCount < this.maxProfilesPerIP;
+        if (usageCount >= this.maxProfilesPerIP) {
+            return false;
+        }
+        
+        // Also check if the current IP for this proxy has reached global limit
+        const currentIP = this.currentBatchIPs.get(proxyLabel);
+        if (currentIP) {
+            const globalUsage = this.globalIPUsage.get(currentIP) || 0;
+            if (globalUsage >= this.maxProfilesPerIP) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     /**
-     * Record proxy usage and IP
+     * Record proxy usage and IP with global IP tracking
      */
     async recordProxyUsage(proxyConfig, proxyLabel) {
         try {
             // Get current IP
             const currentIP = await this.getCurrentIP(proxyConfig, proxyLabel);
             
+            // Check if this IP is already at global limit
+            const globalUsage = this.globalIPUsage.get(currentIP) || 0;
+            if (globalUsage >= this.maxProfilesPerIP) {
+                throw new Error(`IP ${currentIP} has reached global usage limit (${this.maxProfilesPerIP})`);
+            }
+            
             // Initialize tracking for this proxy if needed
             if (!this.ipHistory.has(proxyLabel)) {
                 this.ipHistory.set(proxyLabel, new Set());
+            }
+            if (!this.globalIPToProxies.has(currentIP)) {
+                this.globalIPToProxies.set(currentIP, new Set());
             }
             
             // Record IP in history
             this.ipHistory.get(proxyLabel).add(currentIP);
             this.currentBatchIPs.set(proxyLabel, currentIP);
+            this.globalIPToProxies.get(currentIP).add(proxyLabel);
             
-            // Increment usage count
+            // Increment usage counts
             const currentCount = this.proxyUsageCount.get(proxyLabel) || 0;
             this.proxyUsageCount.set(proxyLabel, currentCount + 1);
             
-            console.log(`📊 Proxy ${proxyLabel}: IP ${currentIP}, usage ${currentCount + 1}/${this.maxProfilesPerIP}`);
+            const newGlobalUsage = globalUsage + 1;
+            this.globalIPUsage.set(currentIP, newGlobalUsage);
+            
+            const proxiesUsingIP = Array.from(this.globalIPToProxies.get(currentIP));
+            console.log(`📊 Proxy ${proxyLabel}: IP ${currentIP}, usage ${currentCount + 1}/${this.maxProfilesPerIP} (global: ${newGlobalUsage}/${this.maxProfilesPerIP}, used by: ${proxiesUsingIP.join(', ')})`);
             
             return currentIP;
         } catch (error) {
@@ -194,22 +223,42 @@ export class IPTracker {
     }
 
     /**
-     * Reset usage counts for next batch cycle
+     * Check if an IP is already being used by any proxy (for preventing duplicates across labels)
      */
-    resetBatchCounts() {
-        console.log('🔄 Resetting batch proxy usage counts');
-        this.proxyUsageCount.clear();
+    isIPAlreadyUsed(ip) {
+        const globalUsage = this.globalIPUsage.get(ip) || 0;
+        return globalUsage > 0;
     }
 
     /**
-     * Get usage statistics
+     * Get proxies currently using a specific IP
+     */
+    getProxiesUsingIP(ip) {
+        return Array.from(this.globalIPToProxies.get(ip) || []);
+    }
+
+    /**
+     * Reset usage counts for next batch cycle
+     */
+    resetBatchCounts() {
+        console.log('🔄 Resetting batch proxy usage counts and global IP tracking');
+        this.proxyUsageCount.clear();
+        this.globalIPUsage.clear();
+        this.globalIPToProxies.clear();
+    }
+
+    /**
+     * Get usage statistics including global IP tracking
      */
     getStats() {
         const stats = {
             totalUniqueIPs: 0,
-            proxyStats: {}
+            globallyUniqueIPs: new Set(),
+            proxyStats: {},
+            globalIPStats: {}
         };
 
+        // Calculate proxy-specific stats
         for (const [proxyLabel, ips] of this.ipHistory.entries()) {
             stats.proxyStats[proxyLabel] = {
                 uniqueIPs: ips.size,
@@ -217,9 +266,25 @@ export class IPTracker {
                 currentUsage: this.proxyUsageCount.get(proxyLabel) || 0,
                 currentIP: this.currentBatchIPs.get(proxyLabel)
             };
-            stats.totalUniqueIPs += ips.size;
+            
+            // Add to global unique IPs
+            for (const ip of ips) {
+                stats.globallyUniqueIPs.add(ip);
+            }
         }
 
+        // Calculate global IP stats
+        for (const [ip, usage] of this.globalIPUsage.entries()) {
+            const proxiesUsingIP = Array.from(this.globalIPToProxies.get(ip) || []);
+            stats.globalIPStats[ip] = {
+                usage,
+                proxies: proxiesUsingIP,
+                atLimit: usage >= this.maxProfilesPerIP
+            };
+        }
+
+        stats.totalUniqueIPs = stats.globallyUniqueIPs.size;
+        
         return stats;
     }
 

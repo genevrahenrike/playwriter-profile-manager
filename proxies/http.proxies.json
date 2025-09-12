@@ -64,12 +64,12 @@
     }
   },
   {
-    "label": "US5",
+    "label": "US6",
     "host": "geo-dc.floppydata.com",
     "port": 10080,
-    "login": "1VxZ9JJFBCjqg68C",
-    "password": "8lX93VV41JCYjFF1",
-    "url": "http://1VxZ9JJFBCjqg68C:8lX93VV41JCYjFF1@geo-dc.floppydata.com:10080",
+    "login": "GAOTubNZn9dtMDJt",
+    "password": "eQTCjTCqez8Ofzuv",
+    "url": "http://GAOTubNZn9dtMDJt:eQTCjTCqez8Ofzuv@geo-dc.floppydata.com:10080",
     "status": "OK",
     "lastChecked": "2025-09-11T23:48:17.511Z",
     "avgLatencyMs": 915,

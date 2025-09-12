@@ -496,7 +496,8 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
-    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin', 'round-robin')
+    .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .option('--list-proxies', 'List all available proxies and exit')
     .action(async (profileName, options) => {
@@ -558,7 +559,8 @@ program
                 autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
                 captchaGraceMs: parseInt(options.captchaGrace) || 45000,
                 disableCompression: options.compress === false,
-                proxy: options.proxy,
+                proxyStrategy: options.proxyStrategy,
+                proxyStart: options.proxyStart,
                 proxyType: options.proxyType
             };
 
@@ -681,7 +683,8 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .option('--no-compress', 'Disable compress-on-close for this instance')
-    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin', 'round-robin')
+    .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .action(async (template, instanceName, options) => {
         try {
@@ -736,7 +739,8 @@ program
                 autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
                 captchaGraceMs: parseInt(options.captchaGrace) || 45000,
                 disableCompression: options.compress === false,
-                proxy: options.proxy,
+                proxyStrategy: options.proxyStrategy,
+                proxyStart: options.proxyStart,
                 proxyType: options.proxyType
             };
 
@@ -820,7 +824,8 @@ program
     .option('--no-clear-cache', 'Disable cache clearing for successful profiles (cache cleanup enabled by default)')
     .option('--delay <seconds>', 'Delay between successful runs (seconds)', '60')
     .option('--failure-delay <seconds>', 'Delay after failed runs (seconds)', '300')
-    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin', 'round-robin')
+    .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
     .action(async (options) => {
@@ -942,18 +947,22 @@ program
         let proxyRotator = null;
         let useProxyRotation = false;
         
-        if (options.proxy) {
+        if (options.proxyStrategy || options.proxyStart) {
             const { ProxyRotator } = await import('./ProxyRotator.js');
             const launcher = new ProfileLauncher(pmLocal, {});
             
             proxyRotator = new ProxyRotator(launcher.proxyManager, {
-                maxProfilesPerIP: maxProfilesPerIP
+                maxProfilesPerIP: maxProfilesPerIP,
+                strategy: options.proxyStrategy || 'round-robin',
+                startProxyLabel: options.proxyStart
             });
             
             const hasProxies = await proxyRotator.initialize();
             if (hasProxies) {
                 useProxyRotation = true;
-                console.log(chalk.green(`🌐 Proxy rotation enabled: max ${maxProfilesPerIP} profiles per IP`));
+                const strategyInfo = options.proxyStrategy || 'round-robin';
+                const startInfo = options.proxyStart ? ` starting from ${options.proxyStart}` : '';
+                console.log(chalk.green(`🌐 Proxy rotation enabled: ${strategyInfo} strategy${startInfo}, max ${maxProfilesPerIP} profiles per IP`));
             } else {
                 console.log(chalk.yellow('⚠️  No proxies available, running without proxy rotation'));
             }
@@ -1014,8 +1023,20 @@ program
                         console.log('\n📊 Final Proxy Statistics:');
                         console.log(`   Proxy cycles completed: ${finalStats.proxyCycle}`);
                         console.log(`   Total unique IPs used: ${finalStats.totalUniqueIPs}`);
+                        console.log(`   Global IPs at limit: ${finalStats.globalIPsAtLimit}/${finalStats.totalGlobalIPs}`);
+                        
+                        // Show per-proxy stats
                         for (const [label, stats] of Object.entries(finalStats.proxyStats)) {
-                            console.log(`   ${label}: ${stats.uniqueIPs} unique IPs`);
+                            console.log(`   ${label}: ${stats.uniqueIPs} unique IPs, current usage: ${stats.currentUsage}/${finalStats.maxProfilesPerIP}`);
+                        }
+                        
+                        // Show global IP usage details
+                        if (finalStats.globalIPStats && Object.keys(finalStats.globalIPStats).length > 0) {
+                            console.log('\n🌐 Global IP Usage:');
+                            for (const [ip, stats] of Object.entries(finalStats.globalIPStats)) {
+                                const status = stats.atLimit ? '🔴 AT LIMIT' : '🟢 Available';
+                                console.log(`   ${ip}: ${stats.usage}/${finalStats.maxProfilesPerIP} profiles (${stats.proxies.join(', ')}) ${status}`);
+                            }
                         }
                         break;
                     }
@@ -1052,10 +1073,6 @@ program
                     // Use the specific proxy from rotation
                     launchOptions.proxy = currentProxy.label;
                     launchOptions.proxyType = currentProxy.type;
-                } else if (options.proxy && !useProxyRotation) {
-                    // Use the manual proxy selection
-                    launchOptions.proxy = options.proxy;
-                    launchOptions.proxyType = options.proxyType;
                 }
                 
                 const runRes = await launcher.launchFromTemplate(template, name, launchOptions);
@@ -1140,10 +1157,23 @@ program
             console.log(chalk.dim(`   Cycles completed: ${finalStats.proxyCycle}`));
             console.log(chalk.dim(`   Total unique IPs: ${finalStats.totalUniqueIPs}`));
             console.log(chalk.dim(`   Max profiles per IP: ${finalStats.maxProfilesPerIP}`));
+            console.log(chalk.dim(`   Global IPs at limit: ${finalStats.globalIPsAtLimit}/${finalStats.totalGlobalIPs}`));
             
+            // Show per-proxy stats
+            console.log(chalk.cyan('\n📊 Per-Proxy Statistics:'));
             for (const [label, stats] of Object.entries(finalStats.proxyStats)) {
                 const ips = stats.ips.join(', ');
-                console.log(chalk.dim(`   ${label}: ${stats.uniqueIPs} unique IP(s) [${ips}]`));
+                console.log(chalk.dim(`   ${label}: ${stats.uniqueIPs} unique IP(s) [${ips}], usage: ${stats.currentUsage}/${finalStats.maxProfilesPerIP}`));
+            }
+            
+            // Show global IP usage details
+            if (finalStats.globalIPStats && Object.keys(finalStats.globalIPStats).length > 0) {
+                console.log(chalk.cyan('\n🌐 Global IP Usage Details:'));
+                for (const [ip, stats] of Object.entries(finalStats.globalIPStats)) {
+                    const status = stats.atLimit ? chalk.red('AT LIMIT') : chalk.green('Available');
+                    const proxiesList = stats.proxies.join(', ');
+                    console.log(chalk.dim(`   ${ip}: ${stats.usage}/${finalStats.maxProfilesPerIP} profiles (used by: ${proxiesList}) - ${status}`));
+                }
             }
         }
     });

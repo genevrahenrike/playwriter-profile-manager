@@ -505,7 +505,9 @@ export class ProfileLauncher {
             stealthConfig = null, // Custom stealth configuration
             isTemporary = false, // Mark as temporary profile for cleanup
             disableCompression = undefined, // Optional override per launch
-            proxy = null, // Proxy configuration: null, 'auto', 'random', 'fastest', 'round-robin', or proxy label
+            proxy = null, // Legacy proxy configuration (deprecated, use proxyStrategy)
+            proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin'
+            proxyStart = null, // Proxy label to start rotation from
             proxyType = null // Proxy type filter: null, 'http', 'socks5'
         } = options;
 
@@ -530,13 +532,35 @@ export class ProfileLauncher {
         // Store current profile name for extension customization
         this.currentProfileName = profile.name;
 
-        // Configure proxy if requested
+        // Configure proxy if requested (support both legacy and new format)
         let proxyConfig = null;
-        if (proxy) {
+        const proxySelection = proxyStrategy || proxy; // Use new proxyStrategy or fall back to legacy proxy
+        
+        if (proxySelection) {
             await this.ensureProxiesLoaded();
-            proxyConfig = await this.proxyManager.getProxyConfig(proxy, proxyType);
-            if (!proxyConfig) {
-                console.warn(`⚠️  Proxy configuration failed, launching without proxy`);
+            
+            // If we have a start position, we need to use ProxyRotator for round-robin
+            if (proxyStart && (proxySelection === 'round-robin' || !proxySelection)) {
+                const { ProxyRotator } = await import('./ProxyRotator.js');
+                const rotator = new ProxyRotator(this.proxyManager, {
+                    strategy: 'round-robin',
+                    startProxyLabel: proxyStart
+                });
+                
+                await rotator.initialize();
+                const result = await rotator.getNextProxy();
+                if (result) {
+                    proxyConfig = result.proxyConfig;
+                    console.log(`🎯 Using proxy from rotation: ${result.proxy.label}`);
+                } else {
+                    console.warn(`⚠️  Proxy rotation failed, launching without proxy`);
+                }
+            } else {
+                // Use standard proxy selection
+                proxyConfig = await this.proxyManager.getProxyConfig(proxySelection, proxyType);
+                if (!proxyConfig) {
+                    console.warn(`⚠️  Proxy configuration failed, launching without proxy`);
+                }
             }
         }
 

@@ -1056,22 +1056,22 @@ Proxy configurations are stored in JSON files in the `./proxies` folder:
 ### Launch with Proxy
 
 ```bash
-# Use automatic proxy selection (random working proxy)
-npx ppm launch my-profile --proxy auto
+# Use round-robin proxy selection (default strategy)
+npx ppm launch my-profile
 
-# Use the fastest available proxy
-npx ppm launch my-profile --proxy fastest
+# Use specific strategy
+npx ppm launch my-profile --proxy-strategy auto
+npx ppm launch my-profile --proxy-strategy fastest
 
-# Use round-robin selection
-npx ppm launch my-profile --proxy round-robin
+# Start rotation from specific proxy (useful to skip already used proxies)
+npx ppm launch my-profile --proxy-start US3
 
-# Use specific proxy by label
-npx ppm launch my-profile --proxy "US1"
-npx ppm launch my-profile --proxy "nl"
+# Combine strategy and start position
+npx ppm launch my-profile --proxy-strategy round-robin --proxy-start Germany
 
 # Filter by proxy type
-npx ppm launch my-profile --proxy auto --proxy-type http
-npx ppm launch my-profile --proxy fastest --proxy-type socks5
+npx ppm launch my-profile --proxy-strategy auto --proxy-type http
+npx ppm launch my-profile --proxy-strategy fastest --proxy-type socks5
 
 # List available proxies
 npx ppm launch my-profile --list-proxies
@@ -1080,27 +1080,36 @@ npx ppm launch my-profile --list-proxies
 ### Template Launch with Proxy
 
 ```bash
-# Launch template with automatic proxy
-npx ppm launch-template vpn-fresh user1 --proxy auto
+# Launch template with round-robin proxy (default strategy)
+npx ppm launch-template vpn-fresh user1
 
-# Launch with specific proxy type
-npx ppm launch-template vpn-fresh user2 --proxy fastest --proxy-type socks5
+# Launch with specific strategy
+npx ppm launch-template vpn-fresh user2 --proxy-strategy fastest --proxy-type socks5
 
-# Launch with specific proxy location
-npx ppm launch-template vpn-fresh user3 --proxy "Germany"
+# Launch starting from specific proxy
+npx ppm launch-template vpn-fresh user3 --proxy-start Germany
+
+# Combine strategy and start position
+npx ppm launch-template vpn-fresh user4 --proxy-strategy round-robin --proxy-start US3
 ```
 
 ### Batch Automation with Proxy
 
 ```bash
-# Run batch with automatic proxy rotation
-npx ppm batch --template vidiq-clean --count 5 --proxy round-robin
+# Run batch with round-robin proxy rotation (default strategy)
+npx ppm batch --template vidiq-clean --count 5
 
-# Run batch with HTTP proxies only
-npx ppm batch --template vidiq-clean --count 10 --proxy auto --proxy-type http
+# Run batch with specific strategy
+npx ppm batch --template vidiq-clean --count 10 --proxy-strategy auto --proxy-type http
 
-# Run batch with specific proxy
-npx ppm batch --template vidiq-clean --count 3 --proxy "UK"
+# Run batch starting from specific proxy (useful to skip already used proxies)
+npx ppm batch --template vidiq-clean --count 5 --proxy-start US3
+
+# Combine strategy and start position
+npx ppm batch --template vidiq-clean --count 10 --proxy-strategy round-robin --proxy-start Germany
+
+# Use fastest strategy with HTTP proxies only
+npx ppm batch --template vidiq-clean --count 5 --proxy-strategy fastest --proxy-type http
 ```
 
 ### Proxy Management Commands
@@ -1131,6 +1140,70 @@ Cycles through proxies in order. Ensures even distribution across all proxies.
 
 ### By Label
 Selects a specific proxy by its label (e.g., "US", "Germany", "nl"). Useful when you need a specific location.
+
+## Enhanced Global IP Uniqueness Tracking
+
+The proxy rotation system now includes **global IP uniqueness tracking** to prevent different proxy labels from having the same IP address. This ensures true profile isolation in batch operations.
+
+### Key Features:
+- **🌐 Global IP Tracking**: Tracks IP usage across ALL proxy labels, not just within individual labels
+- **🚫 Duplicate Prevention**: Prevents US2 and US3 from having the same IP address
+- **📊 Enhanced Statistics**: Detailed reporting of IP usage across all proxies
+- **🔄 Intelligent Rotation**: Automatically skips proxies that would create duplicate IPs
+
+### How It Works:
+```bash
+# Before: US2 and US3 could have the same IP
+US1 -> 174.108.139.19
+US2 -> 138.197.114.77
+US3 -> 138.197.114.77  # Same as US2 ❌
+
+# After: Each proxy gets a unique IP
+US1 -> 174.108.139.19
+US2 -> 138.197.114.77
+US3 -> 137.184.118.32  # Different IP ✅
+```
+
+### Enhanced Batch Statistics:
+```bash
+npx ppm batch --template vidiq-clean --count 5 --proxy auto
+
+# Shows detailed IP usage:
+🌐 Global IP Usage Details:
+   174.108.139.19: 2/5 profiles (used by: US1, US4) - Available
+   138.197.114.77: 1/5 profiles (used by: US2) - Available
+   137.184.118.32: 1/5 profiles (used by: US3) - Available
+```
+
+### New Proxy Strategy and Start Position:
+```bash
+# Default: Round-robin strategy from beginning
+npx ppm batch --template vidiq-clean --count 5
+
+# Round-robin starting from specific proxy (skip already used proxies)
+npx ppm batch --template vidiq-clean --count 5 --proxy-start US3
+
+# Use fastest strategy
+npx ppm batch --template vidiq-clean --count 5 --proxy-strategy fastest
+
+# Combine strategy and start position
+npx ppm batch --template vidiq-clean --count 10 --proxy-strategy round-robin --proxy-start Germany
+```
+
+### Testing the Enhancement:
+```bash
+# Test the enhanced proxy rotation logic
+node test-proxy-unique-ip.js
+
+# Test strategy separation
+node test-proxy-strategy-separation.js
+
+# Verifies:
+# - No duplicate IPs across different proxy labels
+# - Proper global IP usage tracking
+# - Correct limit enforcement
+# - Strategy and start position separation
+```
 
 ## Programmatic Usage
 
