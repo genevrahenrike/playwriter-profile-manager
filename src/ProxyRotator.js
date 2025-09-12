@@ -3,7 +3,14 @@ import { IPTracker } from './IPTracker.js';
 export class ProxyRotator {
     constructor(proxyManager, options = {}) {
         this.proxyManager = proxyManager;
-        this.ipTracker = new IPTracker();
+        this.skipIPCheck = !!options.skipIPCheck;
+        this.ipCheckTimeoutMs = options.ipCheckTimeoutMs || 10000;
+        this.ipCheckMaxAttempts = options.ipCheckMaxAttempts || 3;
+        this.ipTracker = new IPTracker({
+            skipIPCheck: this.skipIPCheck,
+            ipCheckTimeoutMs: this.ipCheckTimeoutMs,
+            ipCheckMaxAttempts: this.ipCheckMaxAttempts
+        });
         this.maxProfilesPerIP = options.maxProfilesPerIP || 5;
         this.currentProxyIndex = -1;
         this.proxyCycle = 0; // Track how many complete cycles we've done
@@ -94,15 +101,23 @@ export class ProxyRotator {
                 const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
                 
                 try {
+                    // Fast path: skip all IP checking if configured
+                    if (this.skipIPCheck) {
+                        await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { skipIPCheck: true });
+                        return { proxy, proxyConfig };
+                    }
+    
                     // For SOCKS5 proxies, skip IP duplicate checking to avoid connection exhaustion
                     if (proxy.type === 'socks5') {
-                        // Record usage without IP checking
                         await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
                         return { proxy, proxyConfig };
                     }
                     
-                    // For HTTP proxies, check for IP duplicates
-                    const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
+                    // For HTTP proxies, check for IP duplicates (REST-based, no page open), with timeouts
+                    const testIP = await this.ipTracker.getCurrentIP(proxyConfig, {
+                        timeoutMs: this.ipCheckTimeoutMs,
+                        maxAttempts: this.ipCheckMaxAttempts
+                    });
                     const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
                     
                     if (existingProxies.length > 0 && !existingProxies.includes(proxy.label)) {
@@ -110,8 +125,8 @@ export class ProxyRotator {
                         continue;
                     }
                     
-                    // Record usage and get IP
-                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+                    // Record usage and reuse the IP we already resolved to avoid a second network call
+                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { knownIP: testIP });
                     return { proxy, proxyConfig };
                 } catch (error) {
                     console.warn(`⚠️  Failed to use proxy ${proxy.label}: ${error.message}`);
@@ -130,7 +145,7 @@ export class ProxyRotator {
                 }
             }
         }
-
+    
         // If we get here, all proxies have hit their limit or would result in duplicate IPs
         console.log('🔄 All proxies have reached their limit or would create duplicate IPs, checking for IP changes...');
         
@@ -139,7 +154,7 @@ export class ProxyRotator {
         this.proxyCycle++;
         
         console.log(`🔄 Starting proxy cycle ${this.proxyCycle}`);
-
+    
         // Check if any proxies have new IPs
         const hasNewIPs = await this.checkForNewIPs();
         
@@ -147,7 +162,7 @@ export class ProxyRotator {
             console.log('🛑 All proxies still have the same IPs, stopping batch');
             return null; // Signal to stop the batch
         }
-
+    
         // Try again with reset counts
         return await this.getNextRoundRobinProxy();
     }
@@ -162,21 +177,26 @@ export class ProxyRotator {
             return null;
         }
         
-        // Try random proxies until we find one with unique IP
         const shuffled = [...availableProxies].sort(() => Math.random() - 0.5);
         
         for (const proxy of shuffled) {
             const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
             
             try {
-                // For SOCKS5 proxies, skip IP duplicate checking
+                if (this.skipIPCheck) {
+                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { skipIPCheck: true });
+                    return { proxy, proxyConfig };
+                }
+    
                 if (proxy.type === 'socks5') {
                     await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
                     return { proxy, proxyConfig };
                 }
                 
-                // For HTTP proxies, check for IP duplicates
-                const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
+                const testIP = await this.ipTracker.getCurrentIP(proxyConfig, {
+                    timeoutMs: this.ipCheckTimeoutMs,
+                    maxAttempts: this.ipCheckMaxAttempts
+                });
                 const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
                 
                 if (existingProxies.length > 0 && !existingProxies.includes(proxy.label)) {
@@ -184,8 +204,7 @@ export class ProxyRotator {
                     continue;
                 }
                 
-                // Record usage and get IP
-                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { knownIP: testIP });
                 return { proxy, proxyConfig };
             } catch (error) {
                 console.warn(`⚠️  Failed to use random proxy ${proxy.label}: ${error.message}`);
@@ -206,23 +225,27 @@ export class ProxyRotator {
             .sort((a, b) => a.avgLatencyMs - b.avgLatencyMs);
         
         if (availableProxies.length === 0) {
-            // Fallback to random if no latency data
             return await this.getRandomProxy();
         }
         
-        // Try fastest proxies until we find one with unique IP
         for (const proxy of availableProxies) {
             const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
             
             try {
-                // For SOCKS5 proxies, skip IP duplicate checking
+                if (this.skipIPCheck) {
+                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { skipIPCheck: true });
+                    return { proxy, proxyConfig };
+                }
+    
                 if (proxy.type === 'socks5') {
                     await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
                     return { proxy, proxyConfig };
                 }
                 
-                // For HTTP proxies, check for IP duplicates
-                const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
+                const testIP = await this.ipTracker.getCurrentIP(proxyConfig, {
+                    timeoutMs: this.ipCheckTimeoutMs,
+                    maxAttempts: this.ipCheckMaxAttempts
+                });
                 const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
                 
                 if (existingProxies.length > 0 && !existingProxies.includes(proxy.label)) {
@@ -230,8 +253,7 @@ export class ProxyRotator {
                     continue;
                 }
                 
-                // Record usage and get IP
-                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { knownIP: testIP });
                 return { proxy, proxyConfig };
             } catch (error) {
                 console.warn(`⚠️  Failed to use fastest proxy ${proxy.label}: ${error.message}`);
@@ -250,7 +272,7 @@ export class ProxyRotator {
         if (!proxy) {
             throw new Error(`Proxy with label '${label}' not found`);
         }
-
+    
         if (!this.ipTracker.canUseProxy(proxy.label)) {
             const currentIP = this.ipTracker.currentBatchIPs.get(proxy.label);
             const globalUsage = currentIP ? (this.ipTracker.globalIPUsage.get(currentIP) || 0) : 0;
@@ -263,26 +285,31 @@ export class ProxyRotator {
                 throw new Error(`Proxy ${label} blocked - proxy usage limit reached (${proxyUsage}/${this.maxProfilesPerIP})`);
             }
         }
-
+    
         const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
         
         try {
-            // For SOCKS5 proxies, skip IP duplicate checking
+            if (this.skipIPCheck) {
+                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { skipIPCheck: true });
+                return { proxy, proxyConfig };
+            }
+    
             if (proxy.type === 'socks5') {
                 await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
                 return { proxy, proxyConfig };
             }
             
-            // For HTTP proxies, check for IP duplicates
-            const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
+            const testIP = await this.ipTracker.getCurrentIP(proxyConfig, {
+                timeoutMs: this.ipCheckTimeoutMs,
+                maxAttempts: this.ipCheckMaxAttempts
+            });
             const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
             
             if (existingProxies.length > 0 && !existingProxies.includes(proxy.label)) {
                 throw new Error(`Proxy ${label} would create duplicate IP ${testIP} (already used by: ${existingProxies.join(', ')})`);
             }
             
-            // Record usage and get IP
-            await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+            await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type, { knownIP: testIP });
             return { proxy, proxyConfig };
         } catch (error) {
             throw new Error(`Failed to use specific proxy ${label}: ${error.message}`);
@@ -293,6 +320,11 @@ export class ProxyRotator {
      * Check if any proxies have new IPs since last cycle
      */
     async checkForNewIPs() {
+        if (this.skipIPCheck) {
+            console.log('🟡 Skipping IP change scan (configured to skip)');
+            return true;
+        }
+    
         let foundNewIP = false;
         
         console.log('🔍 Checking all proxies for IP changes...');
@@ -301,7 +333,10 @@ export class ProxyRotator {
             const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
             
             try {
-                if (await this.ipTracker.hasNewIP(proxyConfig, proxy.label, proxy.type)) {
+                if (await this.ipTracker.hasNewIP(proxyConfig, proxy.label, proxy.type, {
+                    timeoutMs: this.ipCheckTimeoutMs,
+                    maxAttempts: this.ipCheckMaxAttempts
+                })) {
                     console.log(`✅ Proxy ${proxy.label} has a new IP`);
                     foundNewIP = true;
                 } else {
@@ -311,7 +346,7 @@ export class ProxyRotator {
                 console.warn(`⚠️  Could not check IP for ${proxy.label}: ${error.message}`);
             }
         }
-
+    
         return foundNewIP;
     }
 

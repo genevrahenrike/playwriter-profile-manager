@@ -3,32 +3,48 @@ import http from 'http';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 
 export class IPTracker {
-    constructor() {
+    constructor(options = {}) {
         this.ipHistory = new Map(); // proxyLabel -> Set of IPs seen
         this.currentBatchIPs = new Map(); // proxyLabel -> current IP
         this.proxyUsageCount = new Map(); // proxyLabel -> usage count in current batch
         this.globalIPUsage = new Map(); // IP -> usage count across all proxies
         this.globalIPToProxies = new Map(); // IP -> Set of proxy labels using this IP
         this.maxProfilesPerIP = 5;
+
+        // IP check behavior
+        this.ipCheckTimeoutMs = options.ipCheckTimeoutMs || 10000; // per-request timeout
+        this.ipCheckMaxAttempts = options.ipCheckMaxAttempts || 3; // how many endpoints to try
+        this.skipIPCheck = options.skipIPCheck || false; // global skip toggle
     }
 
     /**
      * Get current IP address using proxy
      */
-    async getCurrentIP(proxyConfig) {
-        // Use HTTP-only endpoints for simpler testing
+    async getCurrentIP(proxyConfig, overrides = {}) {
+        if (this.skipIPCheck || overrides.skipIPCheck) {
+            console.log(`🟡 Skipping IP check (configured to skip)`);
+            return null;
+        }
+    
+        // Prefer HTTP endpoints for speed with HTTP proxies
         const ipServices = [
             'http://httpbin.org/ip',
             'http://icanhazip.com',
             'http://ipinfo.io/ip'
         ];
-
+    
         const errors = [];
-        
+        const timeoutMs = overrides.timeoutMs || this.ipCheckTimeoutMs;
+        const maxAttempts = Math.max(1, overrides.maxAttempts || this.ipCheckMaxAttempts);
+    
+        let attempts = 0;
         for (const service of ipServices) {
+            if (attempts >= maxAttempts) break;
+            attempts++;
+    
             try {
                 console.log(`Trying IP service: ${service} with proxy: ${proxyConfig.server}`);
-                const ip = await this.fetchIPFromURL(service, proxyConfig);
+                const ip = await this.fetchIPFromURL(service, proxyConfig, timeoutMs);
                 console.log(`Got IP: ${ip} from ${service}`);
                 return ip;
             } catch (error) {
@@ -38,15 +54,15 @@ export class IPTracker {
             }
         }
         
-        throw new Error(`All IP services failed: ${errors.join(', ')}`);
+        throw new Error(`All IP services failed (${attempts} attempt${attempts !== 1 ? 's' : ''}): ${errors.join(', ')}`);
     }
 
     /**
      * Fetch IP from a specific URL using proxy
      */
-    async fetchIPFromURL(url, proxyConfig) {
+    async fetchIPFromURL(url, proxyConfig, timeoutMs = 10000) {
         return new Promise((resolve, reject) => {
-            const timeout = 10000; // 10 second timeout
+            const timeout = timeoutMs; // per-request timeout
             
             // Parse the target URL
             const targetUrl = new URL(url);
@@ -156,49 +172,57 @@ export class IPTracker {
     /**
      * Record proxy usage and IP with global IP tracking
      */
-    async recordProxyUsage(proxyConfig, proxyLabel, proxyType = null) {
+    async recordProxyUsage(proxyConfig, proxyLabel, proxyType = null, options = {}) {
         try {
+            // Configured skip path (no IP calls)
+            if (this.skipIPCheck || options.skipIPCheck) {
+                const currentCount = this.proxyUsageCount.get(proxyLabel) || 0;
+                this.proxyUsageCount.set(proxyLabel, currentCount + 1);
+                this.currentBatchIPs.set(proxyLabel, null);
+                if (!this.ipHistory.has(proxyLabel)) {
+                    this.ipHistory.set(proxyLabel, new Set());
+                }
+                console.log(`📊 Proxy ${proxyLabel}: usage ${currentCount + 1}/${this.maxProfilesPerIP} (IP check skipped)`);
+                return null;
+            }
+    
             // For SOCKS5 proxies, skip IP checking to avoid connection exhaustion
-            // SOCKS5 proxies are always unique and have connection limits
             if (proxyType === 'socks5' || proxyConfig.server.startsWith('socks5://')) {
-                // Generate a unique IP identifier for SOCKS5 (use proxy label as unique identifier)
                 const uniqueIP = `socks5-${proxyLabel}`;
-                
-                // Initialize tracking for this proxy if needed
                 if (!this.ipHistory.has(proxyLabel)) {
                     this.ipHistory.set(proxyLabel, new Set());
                 }
                 if (!this.globalIPToProxies.has(uniqueIP)) {
                     this.globalIPToProxies.set(uniqueIP, new Set());
                 }
-                
-                // Record unique IP in history
                 this.ipHistory.get(proxyLabel).add(uniqueIP);
                 this.currentBatchIPs.set(proxyLabel, uniqueIP);
                 this.globalIPToProxies.get(uniqueIP).add(proxyLabel);
-                
-                // Increment usage counts
+    
                 const currentCount = this.proxyUsageCount.get(proxyLabel) || 0;
                 this.proxyUsageCount.set(proxyLabel, currentCount + 1);
-                
-                const newGlobalUsage = 1; // SOCKS5 proxies are always unique
+    
+                const newGlobalUsage = 1; // treat as unique
                 this.globalIPUsage.set(uniqueIP, newGlobalUsage);
-                
+    
                 console.log(`📊 SOCKS5 Proxy ${proxyLabel}: unique connection, usage ${currentCount + 1}/${this.maxProfilesPerIP}`);
-                
                 return uniqueIP;
             }
             
-            // For HTTP proxies, use the original IP checking logic
-            const currentIP = await this.getCurrentIP(proxyConfig, proxyLabel);
+            // For HTTP proxies, use known IP if provided to avoid duplicate network call
+            let currentIP = options.knownIP || null;
+            if (!currentIP) {
+                currentIP = await this.getCurrentIP(proxyConfig, {
+                    timeoutMs: options.timeoutMs || this.ipCheckTimeoutMs,
+                    maxAttempts: options.maxAttempts || this.ipCheckMaxAttempts
+                });
+            }
             
-            // Check if this IP is already at global limit
             const globalUsage = this.globalIPUsage.get(currentIP) || 0;
             if (globalUsage >= this.maxProfilesPerIP) {
                 throw new Error(`IP ${currentIP} has reached global usage limit (${this.maxProfilesPerIP})`);
             }
             
-            // Initialize tracking for this proxy if needed
             if (!this.ipHistory.has(proxyLabel)) {
                 this.ipHistory.set(proxyLabel, new Set());
             }
@@ -206,12 +230,10 @@ export class IPTracker {
                 this.globalIPToProxies.set(currentIP, new Set());
             }
             
-            // Record IP in history
             this.ipHistory.get(proxyLabel).add(currentIP);
             this.currentBatchIPs.set(proxyLabel, currentIP);
             this.globalIPToProxies.get(currentIP).add(proxyLabel);
             
-            // Increment usage counts
             const currentCount = this.proxyUsageCount.get(proxyLabel) || 0;
             this.proxyUsageCount.set(proxyLabel, currentCount + 1);
             
@@ -234,8 +256,13 @@ export class IPTracker {
     /**
      * Check if proxy has a new IP compared to last batch
      */
-    async hasNewIP(proxyConfig, proxyLabel, proxyType = null) {
+    async hasNewIP(proxyConfig, proxyLabel, proxyType = null, options = {}) {
         try {
+            if (this.skipIPCheck || options.skipIPCheck) {
+                console.log(`🟡 Skipping IP change check for ${proxyLabel} (configured to skip)`);
+                return true;
+            }
+    
             // For SOCKS5 proxies, skip IP checking to avoid connection exhaustion
             if (proxyType === 'socks5' || proxyConfig.server.startsWith('socks5://')) {
                 console.log(`🧦 SOCKS5 proxy ${proxyLabel}: skipping IP check (always unique)`);
@@ -243,7 +270,10 @@ export class IPTracker {
             }
             
             // For HTTP proxies, use the original IP checking logic
-            const currentIP = await this.getCurrentIP(proxyConfig, proxyLabel);
+            const currentIP = await this.getCurrentIP(proxyConfig, {
+                timeoutMs: options.timeoutMs || this.ipCheckTimeoutMs,
+                maxAttempts: options.maxAttempts || this.ipCheckMaxAttempts
+            });
             const lastKnownIP = this.currentBatchIPs.get(proxyLabel);
             
             if (!lastKnownIP) {

@@ -502,6 +502,9 @@ program
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--list-proxies', 'List all available proxies and exit')
+    .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
+    .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
+    .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
     .action(async (profileName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -570,7 +573,11 @@ program
                 proxyStart: options.proxyStart,
                 proxyType: options.proxyType,
                 disableImages: options.disableImages,
-                disableProxyWaitIncrease: options.disableProxyWaitIncrease
+                disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                // IP check controls (affects round-robin rotation path)
+                skipIpCheck: !!options.skipIpCheck,
+                ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,
+                ipCheckRetries: parseInt(options.ipCheckRetries) || 3
             };
             
             if (hasProxyOptions) {
@@ -703,6 +710,9 @@ program
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
+    .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
+    .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
+    .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
     .action(async (template, instanceName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -765,7 +775,11 @@ program
                 proxyStart: options.proxyStart,
                 proxyType: options.proxyType,
                 disableImages: options.disableImages,
-                disableProxyWaitIncrease: options.disableProxyWaitIncrease
+                disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                // IP check controls (affects round-robin rotation path)
+                skipIpCheck: !!options.skipIpCheck,
+                ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,
+                ipCheckRetries: parseInt(options.ipCheckRetries) || 3
             };
             
             if (hasProxyOptions) {
@@ -859,6 +873,9 @@ program
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
+    .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
+    .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
+    .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
     .action(async (options) => {
         const pathMod = (await import('path')).default;
@@ -998,7 +1015,10 @@ program
                 maxProfilesPerIP: maxProfilesPerIP,
                 strategy: options.proxyStrategy || 'round-robin',
                 startProxyLabel: options.proxyStart,
-                proxyType: options.proxyType
+                proxyType: options.proxyType,
+                skipIPCheck: !!options.skipIpCheck,
+                ipCheckTimeoutMs: parseInt(options.ipCheckTimeout) || 10000,
+                ipCheckMaxAttempts: parseInt(options.ipCheckRetries) || 3
             });
             
             const hasProxies = await proxyRotator.initialize();
@@ -1006,7 +1026,8 @@ program
                 useProxyRotation = true;
                 const strategyInfo = options.proxyStrategy || 'round-robin';
                 const startInfo = options.proxyStart ? ` starting from ${options.proxyStart}` : '';
-                console.log(chalk.green(`🌐 Proxy rotation enabled: ${strategyInfo} strategy${startInfo}, max ${maxProfilesPerIP} profiles per IP`));
+                const ipCheckInfo = options.skipIpCheck ? ' (IP check: SKIPPED)' : '';
+                console.log(chalk.green(`🌐 Proxy rotation enabled: ${strategyInfo} strategy${startInfo}${ipCheckInfo}, max ${maxProfilesPerIP} profiles per IP`));
             } else {
                 console.log(chalk.yellow('⚠️  No proxies available, running without proxy rotation'));
             }

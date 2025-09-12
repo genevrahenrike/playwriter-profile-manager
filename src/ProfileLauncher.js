@@ -545,7 +545,11 @@ export class ProfileLauncher {
             proxy = null, // Legacy proxy configuration (deprecated, use proxyStrategy)
             proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin'
             proxyStart = null, // Proxy label to start rotation from
-            proxyType = null // Proxy type filter: null, 'http', 'socks5'
+            proxyType = null, // Proxy type filter: null, 'http', 'socks5'
+            // IP check controls (for rotator path)
+            skipIpCheck = false,
+            ipCheckTimeout = 10000,
+            ipCheckRetries = 3
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
@@ -582,14 +586,18 @@ export class ProfileLauncher {
                 const rotator = new ProxyRotator(this.proxyManager, {
                     strategy: 'round-robin',
                     startProxyLabel: proxyStart,
-                    proxyType: proxyType
+                    proxyType: proxyType,
+                    // Wire IP-check behavior
+                    skipIPCheck: !!skipIpCheck,
+                    ipCheckTimeoutMs: parseInt(ipCheckTimeout) || 10000,
+                    ipCheckMaxAttempts: parseInt(ipCheckRetries) || 3
                 });
                 
                 await rotator.initialize();
                 const result = await rotator.getNextProxy();
                 if (result) {
                     proxyConfig = result.proxyConfig;
-                    console.log(`🎯 Using proxy from rotation: ${result.proxy.label}`);
+                    console.log(`🎯 Using proxy from rotation: ${result.proxy.label}${skipIpCheck ? ' (IP check: SKIPPED)' : ''}`);
                 } else {
                     console.warn(`⚠️  Proxy rotation failed, launching without proxy`);
                 }
