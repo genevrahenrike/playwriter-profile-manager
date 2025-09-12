@@ -496,7 +496,7 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
-    .option('--proxy <selection>', 'Proxy selection: round-robin (default), auto (alias), random, fastest, or proxy label')
+    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .option('--list-proxies', 'List all available proxies and exit')
     .action(async (profileName, options) => {
@@ -681,7 +681,7 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .option('--no-compress', 'Disable compress-on-close for this instance')
-    .option('--proxy <selection>', 'Proxy selection: round-robin (default), auto (alias), random, fastest, or proxy label')
+    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .action(async (template, instanceName, options) => {
         try {
@@ -820,7 +820,7 @@ program
     .option('--no-clear-cache', 'Disable cache clearing for successful profiles (cache cleanup enabled by default)')
     .option('--delay <seconds>', 'Delay between successful runs (seconds)', '60')
     .option('--failure-delay <seconds>', 'Delay after failed runs (seconds)', '300')
-    .option('--proxy <selection>', 'Proxy selection: round-robin (default), auto (alias), random, fastest, or proxy label')
+    .option('--proxy <selection>', 'Proxy selection: auto, random, fastest, round-robin, or proxy label')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
     .action(async (options) => {

@@ -624,32 +624,46 @@ export class ProfileLauncher {
                 if (proxyConfig && proxyConfig.username && proxyConfig.password) {
                     console.log('🔐 Setting up proxy authentication handler');
                     
-                    // Set up authentication for all pages created in this context
-                    context.on('page', async (page) => {
-                        // Handle authentication requests
-                        await page.context().setHTTPCredentials({
+                    try {
+                        // Set credentials for the initial context first
+                        await context.setHTTPCredentials({
                             username: proxyConfig.username,
                             password: proxyConfig.password
                         });
                         
-                        // Handle dialogs that might be proxy auth dialogs
-                        page.on('dialog', async (dialog) => {
-                            const message = dialog.message().toLowerCase();
-                            if (message.includes('proxy') || message.includes('username') || message.includes('password')) {
-                                console.log('🔐 Proxy authentication dialog detected, accepting with credentials');
-                                // For proxy auth dialogs, we need to provide username and password
-                                await dialog.accept(proxyConfig.username);
-                            } else {
-                                await dialog.dismiss();
+                        // Set up authentication for all pages created in this context
+                        context.on('page', async (page) => {
+                            try {
+                                // Handle authentication requests
+                                await page.context().setHTTPCredentials({
+                                    username: proxyConfig.username,
+                                    password: proxyConfig.password
+                                });
+                                
+                                // Handle dialogs that might be proxy auth dialogs
+                                page.on('dialog', async (dialog) => {
+                                    try {
+                                        const message = dialog.message().toLowerCase();
+                                        if (message.includes('proxy') || message.includes('username') || message.includes('password')) {
+                                            console.log('🔐 Proxy authentication dialog detected, accepting with credentials');
+                                            // For proxy auth dialogs, we need to provide username and password
+                                            await dialog.accept(proxyConfig.username);
+                                        } else {
+                                            await dialog.dismiss();
+                                        }
+                                    } catch (error) {
+                                        console.warn('⚠️  Dialog handling error:', error.message);
+                                    }
+                                });
+                            } catch (error) {
+                                console.warn('⚠️  Page proxy auth setup error:', error.message);
                             }
                         });
-                    });
-                    
-                    // Also set credentials for the initial context
-                    await context.setHTTPCredentials({
-                        username: proxyConfig.username,
-                        password: proxyConfig.password
-                    });
+                        
+                        console.log('✅ Proxy authentication configured successfully');
+                    } catch (error) {
+                        console.warn('⚠️  Proxy authentication setup failed:', error.message);
+                    }
                 }
                 
                 // Load cookies if available

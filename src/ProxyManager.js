@@ -81,10 +81,10 @@ export class ProxyManager {
      */
     getProxyByLabel(label, type = null) {
         if (type) {
-            const found = this.loadedProxies[type]?.find(proxy => 
+            const proxy = this.loadedProxies[type]?.find(proxy => 
                 proxy.label?.toLowerCase() === label.toLowerCase()
             );
-            return found ? { ...found, type } : null;
+            return proxy ? { ...proxy, type } : null;
         }
 
         // Search in both types if type not specified
@@ -185,17 +185,10 @@ export class ProxyManager {
      */
     toPlaywrightProxy(proxy) {
         if (!proxy) return null;
-        // Derive scheme; default to http if missing/unknown
-        let scheme = 'http';
-        if (proxy.type === 'socks5' || proxy.type === 'socks5h') scheme = 'socks5';
-        else if (proxy.type === 'http' || proxy.type === 'https') scheme = 'http';
-        else if (!proxy.type) {
-            console.warn(`⚠️  Proxy '${proxy.label}' missing type, defaulting to http`);
-        } else {
-            console.warn(`⚠️  Unrecognized proxy type '${proxy.type}' for '${proxy.label}', defaulting to http`);
-        }
 
-        const config = { server: `${scheme}://${proxy.host}:${proxy.port}` };
+        const config = {
+            server: `${proxy.type}://${proxy.host}:${proxy.port}`
+        };
 
         // Add authentication if available
         if (proxy.username || proxy.login) {
@@ -205,13 +198,20 @@ export class ProxyManager {
             config.password = proxy.password;
         }
 
+        // Debug: Log the proxy configuration being generated
+        console.log(`🔧 Generated proxy config:`, {
+            server: config.server,
+            username: config.username ? '***' : undefined,
+            password: config.password ? '***' : undefined
+        });
+
         return config;
     }
 
     /**
      * Get proxy configuration for Playwright context
      */
-    async getProxyConfig(selection = 'round-robin', type = null) {
+    async getProxyConfig(selection = 'auto', type = null) {
         // Ensure proxies are loaded
         if (this.loadedProxies.http.length === 0 && this.loadedProxies.socks5.length === 0) {
             await this.loadProxies();
@@ -220,15 +220,15 @@ export class ProxyManager {
         let selectedProxy = null;
 
         switch (selection) {
-            case 'auto': // legacy alias
-            case 'round-robin':
-                selectedProxy = this.getNextProxy(type);
-                break;
+            case 'auto':
             case 'random':
                 selectedProxy = this.getRandomProxy(type);
                 break;
             case 'fastest':
                 selectedProxy = this.getFastestProxy(type);
+                break;
+            case 'round-robin':
+                selectedProxy = this.getNextProxy(type);
                 break;
             default:
                 // Assume it's a label/name
@@ -242,7 +242,7 @@ export class ProxyManager {
         }
 
         const config = this.toPlaywrightProxy(selectedProxy);
-    console.log(`🌐 Selected proxy: ${selectedProxy.label} (${selectedProxy.type || 'auto-detected'}) - ${selectedProxy.host}:${selectedProxy.port}`);
+        console.log(`🌐 Selected proxy: ${selectedProxy.label} (${selectedProxy.type}) - ${selectedProxy.host}:${selectedProxy.port}`);
         
         if (selectedProxy.avgLatencyMs) {
             console.log(`   📊 Average latency: ${selectedProxy.avgLatencyMs}ms`);

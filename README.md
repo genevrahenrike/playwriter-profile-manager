@@ -1066,7 +1066,7 @@ npx ppm launch my-profile --proxy fastest
 npx ppm launch my-profile --proxy round-robin
 
 # Use specific proxy by label
-npx ppm launch my-profile --proxy "US"
+npx ppm launch my-profile --proxy "US1"
 npx ppm launch my-profile --proxy "nl"
 
 # Filter by proxy type
