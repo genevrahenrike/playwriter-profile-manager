@@ -167,9 +167,15 @@ export class AutofillHookSystem {
      */
     async handleNewPage(page, sessionId) {
         try {
-            // Wait for page to load
-            await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+            // Wait for page to load (with proxy-aware timeout)
+            const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+            const pageLoadTimeout = Math.round(10000 * proxyMultiplier);
+            await page.waitForLoadState('domcontentloaded', { timeout: pageLoadTimeout });
             const url = page.url();
+            
+            if (this.options.proxyMode) {
+                console.log(`🌐 Proxy mode: Page load timeout ${pageLoadTimeout}ms`);
+            }
             
             if (!url || url === 'about:blank') return;
             
@@ -447,12 +453,14 @@ export class AutofillHookSystem {
                 
                 const firstField = field.first();
                 
-                // Wait for field to be visible and enabled
+                // Wait for field to be visible and enabled (with proxy-aware timeout)
+                const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+                const fieldTimeout = Math.round(2000 * proxyMultiplier);
                 await firstField.waitFor({
                     state: 'visible',
-                    timeout: 2000
+                    timeout: fieldTimeout
                 }).catch(() => {
-                    console.log(`⚠️  Field not visible: ${selector}`);
+                    console.log(`⚠️  Field not visible: ${selector}${this.options.proxyMode ? ' (proxy mode)' : ''}`);
                 });
                 
                 // Check if field is enabled and editable
@@ -738,7 +746,9 @@ export class AutofillHookSystem {
             }
             
             // Get execution settings with improved defaults for race condition handling
-            const settings = {
+            // Apply proxy-aware timeout multipliers if in proxy mode
+            const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+            const baseSettings = {
                 maxAttempts: 3,           // More attempts for better reliability
                 pollInterval: 1500,       // Longer polling for dynamic forms
                 waitAfterFill: 500,       // More time for fields to stabilize
@@ -754,6 +764,22 @@ export class AutofillHookSystem {
                 sequentialDelay: 300,     // Default sequential delay
                 ...hook.execution
             };
+            
+            // Apply proxy multipliers to time-sensitive settings
+            const settings = {
+                ...baseSettings,
+                pollInterval: Math.round(baseSettings.pollInterval * proxyMultiplier),
+                waitAfterFill: Math.round(baseSettings.waitAfterFill * proxyMultiplier),
+                fieldRetryDelay: Math.round(baseSettings.fieldRetryDelay * proxyMultiplier),
+                stabilityDelay: Math.round(baseSettings.stabilityDelay * proxyMultiplier),
+                sequentialDelay: Math.round(baseSettings.sequentialDelay * proxyMultiplier)
+            };
+            
+            if (this.options.proxyMode) {
+                console.log(`🌐 Proxy mode: Using ${proxyMultiplier}x timeout multiplier for autofill`);
+                console.log(`   Poll interval: ${settings.pollInterval}ms (was ${baseSettings.pollInterval}ms)`);
+                console.log(`   Wait after fill: ${settings.waitAfterFill}ms (was ${baseSettings.waitAfterFill}ms)`);
+            }
             
             // Poll for form fields
             console.log(`⏳ Polling for form fields (max ${settings.maxAttempts} attempts)...`);

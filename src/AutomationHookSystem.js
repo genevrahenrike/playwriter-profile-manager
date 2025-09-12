@@ -319,9 +319,17 @@ export class AutomationHookSystem {
     async waitForAutofill(stepConfig, page, sessionId) {
         console.log(`⏳ Waiting for autofill to complete using event-driven approach...`);
 
-        const timeout = stepConfig.timeout || this.options.defaultTimeout;
+        // Apply proxy-aware timeout multipliers
+        const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+        const baseTimeout = stepConfig.timeout || this.options.defaultTimeout;
+        const timeout = Math.round(baseTimeout * proxyMultiplier);
         const allowProceedWithoutFields = stepConfig.allowProceedWithoutFields === true;
-        const postAutofillGraceMs = stepConfig.postAutofillGraceMs || (400 + Math.floor(Math.random() * 600));
+        const baseGraceMs = stepConfig.postAutofillGraceMs || (400 + Math.floor(Math.random() * 600));
+        const postAutofillGraceMs = Math.round(baseGraceMs * proxyMultiplier);
+        
+        if (this.options.proxyMode) {
+            console.log(`🌐 Proxy mode: Autofill wait timeout ${timeout}ms (was ${baseTimeout}ms, ${proxyMultiplier}x multiplier)`);
+        }
 
         // Special-case bypasses (e.g., extension install flows)
         // Only bypass if the page truly has NO input fields after a short probe.
@@ -468,8 +476,16 @@ export class AutomationHookSystem {
     async waitForAutofillFallback(stepConfig, page, sessionId) {
         console.log(`⚠️  Using fallback polling approach for autofill detection`);
 
-        const timeout = stepConfig.timeout || this.options.defaultTimeout;
-        const checkInterval = stepConfig.checkInterval || 500;
+        // Apply proxy-aware timeout multipliers for fallback polling
+        const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+        const baseTimeout = stepConfig.timeout || this.options.defaultTimeout;
+        const timeout = Math.round(baseTimeout * proxyMultiplier);
+        const baseCheckInterval = stepConfig.checkInterval || 500;
+        const checkInterval = Math.round(baseCheckInterval * Math.min(proxyMultiplier, 2.0)); // Cap interval multiplier at 2x
+        
+        if (this.options.proxyMode) {
+            console.log(`🌐 Proxy mode: Fallback autofill timeout ${timeout}ms, check interval ${checkInterval}ms`);
+        }
         const selectors = stepConfig.expectedFields || [];
         const minFilledFields = stepConfig.minFilledFields || Math.max(2, selectors.length);
 
@@ -510,6 +526,11 @@ export class AutomationHookSystem {
         console.log(`🎭 Performing human-like interactions...`);
 
         const interactions = stepConfig.interactions || ['scroll', 'move_mouse'];
+        
+        // Apply proxy-aware delays between interactions
+        const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+        const baseInteractionDelay = 200;
+        const interactionDelay = Math.round(baseInteractionDelay * proxyMultiplier);
 
         for (const interaction of interactions) {
             switch (interaction) {
@@ -528,6 +549,11 @@ export class AutomationHookSystem {
                 case 'random_delay':
                     await this.performRandomDelay(stepConfig.delay || {});
                     break;
+            }
+            
+            // Add extra delay between interactions in proxy mode
+            if (this.options.proxyMode && interactions.length > 1) {
+                await page.waitForTimeout(interactionDelay);
             }
         }
     }
@@ -626,11 +652,19 @@ export class AutomationHookSystem {
      * Perform random delay
      */
     async performRandomDelay(delayConfig) {
-        const minDelay = delayConfig.min || this.options.humanDelayMin;
-        const maxDelay = delayConfig.max || this.options.humanDelayMax;
+        // Apply proxy-aware multipliers to human delays
+        const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+        const baseMinDelay = delayConfig.min || this.options.humanDelayMin;
+        const baseMaxDelay = delayConfig.max || this.options.humanDelayMax;
+        const minDelay = Math.round(baseMinDelay * proxyMultiplier);
+        const maxDelay = Math.round(baseMaxDelay * proxyMultiplier);
 
         const delay = Math.floor(Math.random() * (maxDelay - minDelay)) + minDelay;
-        console.log(`⏰ Random delay: ${delay}ms`);
+        if (this.options.proxyMode) {
+            console.log(`⏰ Random delay (proxy mode): ${delay}ms (${proxyMultiplier}x multiplier)`);
+        } else {
+            console.log(`⏰ Random delay: ${delay}ms`);
+        }
         await new Promise(resolve => setTimeout(resolve, delay));
     }
 
@@ -837,9 +871,16 @@ export class AutomationHookSystem {
             throw new Error('Request capture system not available for monitoring');
         }
 
-        const timeout = stepConfig.timeout || 30000;
+        // Apply proxy-aware timeout multipliers for success monitoring
+        const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+        const baseTimeout = stepConfig.timeout || 30000;
+        const timeout = Math.round(baseTimeout * proxyMultiplier);
         const successUrls = stepConfig.successUrls || [];
         const successStatuses = stepConfig.successStatuses || [200, 201];
+        
+        if (this.options.proxyMode) {
+            console.log(`🌐 Proxy mode: Success monitoring timeout ${timeout}ms (was ${baseTimeout}ms, ${proxyMultiplier}x multiplier)`);
+        }
 
         const startTime = Date.now();
 

@@ -499,6 +499,7 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--list-proxies', 'List all available proxies and exit')
     .action(async (profileName, options) => {
         try {
@@ -542,6 +543,11 @@ program
                 await profileLauncher.requestCaptureSystem.ensureOutputDirectory();
             }
 
+            // Adjust timeouts for proxy mode
+            const hasProxyOptions = options.proxyStrategy || options.proxyStart || options.proxy;
+            const baseAutoCloseTimeout = hasProxyOptions ? 180000 : 120000; // 3 minutes vs 2 minutes
+            const baseCaptchaGrace = hasProxyOptions ? 60000 : 45000; // 1 minute vs 45 seconds
+            
             // Prepare launch options
             const launchOptions = {
                 browserType: options.browser,
@@ -556,13 +562,20 @@ program
                 headlessAutomation: options.headlessAutomation || false,
                 autoCloseOnSuccess: options.autoCloseOnSuccess || false,
                 autoCloseOnFailure: options.autoCloseOnFailure || false,
-                autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
-                captchaGraceMs: parseInt(options.captchaGrace) || 45000,
+                autoCloseTimeout: parseInt(options.autoCloseTimeout) || baseAutoCloseTimeout,
+                captchaGraceMs: parseInt(options.captchaGrace) || baseCaptchaGrace,
                 disableCompression: options.compress === false,
                 proxyStrategy: options.proxyStrategy,
                 proxyStart: options.proxyStart,
-                proxyType: options.proxyType
+                proxyType: options.proxyType,
+                disableImages: options.disableImages
             };
+            
+            if (hasProxyOptions) {
+                console.log(`🌐 Proxy mode detected - using extended timeouts:`);
+                console.log(`   Auto-close timeout: ${launchOptions.autoCloseTimeout/1000}s`);
+                console.log(`   CAPTCHA grace: ${launchOptions.captchaGraceMs/1000}s`);
+            }
 
             // Show extension-related info
             if (options.loadExtensions && options.loadExtensions.length > 0) {
@@ -686,6 +699,7 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--disable-images', 'Disable image loading for faster proxy performance')
     .action(async (template, instanceName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -721,6 +735,11 @@ program
                 console.log(chalk.dim(`Screen resolution variation: ENABLED`));
             }
             
+            // Adjust timeouts for proxy mode
+            const hasProxyOptions = options.proxyStrategy || options.proxyStart || options.proxy;
+            const baseAutoCloseTimeout = hasProxyOptions ? 180000 : 120000; // 3 minutes vs 2 minutes
+            const baseCaptchaGrace = hasProxyOptions ? 60000 : 45000; // 1 minute vs 45 seconds
+            
             const launchOptions = {
                 browserType: options.browser,
                 headless: options.headless, // Enable headless for headless automation
@@ -736,13 +755,20 @@ program
                 headlessAutomation: options.headlessAutomation || false,
                 autoCloseOnSuccess: options.autoCloseOnSuccess || false,
                 autoCloseOnFailure: options.autoCloseOnFailure || false,
-                autoCloseTimeout: parseInt(options.autoCloseTimeout) || 120000,
-                captchaGraceMs: parseInt(options.captchaGrace) || 45000,
+                autoCloseTimeout: parseInt(options.autoCloseTimeout) || baseAutoCloseTimeout,
+                captchaGraceMs: parseInt(options.captchaGrace) || baseCaptchaGrace,
                 disableCompression: options.compress === false,
                 proxyStrategy: options.proxyStrategy,
                 proxyStart: options.proxyStart,
-                proxyType: options.proxyType
+                proxyType: options.proxyType,
+                disableImages: options.disableImages
             };
+            
+            if (hasProxyOptions) {
+                console.log(`🌐 Proxy mode detected - using extended timeouts:`);
+                console.log(`   Auto-close timeout: ${launchOptions.autoCloseTimeout/1000}s`);
+                console.log(`   CAPTCHA grace: ${launchOptions.captchaGraceMs/1000}s`);
+            }
 
             const result = await templateProfileLauncher.launchFromTemplate(template, instanceName, launchOptions);
             
@@ -827,6 +853,7 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
     .action(async (options) => {
         const pathMod = (await import('path')).default;
@@ -836,8 +863,19 @@ program
         const template = options.template;
         const total = parseInt(options.count, 10) || 1;
         const prefix = options.prefix || 'auto';
-        const perRunTimeout = parseInt(options.timeout, 10) || 120000;
-        const captchaGrace = parseInt(options.captchaGrace, 10) || 45000;
+        // Increase default timeouts when proxy is being used
+        const hasProxyOptions = options.proxyStrategy || options.proxyStart || options.proxy;
+        const baseTimeout = hasProxyOptions ? 180000 : 120000; // 3 minutes vs 2 minutes default
+        const baseCaptchaGrace = hasProxyOptions ? 60000 : 45000; // 1 minute vs 45 seconds default
+        
+        const perRunTimeout = parseInt(options.timeout, 10) || baseTimeout;
+        const captchaGrace = parseInt(options.captchaGrace, 10) || baseCaptchaGrace;
+        
+        if (hasProxyOptions) {
+            console.log(`🌐 Proxy mode detected - using extended default timeouts:`);
+            console.log(`   Per-run timeout: ${perRunTimeout/1000}s (default: ${baseTimeout/1000}s)`);
+            console.log(`   CAPTCHA grace: ${captchaGrace/1000}s (default: ${baseCaptchaGrace/1000}s)`);
+        }
     const runHeadless = !!options.headless;
     const deleteOnFailure = !!options.deleteOnFailure;
     const resume = !!options.resume;
@@ -1067,7 +1105,8 @@ program
                     stealth: true,
                     stealthPreset: 'balanced',
                     // Keep the new instance uncompressed until batch completes decisions
-                    disableCompression: false
+                    disableCompression: false,
+                    disableImages: options.disableImages
                 };
                 
                 // Add proxy configuration if available

@@ -255,6 +255,41 @@ export class ProfileLauncher {
     }
 
     /**
+     * Setup image blocking for faster page loading through proxies
+     * @param {object} context - Playwright context
+     */
+    async setupImageBlocking(context) {
+        console.log(`🚫 Setting up image blocking for faster proxy performance`);
+        
+        // Block image requests to speed up page loading
+        await context.route('**/*.{png,jpg,jpeg,gif,webp,svg,ico,bmp,tiff}', async (route) => {
+            await route.abort();
+        });
+        
+        // Also block common image MIME types
+        await context.route('**/*', async (route, request) => {
+            const resourceType = request.resourceType();
+            if (resourceType === 'image') {
+                await route.abort();
+                return;
+            }
+            
+            // Check content-type header for images
+            const headers = await request.allHeaders();
+            const contentType = headers['content-type'] || '';
+            if (contentType.startsWith('image/')) {
+                await route.abort();
+                return;
+            }
+            
+            // Continue with non-image requests
+            await route.continue();
+        });
+        
+        console.log(`✅ Image blocking configured - images will be blocked for faster loading`);
+    }
+
+    /**
      * Generate authentic but randomized fingerprint configuration
      * @param {string} profileName - The profile name for seed
      * @param {object} options - Randomization options
@@ -505,6 +540,7 @@ export class ProfileLauncher {
             stealthConfig = null, // Custom stealth configuration
             isTemporary = false, // Mark as temporary profile for cleanup
             disableCompression = undefined, // Optional override per launch
+            disableImages = false, // Disable image loading for faster proxy connections
             proxy = null, // Legacy proxy configuration (deprecated, use proxyStrategy)
             proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin'
             proxyStart = null, // Proxy label to start rotation from
@@ -777,7 +813,7 @@ export class ProfileLauncher {
             // For Chromium persistent context, use the existing page; for others, create new page
             const page = browserType === 'chromium' ? context.pages()[0] : await context.newPage();
 
-            // Configure autofill behavior based on automation mode
+            // Configure autofill behavior based on automation mode and proxy usage
             try {
                 if (enableAutomation) {
                     this.autofillSystem.options.minimalInterference = false;
@@ -785,6 +821,20 @@ export class ProfileLauncher {
                 } else {
                     this.autofillSystem.options.minimalInterference = true;
                     this.autofillSystem.options.fillStrategy = 'paste';
+                }
+                
+                // Configure proxy-aware timeouts
+                if (proxyConfig) {
+                    console.log(`🌐 Proxy mode detected - increasing wait times for slower connections`);
+                    this.autofillSystem.options.proxyMode = true;
+                    this.autofillSystem.options.proxyTimeoutMultiplier = 2.5; // 2.5x longer timeouts
+                    this.automationSystem.options.proxyMode = true;
+                    this.automationSystem.options.proxyTimeoutMultiplier = 2.5;
+                } else {
+                    this.autofillSystem.options.proxyMode = false;
+                    this.autofillSystem.options.proxyTimeoutMultiplier = 1.0;
+                    this.automationSystem.options.proxyMode = false;
+                    this.automationSystem.options.proxyTimeoutMultiplier = 1.0;
                 }
             } catch (_) {}
 
@@ -822,6 +872,12 @@ export class ProfileLauncher {
             
             // Setup VidIQ device ID spoofing for this profile
             await this.setupVidiqDeviceIdSpoofing(context, profile.name);
+            
+            // Setup image blocking if requested (helps with proxy speed)
+            if (disableImages) {
+                console.log(`🚫 Image loading disabled - blocking images for faster proxy performance`);
+                await this.setupImageBlocking(context);
+            }
             
             // Apply stealth configuration if enabled
             if (stealth && stealthConfig) {

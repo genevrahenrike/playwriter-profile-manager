@@ -1,3 +1,3 @@
-npx ppm batch --template proxy-clean --count 5 --prefix proxy-US- --timeout 120000 --captcha-grace 45000 --delete-on-failure  --proxy "US1"
+npx ppm batch --template proxy-clean --count 50 --prefix proxied --proxy-strategy round-robin --proxy-start "US2" --max-profiles-per-ip 5 --timeout 45000 --disable-images --resume
 
 npx ppm batch --template direct-clean --count 5 --prefix direct --timeout 120000 --captcha-grace 45000 --delete-on-failure 
