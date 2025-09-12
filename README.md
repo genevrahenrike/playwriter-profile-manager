@@ -235,6 +235,88 @@ Success detection:
 - Automation completion events (from the automation hook system).
 - 200/201 responses for `api.vidiq.com/subscriptions/active` or `/subscriptions/stripe/next-subscription`.
 
+### Refresh Existing Sessions (VidIQ)
+
+Refresh already-created profiles by opening the VidIQ web app and capturing token refreshes and subsequent app traffic. This is a batch-like flow designed for session maintenance and verification.
+
+Notes:
+- No page interaction is performed during refresh (autofill monitoring is disabled for this command).
+- If login is required, the run captures the login page (HTML + screenshot) for later analysis and exits without attempting credentials (login automation pending).
+
+```bash
+# Default: spot-check earliest and latest profiles (when neither --all nor --prefix is provided)
+npx ppm refresh
+
+# Headless + faster network: disable images
+npx ppm refresh --headless --disable-images
+
+# Run against all profiles with automatic proxy selection
+npx ppm refresh --all --headless --proxy auto
+
+# Run for a prefix subset with limit
+npx ppm refresh --prefix viq --limit 10 --headless
+
+# Only the earliest profile with SOCKS5 fastest proxy
+npx ppm refresh --earliest --headless --proxy fastest --proxy-type socks5
+```
+
+Selection options:
+- `--all`: Refresh all profiles
+- `--prefix &lt;prefix&gt;`: Only profiles whose names start with the given prefix
+- `--limit &lt;n&gt;`: Limit number of profiles processed
+- `--earliest`: Include the earliest-created profile
+- `--latest`: Include the latest-created profile
+- Default behavior (no `--all` and no `--prefix`): spot-check earliest + latest
+
+Runtime options:
+- `--headless`: Run without a visible browser window
+- `--disable-images`: Block image loading for faster runs (recommended on slow proxies)
+- `--timeout &lt;ms&gt;`: Per-run timeout (default aligns with other commands)
+- `--captcha-grace &lt;ms&gt;`: Additional wait if a CAPTCHA is detected
+
+Proxy options (same as launch/batch):
+- `--proxy &lt;strategy|label&gt;`: `auto`, `fastest`, `round-robin`, or a specific label like `"US"` or `"Germany"`
+- `--proxy-type &lt;http|socks5&gt;`
+- `--list-proxies`: Print available proxies and exit
+
+What it does:
+1. Launches each target profile with VidIQ extension isolation (profile-specific extension key + deterministic device ID).
+2. Navigates to `https://app.vidiq.com/dashboard`.
+3. Starts request capture with hooks for both:
+   - `app/auth` hosts (token/refresh/sign-in/session endpoints)
+   - `api.vidiq.com` application traffic
+4. Classifies outcomes by signals or activity:
+   - Success if token refresh/sign-in/session validated signals are observed
+   - Or success if sufficient `api.vidiq.com` 2xx activity is detected
+   - Otherwise, if a login UI is detected, mark as `login_required` and save a page sample
+5. Cleans up gracefully, compresses profiles if enabled, and exports artifacts.
+
+Artifacts:
+- Results JSONL: `automation-results/refresh-&lt;timestamp&gt;.jsonl` (one entry per processed profile)
+- Per-profile network captures: `captured-requests/&lt;profile&gt;-export-&lt;session&gt;-&lt;timestamp&gt;.jsonl`
+- When login is required: `automation-results/login-samples/&lt;profile&gt;-&lt;timestamp&gt;.html` and `.png`
+
+Limitations (current):
+- Credentialed login automation is not executed yet. For `login_required`, only page capture and classification are performed. A future `--autologin` will enable safe credentials-based flows.
+
+Example JSONL entry (fields may evolve):
+```json
+{
+  "timestamp": "2025-09-12T22:54:23.044Z",
+  "profileName": "proxied266",
+  "profileId": "c86182ed-49b5-4258-8169-e088792050e8",
+  "sessionId": "7aa61bcc-302e-4d79-af7c-aa642768f796",
+  "result": "success",
+  "signals": ["session_validated"],
+  "api2xxCount": 9,
+  "exportPath": "captured-requests/proxied266-export-7aa61bcc-302e-4d79-af7c-aa642768f796-2025-09-12T22-54-23-044Z.jsonl"
+}
+```
+
+Operational details:
+- Autofill monitoring is disabled during refresh to avoid interacting with the page.
+- Stale Chromium ProcessSingleton files are cleaned automatically before launch to prevent “profile already in use” errors.
+- Image blocking can be used for performance on slow proxies without affecting classification.
 ### Profile Name Migration
 
 If you have existing timestamp-based profiles from older versions, you can migrate them to the new autoincremental naming:
