@@ -498,7 +498,7 @@ program
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
-    .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--list-proxies', 'List all available proxies and exit')
     .action(async (profileName, options) => {
@@ -698,7 +698,7 @@ program
     .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
-    .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .action(async (template, instanceName, options) => {
         try {
@@ -852,7 +852,7 @@ program
     .option('--failure-delay <seconds>', 'Delay after failed runs (seconds)', '300')
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
-    .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
+    .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
     .action(async (options) => {
@@ -992,7 +992,8 @@ program
             proxyRotator = new ProxyRotator(launcher.proxyManager, {
                 maxProfilesPerIP: maxProfilesPerIP,
                 strategy: options.proxyStrategy || 'round-robin',
-                startProxyLabel: options.proxyStart
+                startProxyLabel: options.proxyStart,
+                proxyType: options.proxyType
             });
             
             const hasProxies = await proxyRotator.initialize();

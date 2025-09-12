@@ -10,6 +10,7 @@ export class ProxyRotator {
         this.workingProxies = [];
         this.strategy = options.strategy || 'round-robin'; // Default to round-robin
         this.startProxyLabel = options.startProxyLabel || null; // Specific proxy to start from
+        this.proxyType = options.proxyType || null; // Filter by proxy type: 'http', 'socks5', or null for all
     }
 
     /**
@@ -17,10 +18,29 @@ export class ProxyRotator {
      */
     async initialize() {
         await this.proxyManager.loadProxies();
-        this.workingProxies = [
-            ...this.proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' })),
-            ...this.proxyManager.loadedProxies.socks5.map(p => ({ ...p, type: 'socks5' }))
-        ];
+        
+        // SOCKS5 proxies are not supported due to Playwright/Chromium limitations
+        if (this.proxyType === 'socks5') {
+            console.log(`❌ SOCKS5 proxies are not supported due to Playwright/Chromium limitations:`);
+            console.log(`   • Chromium doesn't support SOCKS5 proxy authentication`);
+            console.log(`   • SOCKS5 connections often fail (ERR_SOCKS_CONNECTION_FAILED)`);
+            console.log(`   • SOCKS5 proxies have connection limits that conflict with IP checking`);
+            console.log(`🔄 Falling back to HTTP proxies for reliable operation`);
+            this.proxyType = 'http'; // Fall back to HTTP
+        }
+        
+        // Filter proxies by type if specified
+        let candidateProxies = [];
+        if (this.proxyType) {
+            if (this.proxyType === 'http' && this.proxyManager.loadedProxies.http) {
+                candidateProxies = this.proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' }));
+            }
+        } else {
+            // Only include HTTP proxies (SOCKS5 not supported)
+            candidateProxies = this.proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' }));
+        }
+        
+        this.workingProxies = candidateProxies;
         
         // Set starting position if specified
         if (this.startProxyLabel) {
@@ -33,7 +53,8 @@ export class ProxyRotator {
             }
         }
         
-        console.log(`🔄 ProxyRotator initialized with ${this.workingProxies.length} working proxies (strategy: ${this.strategy})`);
+        const typeFilter = this.proxyType ? ` (${this.proxyType} only)` : '';
+        console.log(`🔄 ProxyRotator initialized with ${this.workingProxies.length} working proxies (strategy: ${this.strategy}${typeFilter})`);
         return this.workingProxies.length > 0;
     }
 
@@ -73,7 +94,14 @@ export class ProxyRotator {
                 const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
                 
                 try {
-                    // Check if this proxy would result in a duplicate IP
+                    // For SOCKS5 proxies, skip IP duplicate checking to avoid connection exhaustion
+                    if (proxy.type === 'socks5') {
+                        // Record usage without IP checking
+                        await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+                        return { proxy, proxyConfig };
+                    }
+                    
+                    // For HTTP proxies, check for IP duplicates
                     const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
                     const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
                     
@@ -83,7 +111,7 @@ export class ProxyRotator {
                     }
                     
                     // Record usage and get IP
-                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label);
+                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
                     return { proxy, proxyConfig };
                 } catch (error) {
                     console.warn(`⚠️  Failed to use proxy ${proxy.label}: ${error.message}`);
@@ -141,7 +169,13 @@ export class ProxyRotator {
             const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
             
             try {
-                // Check if this proxy would result in a duplicate IP
+                // For SOCKS5 proxies, skip IP duplicate checking
+                if (proxy.type === 'socks5') {
+                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+                    return { proxy, proxyConfig };
+                }
+                
+                // For HTTP proxies, check for IP duplicates
                 const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
                 const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
                 
@@ -151,7 +185,7 @@ export class ProxyRotator {
                 }
                 
                 // Record usage and get IP
-                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label);
+                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
                 return { proxy, proxyConfig };
             } catch (error) {
                 console.warn(`⚠️  Failed to use random proxy ${proxy.label}: ${error.message}`);
@@ -181,7 +215,13 @@ export class ProxyRotator {
             const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
             
             try {
-                // Check if this proxy would result in a duplicate IP
+                // For SOCKS5 proxies, skip IP duplicate checking
+                if (proxy.type === 'socks5') {
+                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+                    return { proxy, proxyConfig };
+                }
+                
+                // For HTTP proxies, check for IP duplicates
                 const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
                 const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
                 
@@ -191,7 +231,7 @@ export class ProxyRotator {
                 }
                 
                 // Record usage and get IP
-                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label);
+                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
                 return { proxy, proxyConfig };
             } catch (error) {
                 console.warn(`⚠️  Failed to use fastest proxy ${proxy.label}: ${error.message}`);
@@ -227,7 +267,13 @@ export class ProxyRotator {
         const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
         
         try {
-            // Check if this proxy would result in a duplicate IP
+            // For SOCKS5 proxies, skip IP duplicate checking
+            if (proxy.type === 'socks5') {
+                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
+                return { proxy, proxyConfig };
+            }
+            
+            // For HTTP proxies, check for IP duplicates
             const testIP = await this.ipTracker.getCurrentIP(proxyConfig);
             const existingProxies = this.ipTracker.getProxiesUsingIP(testIP);
             
@@ -236,7 +282,7 @@ export class ProxyRotator {
             }
             
             // Record usage and get IP
-            await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label);
+            await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
             return { proxy, proxyConfig };
         } catch (error) {
             throw new Error(`Failed to use specific proxy ${label}: ${error.message}`);
@@ -255,7 +301,7 @@ export class ProxyRotator {
             const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
             
             try {
-                if (await this.ipTracker.hasNewIP(proxyConfig, proxy.label)) {
+                if (await this.ipTracker.hasNewIP(proxyConfig, proxy.label, proxy.type)) {
                     console.log(`✅ Proxy ${proxy.label} has a new IP`);
                     foundNewIP = true;
                 } else {
@@ -309,7 +355,7 @@ export class ProxyRotator {
         
         // Record usage but don't enforce limits for manual selection
         try {
-            await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label);
+            await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, proxy.type);
         } catch (error) {
             console.warn(`⚠️  Could not record usage for ${label}: ${error.message}`);
         }

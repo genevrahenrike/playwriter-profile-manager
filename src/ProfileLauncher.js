@@ -580,7 +580,8 @@ export class ProfileLauncher {
                 const { ProxyRotator } = await import('./ProxyRotator.js');
                 const rotator = new ProxyRotator(this.proxyManager, {
                     strategy: 'round-robin',
-                    startProxyLabel: proxyStart
+                    startProxyLabel: proxyStart,
+                    proxyType: proxyType
                 });
                 
                 await rotator.initialize();

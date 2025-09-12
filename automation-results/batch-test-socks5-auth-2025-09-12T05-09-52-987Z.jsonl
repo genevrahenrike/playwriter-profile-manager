@@ -1,0 +1,1 @@
+{"timestamp":"2025-09-12T05:10:10.263Z","run":1,"batchId":"2025-09-12T05-09-52-987Z","runId":"0ecf2085-4b13-44d1-bf15-f0602b5369eb","profileId":"a5c53338-b508-497e-98f2-f4a9dddd282a","profileName":"test-socks5-auth1","attempt":1,"headless":false,"success":false,"reason":"timeout","proxy":{"label":"nl","type":"socks5","host":"nl.socks.nordhold.net","port":1080}}

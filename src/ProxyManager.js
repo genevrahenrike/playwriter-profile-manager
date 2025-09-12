@@ -135,17 +135,26 @@ export class ProxyManager {
             return { ...proxies[this.lastProxyIndex[type]], type };
         }
 
-        // Round-robin across all types
-        const allProxies = [
-            ...this.loadedProxies.http.map(proxy => ({ ...proxy, type: 'http' })),
-            ...this.loadedProxies.socks5.map(proxy => ({ ...proxy, type: 'socks5' }))
-        ];
+        // Round-robin across all types, but filter by type if specified
+        let candidateProxies = [];
+        if (type) {
+            // Only include proxies of the specified type
+            if (this.loadedProxies[type]) {
+                candidateProxies = this.loadedProxies[type].map(proxy => ({ ...proxy, type }));
+            }
+        } else {
+            // Include all types
+            candidateProxies = [
+                ...this.loadedProxies.http.map(proxy => ({ ...proxy, type: 'http' })),
+                ...this.loadedProxies.socks5.map(proxy => ({ ...proxy, type: 'socks5' }))
+            ];
+        }
 
-        if (allProxies.length === 0) return null;
+        if (candidateProxies.length === 0) return null;
 
         if (!this.lastGlobalIndex) this.lastGlobalIndex = -1;
-        this.lastGlobalIndex = (this.lastGlobalIndex + 1) % allProxies.length;
-        return allProxies[this.lastGlobalIndex];
+        this.lastGlobalIndex = (this.lastGlobalIndex + 1) % candidateProxies.length;
+        return candidateProxies[this.lastGlobalIndex];
     }
 
     /**
@@ -186,11 +195,14 @@ export class ProxyManager {
     toPlaywrightProxy(proxy) {
         if (!proxy) return null;
 
+        // Only support HTTP proxies due to Playwright/Chromium limitations with SOCKS5
+        const protocol = 'http';
+
         const config = {
-            server: `${proxy.type}://${proxy.host}:${proxy.port}`
+            server: `${protocol}://${proxy.host}:${proxy.port}`
         };
 
-        // Add authentication if available
+        // Add authentication for HTTP proxies
         if (proxy.username || proxy.login) {
             config.username = proxy.username || proxy.login;
         }
@@ -218,6 +230,19 @@ export class ProxyManager {
         }
 
         let selectedProxy = null;
+
+        // SOCKS5 proxies are not supported due to Playwright/Chromium limitations:
+        // 1. Chromium doesn't support SOCKS5 proxy authentication
+        // 2. SOCKS5 connections often fail with ERR_SOCKS_CONNECTION_FAILED
+        // 3. SOCKS5 proxies have connection limits that conflict with IP checking
+        if (type === 'socks5') {
+            console.log(`❌ SOCKS5 proxies are not supported due to Playwright/Chromium limitations:`);
+            console.log(`   • Chromium doesn't support SOCKS5 proxy authentication`);
+            console.log(`   • SOCKS5 connections often fail (ERR_SOCKS_CONNECTION_FAILED)`);
+            console.log(`   • SOCKS5 proxies have connection limits that conflict with IP checking`);
+            console.log(`🔄 Falling back to HTTP proxies for reliable operation`);
+            type = 'http'; // Fall back to HTTP proxies
+        }
 
         switch (selection) {
             case 'auto':

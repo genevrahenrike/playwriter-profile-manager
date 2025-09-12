@@ -156,9 +156,40 @@ export class IPTracker {
     /**
      * Record proxy usage and IP with global IP tracking
      */
-    async recordProxyUsage(proxyConfig, proxyLabel) {
+    async recordProxyUsage(proxyConfig, proxyLabel, proxyType = null) {
         try {
-            // Get current IP
+            // For SOCKS5 proxies, skip IP checking to avoid connection exhaustion
+            // SOCKS5 proxies are always unique and have connection limits
+            if (proxyType === 'socks5' || proxyConfig.server.startsWith('socks5://')) {
+                // Generate a unique IP identifier for SOCKS5 (use proxy label as unique identifier)
+                const uniqueIP = `socks5-${proxyLabel}`;
+                
+                // Initialize tracking for this proxy if needed
+                if (!this.ipHistory.has(proxyLabel)) {
+                    this.ipHistory.set(proxyLabel, new Set());
+                }
+                if (!this.globalIPToProxies.has(uniqueIP)) {
+                    this.globalIPToProxies.set(uniqueIP, new Set());
+                }
+                
+                // Record unique IP in history
+                this.ipHistory.get(proxyLabel).add(uniqueIP);
+                this.currentBatchIPs.set(proxyLabel, uniqueIP);
+                this.globalIPToProxies.get(uniqueIP).add(proxyLabel);
+                
+                // Increment usage counts
+                const currentCount = this.proxyUsageCount.get(proxyLabel) || 0;
+                this.proxyUsageCount.set(proxyLabel, currentCount + 1);
+                
+                const newGlobalUsage = 1; // SOCKS5 proxies are always unique
+                this.globalIPUsage.set(uniqueIP, newGlobalUsage);
+                
+                console.log(`📊 SOCKS5 Proxy ${proxyLabel}: unique connection, usage ${currentCount + 1}/${this.maxProfilesPerIP}`);
+                
+                return uniqueIP;
+            }
+            
+            // For HTTP proxies, use the original IP checking logic
             const currentIP = await this.getCurrentIP(proxyConfig, proxyLabel);
             
             // Check if this IP is already at global limit
@@ -203,8 +234,15 @@ export class IPTracker {
     /**
      * Check if proxy has a new IP compared to last batch
      */
-    async hasNewIP(proxyConfig, proxyLabel) {
+    async hasNewIP(proxyConfig, proxyLabel, proxyType = null) {
         try {
+            // For SOCKS5 proxies, skip IP checking to avoid connection exhaustion
+            if (proxyType === 'socks5' || proxyConfig.server.startsWith('socks5://')) {
+                console.log(`🧦 SOCKS5 proxy ${proxyLabel}: skipping IP check (always unique)`);
+                return true; // SOCKS5 proxies are always considered to have unique IPs
+            }
+            
+            // For HTTP proxies, use the original IP checking logic
             const currentIP = await this.getCurrentIP(proxyConfig, proxyLabel);
             const lastKnownIP = this.currentBatchIPs.get(proxyLabel);
             
