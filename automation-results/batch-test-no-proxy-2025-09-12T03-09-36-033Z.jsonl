@@ -1,0 +1,1 @@
+{"timestamp":"2025-09-12T03:09:36.100Z","run":1,"batchId":"2025-09-12T03-09-36-033Z","runId":"e6677465-1ce7-4f77-bfc0-9cd720c23f40","error":"Failed to launch profile: browserType.launchPersistentContext: proxy: expected object, got null"}

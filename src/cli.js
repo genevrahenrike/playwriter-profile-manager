@@ -496,7 +496,7 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
-    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin', 'round-robin')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .option('--list-proxies', 'List all available proxies and exit')
@@ -683,7 +683,7 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .option('--no-compress', 'Disable compress-on-close for this instance')
-    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin', 'round-robin')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .action(async (template, instanceName, options) => {
@@ -824,7 +824,7 @@ program
     .option('--no-clear-cache', 'Disable cache clearing for successful profiles (cache cleanup enabled by default)')
     .option('--delay <seconds>', 'Delay between successful runs (seconds)', '60')
     .option('--failure-delay <seconds>', 'Delay after failed runs (seconds)', '300')
-    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin', 'round-robin')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http or socks5')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
@@ -943,7 +943,7 @@ program
             }
         } catch (_) { /* ignore */ }
 
-        // Initialize proxy rotation if proxy options are provided
+        // Initialize proxy rotation ONLY if proxy options are explicitly provided
         let proxyRotator = null;
         let useProxyRotation = false;
         
@@ -966,6 +966,8 @@ program
             } else {
                 console.log(chalk.yellow('⚠️  No proxies available, running without proxy rotation'));
             }
+        } else {
+            console.log(chalk.dim('🌐 Proxy rotation disabled (no proxy options specified)'));
         }
 
         // Determine starting index when resuming: find highest existing numeric suffix for this prefix

@@ -532,11 +532,11 @@ export class ProfileLauncher {
         // Store current profile name for extension customization
         this.currentProfileName = profile.name;
 
-        // Configure proxy if requested (support both legacy and new format)
+        // Configure proxy ONLY if explicitly requested (support both legacy and new format)
         let proxyConfig = null;
         const proxySelection = proxyStrategy || proxy; // Use new proxyStrategy or fall back to legacy proxy
         
-        if (proxySelection) {
+        if (proxySelection || proxyStart) {
             await this.ensureProxiesLoaded();
             
             // If we have a start position, we need to use ProxyRotator for round-robin
@@ -555,7 +555,7 @@ export class ProfileLauncher {
                 } else {
                     console.warn(`⚠️  Proxy rotation failed, launching without proxy`);
                 }
-            } else {
+            } else if (proxySelection) {
                 // Use standard proxy selection
                 proxyConfig = await this.proxyManager.getProxyConfig(proxySelection, proxyType);
                 if (!proxyConfig) {
@@ -588,7 +588,6 @@ export class ProfileLauncher {
                     devtools,
                     viewport,
                     channel: 'chromium', // Required for extension loading
-                    proxy: proxyConfig, // Add proxy configuration
                     args: [
                         // Core stealth flags
                         '--disable-blink-features=AutomationControlled',
@@ -632,6 +631,11 @@ export class ProfileLauncher {
                         ...args
                     ]
                 };
+                
+                // Add proxy configuration only if specified
+                if (proxyConfig) {
+                    launchOptions.proxy = proxyConfig;
+                }
                 
                 // Add extensions if available - for persistent context, extensions should be in user data dir
                 if (importedData.extensions && importedData.extensions.length > 0) {
@@ -715,13 +719,17 @@ export class ProfileLauncher {
                 const browserOptions = {
                     headless,
                     devtools,
-                    proxy: proxyConfig, // Add proxy configuration
                     args: [
                         '--disable-blink-features=AutomationControlled',
                         '--disable-features=VizDisplayCompositor',
                         ...args
                     ]
                 };
+                
+                // Add proxy configuration only if specified
+                if (proxyConfig) {
+                    browserOptions.proxy = proxyConfig;
+                }
                 
                 switch (browserType) {
                     case 'firefox':
