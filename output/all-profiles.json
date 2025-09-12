@@ -11,7 +11,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "da9d4701-64f3-4aaf-9582-45b286d75845",
+        "x-amplitude-device-id": "2823f003-b1bd-46b2-8390-fffd40ee53c5",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -29,7 +29,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "b4dee3de-0796-4fb2-8aad-ac87d7cc05b0",
+        "x-amplitude-device-id": "6a9f3875-eefa-49da-bc3f-9c90eadc3562",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -47,7 +47,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "40f10818-6e1a-4eb4-b324-e343536dcca9",
+        "x-amplitude-device-id": "a5cd89a2-1620-49c8-bdcc-5999a6aecddd",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -65,7 +65,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9fe0235a-9068-47c0-ac04-0c1f7f990344",
+        "x-amplitude-device-id": "d326797f-1ab8-4c04-bbad-88f7f8ca99c1",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -83,7 +83,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c7c370a8-6aca-4a02-85d6-631da15c5093",
+        "x-amplitude-device-id": "a01e412e-d228-4057-b0a0-fd12425b092b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -101,7 +101,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "94f45c7f-fe2d-41ee-8146-f4d6b43dd430",
+        "x-amplitude-device-id": "0215f21c-8785-44c7-b9f8-4e7942b6c0b5",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -119,7 +119,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "b2794c7c-1dc5-4483-af8d-91205d359099",
+        "x-amplitude-device-id": "1c327c0c-769f-464d-b0d0-fdb9c263300a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -137,7 +137,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "5b9feb5a-a9c8-4fe8-b334-5283cb01e895",
+        "x-amplitude-device-id": "93804817-6012-4fe0-a064-1a4385fc70d6",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -155,7 +155,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "20f23c3b-c04d-435f-bb3b-cfcbe08e5360",
+        "x-amplitude-device-id": "964bdb6a-e97e-490a-b173-8f3c5d98446c",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -173,7 +173,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "31a79993-0224-4fa9-b048-81cf24453e74",
+        "x-amplitude-device-id": "1b3420b8-72c5-4ae3-80ea-4631d7922e82",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -191,7 +191,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "d89473bb-e24f-4de7-8a7d-3d90a27453d3",
+        "x-amplitude-device-id": "12c21b5c-641b-4d60-ad79-69937e699ece",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -209,7 +209,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "6721bb82-f3cf-4eaf-bca3-29af89f34fd5",
+        "x-amplitude-device-id": "38510cfd-a187-4fdb-b757-37cd68bc4d6b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -227,7 +227,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "576faa33-c75f-4bd8-b75a-318566edebbc",
+        "x-amplitude-device-id": "ec03fe14-b68b-48fb-8048-5b79161d51f4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -245,7 +245,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "dc37e57e-81a8-43d0-ba34-c7ee2e559dae",
+        "x-amplitude-device-id": "44a9da18-fdf9-4cb1-ae73-3e3a61c1296e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -263,7 +263,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7fb4bf44-ffad-43ec-837a-c77026428b47",
+        "x-amplitude-device-id": "2f4cca7b-66d9-4bf8-abcc-3ee4a038ee05",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -281,7 +281,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "090de029-8eed-47c3-b665-5169a3600bc1",
+        "x-amplitude-device-id": "afb66e1e-2885-45d4-bf36-4085badf4bf6",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -299,7 +299,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "5277f27f-b272-425b-91ef-0c16b5e3e45c",
+        "x-amplitude-device-id": "3fb74f19-5b0a-4b64-b989-38900497269e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -317,7 +317,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2ea852b1-46a6-47ed-900d-f36e2df565c1",
+        "x-amplitude-device-id": "f4b2b4dd-066d-4bfb-9572-502462363e4f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -335,7 +335,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f7fa8099-9eb8-4d56-bd58-ca87c87240ce",
+        "x-amplitude-device-id": "da9dc4ec-60c3-4933-850a-3b2c42f80eff",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -353,7 +353,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1248edc7-2182-434a-a867-2b46a482fb0b",
+        "x-amplitude-device-id": "7f6236d2-81c3-4ac2-a642-40f81fe871a8",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -371,7 +371,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "3cf792f7-23da-44d5-b151-b848dd16f6ec",
+        "x-amplitude-device-id": "5d52b0fd-7605-475c-93ee-41c725fa6627",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -389,7 +389,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "84771b81-23fb-40f5-a75b-e71c75081e7f",
+        "x-amplitude-device-id": "06851c29-9bbb-4289-a128-79be0a82059f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -407,7 +407,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "82a840da-6162-417d-94eb-a71c8eb448e0",
+        "x-amplitude-device-id": "bcf65e75-205e-4533-9508-d6f947fc0868",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -425,7 +425,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "ba92ac70-4033-4cc2-b2ef-be1aa651186f",
+        "x-amplitude-device-id": "95c558a8-1c0e-4a38-a3e5-13b705a4ce47",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -443,7 +443,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "14ba24ed-6074-4df5-b5ec-96d2fb9af670",
+        "x-amplitude-device-id": "6aa60d61-c282-4b9f-824b-8c69925d073e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -461,7 +461,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "b4f3c2c3-e131-4d29-abe1-ab92fa878c1a",
+        "x-amplitude-device-id": "3e1ba8a9-73a6-4a86-ab5c-13a34fad83a0",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -479,7 +479,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f4c4a094-bd7d-4a01-8621-4c281d920171",
+        "x-amplitude-device-id": "5c9769c8-1951-40d6-b959-d8a37181070f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -497,7 +497,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "773b156b-5309-406b-91ad-3daa8af78a71",
+        "x-amplitude-device-id": "d86e9f90-d240-43b0-8bb7-6ec23a9bac5e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -515,7 +515,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "024b1c86-d75c-4b42-acc3-180b4a3285ef",
+        "x-amplitude-device-id": "a5d616b9-467b-4336-8837-e05eca183369",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -533,7 +533,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "ec0de432-c31d-4aed-bf47-0f1734a5a19f",
+        "x-amplitude-device-id": "e7ea1394-48cf-4232-9704-ad91bcf71cd4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -551,7 +551,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7c023023-49ce-4707-a059-2a7466d80617",
+        "x-amplitude-device-id": "3871e51a-e4ae-49c9-950d-a317037ab635",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -569,7 +569,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "6d3ace7b-3de6-42c7-8902-75d7bfcf8ada",
+        "x-amplitude-device-id": "95e93b6b-e5db-4a43-9440-4e56ad0e8981",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -587,7 +587,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f8ac5910-2989-496b-9eba-56e8822dc077",
+        "x-amplitude-device-id": "9b6ae8c0-d6e3-407f-918a-d69e7d895389",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -605,7 +605,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "72bffbee-7b13-4e2c-8051-6c22062ed456",
+        "x-amplitude-device-id": "45ab8fed-2b1a-4909-885e-11fbb34c0443",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -623,7 +623,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "380311b2-3561-489a-a817-4bf172aa989d",
+        "x-amplitude-device-id": "e25e37a3-c64e-4d8e-87a5-9bbdc14eaab2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -641,7 +641,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "26627b39-0459-460c-a34c-10486e78aeaf",
+        "x-amplitude-device-id": "7f704b5e-b4c6-4196-9b6e-e19cfee4c483",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -659,7 +659,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1a78bcac-f390-4eaa-939f-9fcd481684fb",
+        "x-amplitude-device-id": "c2a339cf-12d3-4cc8-ae47-ddadcccb605b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -677,7 +677,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9a9199ba-5a3e-45a5-836f-660a272cc570",
+        "x-amplitude-device-id": "2164722f-dc85-465c-b377-4b0ea6fcc055",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -695,7 +695,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "00c73a0c-45ec-438d-9761-a7c3812e4381",
+        "x-amplitude-device-id": "d29004e9-70f1-4d2f-88c4-9b3bbd5fec45",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -713,7 +713,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7eacd339-b281-4b29-8355-fae827c9c2bb",
+        "x-amplitude-device-id": "7ce37af0-49b8-41e6-b82d-83687b450c04",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -731,7 +731,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f2f5da3b-3cc5-4cf7-a611-963af2bce7a7",
+        "x-amplitude-device-id": "e3d154dc-7ac5-4072-baf5-3f9c67f6e2fa",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -749,7 +749,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "afe3130e-cf21-44ee-b611-588aa29c85aa",
+        "x-amplitude-device-id": "06c53ce9-8acb-4379-8e5d-cd4400f8afa7",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -767,7 +767,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "3787699c-9a4c-4c5d-a668-fdc148c76c6f",
+        "x-amplitude-device-id": "3bfde998-d316-4388-830f-dcd3c861ddaa",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -785,7 +785,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "799b0cad-22bd-4e14-898c-a527e8369686",
+        "x-amplitude-device-id": "650155c7-1564-45a4-82ef-97b939d60b92",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -803,7 +803,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9261b9d8-3a68-4a01-9a68-6b81757f7831",
+        "x-amplitude-device-id": "b545ea33-8e60-4032-b1a5-7abac9fcbc85",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -821,7 +821,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "4743d09f-8818-44b2-bb9f-a10a43e5574e",
+        "x-amplitude-device-id": "883c102a-2269-4f0b-8190-d79893aa1bb2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -839,7 +839,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "6fa27d7c-449a-43b7-9fb3-83ee3646102b",
+        "x-amplitude-device-id": "09da75b6-d1a0-4f07-a77a-00025958a17c",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -857,7 +857,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7b040ef3-be34-40c1-b3b6-37b1a7384d48",
+        "x-amplitude-device-id": "8afe329b-4835-43eb-aae4-9730306a4395",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -875,7 +875,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "ec2bc516-91df-4c43-9254-ee04de62a12d",
+        "x-amplitude-device-id": "ce34e6c7-312f-4a65-86e0-bc354b21cd41",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -893,7 +893,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1abff1af-00aa-4268-abc4-60f861382228",
+        "x-amplitude-device-id": "dd723fa0-b2e9-4e1f-8efd-c55a67fbd056",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -911,7 +911,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "792f7c89-8025-4422-b9d2-065739015d37",
+        "x-amplitude-device-id": "d171550c-587d-4b94-9394-0ffeff43530e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -929,7 +929,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "edd5890a-1bea-483e-a26e-46361bb79502",
+        "x-amplitude-device-id": "f842f59c-32bb-429b-a005-2e09ac4c3fa0",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -947,7 +947,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "cfadce5d-bdd1-46fc-9be9-e6a60da8aebd",
+        "x-amplitude-device-id": "418330a9-c543-4a4f-973c-25dfc594ba18",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -965,7 +965,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "64e80954-9847-4ba6-b1ce-1070621694b1",
+        "x-amplitude-device-id": "c3f84fa1-4f26-4766-82b5-23af40636487",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -983,7 +983,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "98e579b4-7e47-4e0b-9364-fd0f52043bac",
+        "x-amplitude-device-id": "8da441a3-6991-4b2b-abc8-85f3a83738bb",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1001,7 +1001,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "580c303e-8293-4183-a3f0-075d1b550b86",
+        "x-amplitude-device-id": "df87fcf3-155f-4518-9005-186cd563d1d6",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1019,7 +1019,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "a6250e34-58bc-44ab-b73b-c341cb30e736",
+        "x-amplitude-device-id": "cc0fdb83-1098-4d88-a19e-d156436c43e1",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1037,7 +1037,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9c490c4d-1d6a-4ae2-81c3-5cd62449ee14",
+        "x-amplitude-device-id": "5846f688-d1bc-4f0e-abbf-70d831bc0c25",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1055,7 +1055,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "20b99488-e1f8-4458-98c5-e952d8a06723",
+        "x-amplitude-device-id": "42e1fe26-aeeb-4081-a660-4eb50df07981",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1073,7 +1073,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1081acac-765c-4d45-8d82-0a6903331fc0",
+        "x-amplitude-device-id": "9df82a2b-f923-4605-9a30-dbb6304d1efb",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1091,7 +1091,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "20f1e8e4-a73e-47c8-9e4b-ba4507d00127",
+        "x-amplitude-device-id": "2a39f2da-da7e-4cf9-914b-cc63e06c93dc",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1109,7 +1109,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c4938678-a69a-4442-99b9-2cb05ed7c658",
+        "x-amplitude-device-id": "7af9bbbe-67c0-4dd6-b310-e456b9927053",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1127,7 +1127,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "8cc3cc34-157f-4fad-a3a6-f41bb74febb4",
+        "x-amplitude-device-id": "6138cbfd-c16a-4150-9e14-bce8c1409bd6",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1145,7 +1145,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2879ec43-befb-4fc1-9de1-250a14dcf78f",
+        "x-amplitude-device-id": "44697a6f-774b-468b-83dd-a833f45f39d9",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1163,7 +1163,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "46658459-bace-43d0-9b1f-11a52d9aa1fa",
+        "x-amplitude-device-id": "907011ba-b2a3-46b9-8290-c3a535fb84f5",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1181,7 +1181,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1a9321f8-e745-4b32-ad01-677c271441b2",
+        "x-amplitude-device-id": "74ef08d3-582e-4247-a6ab-7c9841c0dd1f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1199,7 +1199,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f5eb962e-928a-4736-9789-a6ce518586e6",
+        "x-amplitude-device-id": "6e3f4e36-d818-4b22-b1c3-70cd17ef832d",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1217,7 +1217,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "5bbc22a4-24e2-4439-af93-9c1891852731",
+        "x-amplitude-device-id": "cbb094e9-2800-4249-adae-26680a4f574a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1235,7 +1235,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "a6b6de93-0528-4ab4-93f7-d6922db05ff4",
+        "x-amplitude-device-id": "3dd2596e-eac1-4494-bd96-8a1dce8b3514",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1253,7 +1253,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9d413a26-ac33-40fe-adcb-93a2e878eaa3",
+        "x-amplitude-device-id": "a7532036-1d8e-417b-ba74-c87779fb1a5a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1271,7 +1271,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "be892d3b-8a19-4579-9f3c-2f56d0672f46",
+        "x-amplitude-device-id": "5fcc1605-18ff-496f-9f77-9e417932a89b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1289,7 +1289,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "23beb682-482e-4963-9240-84a62d949099",
+        "x-amplitude-device-id": "c3815f24-e82b-407b-ac2e-ae1ba4b417c9",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1307,7 +1307,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "41727820-1d4f-4027-beb5-2e85f27a847a",
+        "x-amplitude-device-id": "0f73f8a7-ae11-4f15-be39-91413b920b71",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1325,7 +1325,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "d3dabf0d-9d0a-47b4-9b9f-c8e3af89a3a1",
+        "x-amplitude-device-id": "9fedd043-7319-4c84-bd06-7d2a698069d6",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1343,7 +1343,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "61c1cbb4-5929-4d96-8bc8-c64307ba4a4b",
+        "x-amplitude-device-id": "0d8b121a-ebe4-4b3a-ad29-e2e12592da4a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1361,7 +1361,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7d07d479-bc77-441e-94db-4867223dad5a",
+        "x-amplitude-device-id": "8b55cff5-0a3b-44c2-ae6e-5033e966422a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1379,7 +1379,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2a4232d1-2db4-4c07-8d07-72afa6a4d097",
+        "x-amplitude-device-id": "0339dc73-5d3e-4665-834b-f60d893aa37c",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1397,7 +1397,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "e8482986-5d58-4ad4-a1c4-e4885698218c",
+        "x-amplitude-device-id": "2738b52e-a79b-4695-8ca9-ec921e1118a1",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1415,7 +1415,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "cab9bb2a-88a5-4c10-8298-812c1987b44a",
+        "x-amplitude-device-id": "698599e9-0e3f-4472-a952-33e644e34920",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1433,7 +1433,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "16c88163-b427-4d94-96ef-c512e33519d3",
+        "x-amplitude-device-id": "0ea7e6a9-3174-4dfa-b822-0f7dc09e395b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1451,7 +1451,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "d35158d2-7685-44b7-accd-624a33e26072",
+        "x-amplitude-device-id": "e81589b9-5e6b-4966-8688-a5c5a86ec214",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1469,7 +1469,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "6e6aa2bb-ceca-42bd-8a0d-a5ff97e6f2f4",
+        "x-amplitude-device-id": "8b8b55e4-e9aa-42da-ac36-7080185a71ff",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1487,7 +1487,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "4e28b49c-d92c-40cc-a834-b7acf3dffb5e",
+        "x-amplitude-device-id": "f7ad00ff-a4a4-4b51-a0d4-0efa33254f94",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1505,7 +1505,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2a19afce-7708-4887-af93-155d1bd16ac5",
+        "x-amplitude-device-id": "70e7f721-b78d-4f4e-95c2-8ce76745b736",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1523,7 +1523,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "59c8810e-bcc7-4d64-9645-a0c30506a5bb",
+        "x-amplitude-device-id": "6598e623-d7b4-4a5e-8ccc-e1ee1ddd2501",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1541,7 +1541,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "061f189b-225d-44e1-b98c-fab783a77da0",
+        "x-amplitude-device-id": "7150bc82-65a0-4fd1-87d8-a2c6d3ee6365",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1559,7 +1559,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "0a422abb-227f-4f9f-873d-173b3f476274",
+        "x-amplitude-device-id": "600b9762-26ff-410d-8c23-f90f3d89d03a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1577,7 +1577,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "fb003c77-cb1e-4898-9a9d-4d33300d96d3",
+        "x-amplitude-device-id": "7cd70501-f775-45dd-8cbc-53daba95d9da",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1595,7 +1595,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c134ad12-0b47-44c8-902d-9c0494f87d81",
+        "x-amplitude-device-id": "22e91f3f-12e3-4677-be65-25c996e01b1d",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1613,7 +1613,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1826b03d-9eff-438f-a364-9583f1596394",
+        "x-amplitude-device-id": "cc29d904-3529-4411-860d-564ebdf49a1b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1631,7 +1631,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f50d6f4a-ae45-4450-80de-a9b745d94baa",
+        "x-amplitude-device-id": "6fb77c5c-4ead-4e09-8ddc-00213f95f1bd",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1649,7 +1649,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "96c5d77d-1936-462d-be7c-f22d38b4d45c",
+        "x-amplitude-device-id": "7c417c2d-12fc-459f-b73b-f72700ca1d4d",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1667,7 +1667,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "87f1ee58-13f5-4afe-93be-7f571fb0529c",
+        "x-amplitude-device-id": "9e73387a-73f9-471c-9a99-b228178d98b4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1685,7 +1685,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "391700e8-6d7d-4ba7-8a7f-46d02ae1f55c",
+        "x-amplitude-device-id": "cf6f65dc-8d37-4e99-8288-e417827da028",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1703,7 +1703,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "a5af17dd-6b5d-4355-b322-5c5e8b5baa93",
+        "x-amplitude-device-id": "956ab17c-2860-4c7a-8ca3-3bee250f9dce",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1721,7 +1721,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "a16f9297-aeba-43cb-9947-e4573e284507",
+        "x-amplitude-device-id": "558bfd04-f01d-4737-9673-66dcd4b1dfc2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1739,7 +1739,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9c7c947c-0ad4-4087-b5dd-ff60c45e7dba",
+        "x-amplitude-device-id": "b0aecef5-b794-4c91-9eb7-2239770fce0d",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1757,7 +1757,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "cd4b4331-dc59-410c-bd83-5bcf0e11dd67",
+        "x-amplitude-device-id": "74668cc3-61e1-458f-a849-b0fe5ccee3b3",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1775,7 +1775,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "a0a269d0-570e-43a9-bef2-9c83089dd444",
+        "x-amplitude-device-id": "3024da59-3261-49eb-a92c-bfdcd608618a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1793,7 +1793,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "492eb819-6bf4-4ceb-8310-9f18d22a20cc",
+        "x-amplitude-device-id": "aa528039-df6f-4880-baf6-e96d703e9388",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1811,7 +1811,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "e387bced-89b5-4126-9d0e-c348bc2cd724",
+        "x-amplitude-device-id": "39dba258-106a-4e69-a018-43b763922fc0",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1829,7 +1829,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "bc331970-495e-4a47-b436-173759b83201",
+        "x-amplitude-device-id": "b7a6add6-5f1b-412b-86ce-27f5d2a03d2e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1847,7 +1847,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "86886865-22d5-48bb-a9a4-9ee64f5f5c1d",
+        "x-amplitude-device-id": "73cab6a1-7c83-4672-85b9-571180eeac8f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1865,7 +1865,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "134907ed-d938-4329-b13d-a4bf3ac2c329",
+        "x-amplitude-device-id": "608f812d-8abd-406d-8c33-05600040eec1",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1883,7 +1883,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "adaa3e9d-6606-4023-8cf6-0cf2eff29fdc",
+        "x-amplitude-device-id": "4f9e3cc3-255d-4ce3-af30-0ac2531ba432",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1901,7 +1901,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c995e4d0-9596-4ee9-a531-26f26fd21583",
+        "x-amplitude-device-id": "3caa5509-3c62-4403-b310-4480650d9b1e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1919,7 +1919,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "8d586efd-0924-4fef-ad3f-2180bddf9493",
+        "x-amplitude-device-id": "83f71ff9-27a1-4b4c-99fa-3cd9594acaff",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1937,7 +1937,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "205bf88b-107a-40c8-81c3-237b17dbe835",
+        "x-amplitude-device-id": "dd54fa41-2b47-4b33-8414-0df450e3d250",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1955,7 +1955,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "82655650-8dfb-445f-b047-d18db1a13bdf",
+        "x-amplitude-device-id": "5cac1783-f355-4b5b-b95b-5aabac2f5d96",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1973,7 +1973,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "966e428c-8f63-49ae-8b40-9f940d0680f9",
+        "x-amplitude-device-id": "0f9dd9ad-6e1a-4509-beef-1aaa35ea6c4e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -1991,7 +1991,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "94cb25d5-541b-4d2a-8c9e-b044158b44a4",
+        "x-amplitude-device-id": "677372a5-9abe-492d-97a1-e0c2f7d7f7b2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2009,7 +2009,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c0789f2f-c5f9-4d18-9e38-a46c47d02316",
+        "x-amplitude-device-id": "d399ad97-716f-4c6a-b96a-cc43c286e37f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2027,7 +2027,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "4045c40a-77b9-4bbb-b6f9-0ccbb745de43",
+        "x-amplitude-device-id": "39558c6c-516c-4178-8398-9576edc577e7",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2045,7 +2045,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "eed7bc79-1a7f-426e-8fb4-4284d6d4a39a",
+        "x-amplitude-device-id": "a6890491-aa3f-43c4-ac39-9305a4118006",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2063,7 +2063,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9a00442e-23b8-4811-9d54-fdbed60ca1b9",
+        "x-amplitude-device-id": "66cd3b28-9f09-4078-95e9-78f54f6f49ea",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2081,7 +2081,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2b5a53f3-d8a4-4766-9698-5e714f789591",
+        "x-amplitude-device-id": "453d47fd-54e7-4f7b-a74d-97555003190a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2099,7 +2099,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "bd900279-7e87-4a3c-abc5-1efd76f8dce5",
+        "x-amplitude-device-id": "d1621102-a287-4846-b1c3-c74b74484d46",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2117,7 +2117,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "082debdb-769c-44b1-828f-1917244fdb27",
+        "x-amplitude-device-id": "5d720c41-ca4b-45ce-9635-713d22a80b9c",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2135,7 +2135,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "0a9b9cbf-7e47-4b6c-94ba-01962fd453fe",
+        "x-amplitude-device-id": "d6cfe66b-af79-4d4c-b7fd-43c2b3c10561",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2153,7 +2153,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2ebb497d-5416-4c76-86c7-cf29125679ca",
+        "x-amplitude-device-id": "9faa5228-5a12-4327-b3ff-30148f6dce8b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2171,7 +2171,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "d6a5d6f3-add9-4be5-8f2b-258f374c8a09",
+        "x-amplitude-device-id": "951d50bd-8cf7-4121-8f46-c246bbaa60b7",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2189,7 +2189,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "0b0e0c90-7cba-46c2-96a1-8f47b7a39e98",
+        "x-amplitude-device-id": "a9cb84b8-556e-4859-b7fc-ef162e7452e4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2207,7 +2207,313 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "ef9ed3e6-4996-4b15-bda0-b6116ade22b8",
+        "x-amplitude-device-id": "4c7e30c5-9b95-4872-bd6a-27c17086f668",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied100",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!0d618232-7c59-43ad-9d1f-5040e661111f!cfbb754c-5ae9-4090-a61b-d3b1108ac56c",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "9c366e4f-6a79-438b-9e15-ca0eabb5c3dc",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied101",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!62a1375b-e956-4d25-b006-805639aa6a40!9a6fb346-fa84-4e4e-8e97-8c130dec4022",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "36330637-be7f-4f04-b27e-bbaf726b621a",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied102",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!9c82a602-8bbe-4eb9-acc1-c3a88f51d309!c2bdd674-0f66-4ad1-af45-b570638a5caa",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "495d0ac1-8c48-486b-b735-421813a7f46c",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied103",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!6fc9409d-946b-43aa-981f-6b55fadde965!6dcfc1f5-f34a-4a0d-88d5-ce27169cdf02",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "27c67fd9-b7ea-4f3b-9086-7c148fbf7dc2",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied104",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!2b4d1f88-8771-4c95-8774-ac36d1d692aa!5615ba96-cf00-4f4a-8716-4f22dbfc1f99",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "a76bb648-f021-4502-a5c7-aa0344cfb6ae",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied105",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!510d5762-1bf8-498b-b417-c50ec32e80a5!57543dbf-5e88-4c4e-a70e-818aac000d77",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "a5fc4856-41f1-488f-8203-ee0f1d94aff7",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied106",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!7b51c5a6-72df-4b71-9bae-a625bfe34ce3!c14cf9c9-3992-42af-81fc-1ff32fc00314",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "c36fd424-a9eb-4cc0-b36c-9ad54470d441",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied107",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!d27293d2-fc9a-4d2b-bb1a-8eae6dc4f55c!7a81ece8-0acb-4001-97c2-a9af6397d0e1",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "e9dddb7b-0f18-4ae5-8cdb-71cc4fb8e76c",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied110",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!9d61a594-2dac-46fd-acad-01b63cbc3203!305913d6-bf32-43d6-8cae-6c8a5d045e9c",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "d72a0c7f-a935-47ed-b1d2-c87602257449",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied111",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!54104a2f-6509-467c-953b-4efb99965f4f!78a38534-c6f3-45a4-a2c7-79308a59bfea",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "a671de6b-bc8f-4c95-920b-5c6370bbf4bc",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied112",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!7e27e940-a1db-4c87-ab0c-5b5259ae236e!cf47b626-88d5-47ea-a1bf-d6d82d37c2f5",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "dd76997b-d7eb-492e-9f83-058f349d6c6c",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied113",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!094ca68c-39f5-4936-a832-f28a9a7abc3f!74dc844b-89ef-431d-b5e0-c2cd2532290f",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "9d13b097-9527-4e6e-b562-81fb59578f8b",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied114",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!1fa01cb5-3f96-4d46-89c6-6123e5cf940f!88e5c855-4f07-4fd5-a56e-61d7cef466d6",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "fb330bd2-5dd4-48a3-bfc9-98d2fed6038d",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied115",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!8c5f7235-b7b9-41a8-9613-b107fe60e39f!4c12d443-1a15-41e4-99b6-d69b4630a7e4",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "ef910db9-688b-40a2-b00b-e2958b810393",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied116",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!0c267f04-2454-4330-8aa6-f4c1a461337c!f2ed9415-a8b7-4e81-acea-f84151aeedc2",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "cc04a1e7-7056-45fc-9333-3aa879a52099",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied117",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!28c87126-c67e-4784-ad3d-25bd256fd31b!3c59b308-f995-487f-940e-d2b3d8c17aca",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "28050724-146f-42d8-aef1-546c230dec93",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied118",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!15bf744d-7778-44de-9022-a31a9952e1db!81a0d5fa-c898-4228-945d-2930a1efd1d2",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "6a5951dc-4246-4d13-822e-96bbb409a452",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2225,7 +2531,151 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1e805253-25b2-4347-9776-490fac2d547f",
+        "x-amplitude-device-id": "d8aff0ee-dbe6-43ef-a028-81b857528849",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied121",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!6866e770-e95e-4ce7-a26a-b1444af98fa9!601b396d-f779-46b2-874f-7dea1f031939",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "b3322d5a-9efb-422f-99c5-8d481586ca37",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied122",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!d248c75e-0305-4a9d-8dbe-5f5384b250d4!01e0d55e-65e8-4778-b0c4-d600d1b26071",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "b6dd25a8-ed52-4a4a-a701-707fe0444717",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied123",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!18d9fa72-42d8-47de-9a3c-8f5dc1dab9e2!6a90be32-5b65-4f0b-b421-d0a9a088560f",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "87686cc2-3609-4e52-a7ca-233d5292033a",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied124",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!a2ea9c6f-6589-4f94-bbff-db20af85780d!abf53705-e557-4499-9577-96fa2245042a",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "df42302b-cb03-44b9-a440-a1305a47904e",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied125",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!9f03143f-227d-450b-af3a-3462f6ac64ce!23e4ace5-915d-4b1b-a6ec-22ceddcaf79f",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "683e392c-1c88-4880-a609-8f295e74740a",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied127",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!d70644b4-6cf9-49a9-b197-85f9f075de1e!a879fae5-d6cc-4463-9832-4cbbd67b1853",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "8641de98-ce65-421e-a290-222a63a080da",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied128",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!650bf177-5011-44fd-9a34-1ce001cb2fd3!669dbe0b-6221-4cb0-9b01-5d93286d7d19",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "d8c74040-c1f1-4e67-9c07-04568ee057a5",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied129",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!f4400edd-c0b3-4f41-a9fb-10ae1960d3b4!f14f8c2f-0c42-4a7b-875b-75102e65f3a8",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "bbebae74-b7b3-4202-96af-662fa6947ab4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2243,7 +2693,79 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "d462acfe-a3b7-40bf-8479-d93fd7316856",
+        "x-amplitude-device-id": "e6a4b99d-59aa-478d-a74f-3be42a8a8cf6",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied130",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!09198319-c6c6-4aa4-af54-58c4e358d8ec!3701fffd-a035-4a71-88a0-66f96a146541",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "58d4da37-1fcf-437a-9161-66a2f9929d1f",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied131",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!e020c65e-ad81-4ea4-8fd2-05cdc0f9da28!9ae21a93-b7ed-4bc9-a4fa-9b90e4e46e5d",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "e2244c03-c62d-460b-8378-061fb85ddfa6",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied133",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!02e8c06d-e7e2-44e7-b81f-e6fefe40d19f!475a0fd1-c3b1-4f16-88a3-904b97dc3f89",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "f0a306b9-c480-467f-825f-f51243ffa325",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied134",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!7e7093c8-7bc3-4dc2-8752-f0d2f33d7cc4!9b433a4b-2678-43c1-b9b0-829f71f64632",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "6821f8bd-572c-4865-8158-d9dc98c0c24e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2261,7 +2783,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "15490bc0-9831-4d6d-8ea1-ea1b235cad4c",
+        "x-amplitude-device-id": "581f1d5b-0a66-423c-b495-519b067645d2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2279,7 +2801,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7426ea5d-22dc-48c1-b38a-f9b9e7f835b7",
+        "x-amplitude-device-id": "3f42fbec-23eb-454e-b556-82f960cfd881",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2297,7 +2819,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "66637535-6835-422b-8686-73df11937b9b",
+        "x-amplitude-device-id": "cb887ef8-06c9-4151-a132-9a05adabba63",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2315,7 +2837,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2f862991-dfb5-4810-9eee-c4d7d0263f8e",
+        "x-amplitude-device-id": "5984ba15-41bf-461e-9286-b4b22248bf6c",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2333,7 +2855,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "ee48a67d-ff68-4c16-80e8-cef1be9a9e02",
+        "x-amplitude-device-id": "21295de6-5486-4c6c-833d-92af487ae5bc",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2351,7 +2873,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "27da14b8-4f19-4098-a0df-917f614db002",
+        "x-amplitude-device-id": "228c2cbb-af48-40b1-9d69-c5003f3ca04b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2369,7 +2891,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1de25bfe-9d52-4290-891b-9e782cd94c99",
+        "x-amplitude-device-id": "6020554c-96dd-4638-82eb-a219dfa44836",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2387,7 +2909,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "dae91285-4cc4-44a8-81ef-fe9d257d90bb",
+        "x-amplitude-device-id": "e7109ea5-d3c8-4950-81ef-50887f58117b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2405,7 +2927,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "077180d4-511f-4d4c-b78d-55bd4c328b80",
+        "x-amplitude-device-id": "ff1c5ae5-b044-4b74-84cb-e25aacb41ac5",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2423,7 +2945,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "157a7dc1-a166-4a6b-8bbf-0cab7405a183",
+        "x-amplitude-device-id": "a65dd7cb-f4c8-4235-a425-38dc3a883fcf",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2441,7 +2963,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "12e5211c-f424-4346-ac20-49d0da6ad14e",
+        "x-amplitude-device-id": "6fe48aee-657e-4166-8a10-702ba23a40c4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2459,7 +2981,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "76b77a1c-aed5-479d-a8e6-2209470b7560",
+        "x-amplitude-device-id": "9ed82ebf-03a3-427a-b152-418ac54ec2fd",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2477,7 +2999,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "aab3d6c8-b17c-4f87-b38f-64cf2aeb3fcb",
+        "x-amplitude-device-id": "228593e5-b683-46d9-a027-d7f51060da8c",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2495,7 +3017,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "687c81e0-7f5c-4826-a1c8-3345caab05cf",
+        "x-amplitude-device-id": "a79d0968-0502-4dbf-85f5-9dec7d61c77f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2513,7 +3035,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "abe0142a-bfd5-412f-afde-e7231cc61cb6",
+        "x-amplitude-device-id": "b907225c-a8c7-4ddb-99a4-3de0e891588d",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2531,7 +3053,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f8dd11eb-ca81-4bfd-8c4d-c74b1a48909d",
+        "x-amplitude-device-id": "3ad13d5c-1ed1-4e42-b8c5-cf7b5b12845d",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2549,7 +3071,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "55494ecf-f7a5-4c75-91f4-4fe945a1f313",
+        "x-amplitude-device-id": "4bb1bcdb-193a-4025-90d4-a66a6a163e29",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2567,7 +3089,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "ab6386db-c4e6-407a-b7c5-2edb4fb08604",
+        "x-amplitude-device-id": "88e7ccd7-3107-4ffb-b2a3-3cf7f661dd92",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2585,7 +3107,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "26d3e15d-fb8d-4fdf-8d19-ee502b661997",
+        "x-amplitude-device-id": "e785b0be-8b57-4634-93bb-190170afa165",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2603,7 +3125,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "b36d0d40-4db1-47df-92a3-567424473863",
+        "x-amplitude-device-id": "4a696b92-fb57-4d2d-9fc9-a146fc3e9159",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2621,7 +3143,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "6fd7c60f-b5da-4019-a010-47b024d8330e",
+        "x-amplitude-device-id": "80dfae77-2149-4880-9d59-ba4d18f1f915",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2639,7 +3161,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "be34f77f-e407-4124-9322-758cd2b9c45a",
+        "x-amplitude-device-id": "ae212c67-ba9b-454f-804e-1d37fbca3e4f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2657,7 +3179,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "cbab1cc6-8a3b-45d3-8d2d-c5b5d86b9f74",
+        "x-amplitude-device-id": "706b886f-33c5-4622-a0ff-191a94225e6a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2675,7 +3197,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f04c1eb1-fb6f-4ee8-9db2-470354839119",
+        "x-amplitude-device-id": "811bbc3c-d33e-4004-8675-ccf445261461",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2693,7 +3215,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "377648d3-8f89-4b46-83b7-bea6033ed384",
+        "x-amplitude-device-id": "c3498bc4-b3de-45f2-afc6-debb3d128e2b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2711,7 +3233,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "d4a5ebf6-d4db-45ed-81d8-303aaa865c37",
+        "x-amplitude-device-id": "b8eba3be-5a95-42d9-846a-eabbd77a8755",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2729,7 +3251,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "eaa9051c-a982-44ae-842f-1710d0321b80",
+        "x-amplitude-device-id": "90e6d9b6-28b6-41a2-ab4d-7db8bfcef165",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2747,7 +3269,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "cd7c222b-073b-4380-8371-52d25d95304c",
+        "x-amplitude-device-id": "03952db9-fd1f-4816-a16c-7391c2bfc808",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2765,7 +3287,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "540a0aa0-14d6-4b68-a88d-b465f3152754",
+        "x-amplitude-device-id": "7aab31e0-9786-4fee-812a-d67fbc3e1c59",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2783,7 +3305,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "52dab272-18c0-412e-85e2-18c594b8b42e",
+        "x-amplitude-device-id": "f5a54631-f066-4b9c-b8b4-328cef85ac12",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2801,7 +3323,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "b70eb8f9-d881-4de7-990b-2d0a42df8f07",
+        "x-amplitude-device-id": "050fcb6e-9f8d-4fef-86a3-ec097a91eab3",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2819,7 +3341,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "328d723b-6b73-4792-a63f-9a293f8fa513",
+        "x-amplitude-device-id": "b25ff7c3-5a78-4d42-aa58-54afa07fb870",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2837,7 +3359,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9c1bc4a9-47f0-48a6-acb1-203021fd90d1",
+        "x-amplitude-device-id": "958e482f-02d0-4b6f-a69a-8089c9a33ba1",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2855,7 +3377,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "617bd879-6462-4f70-b79a-0116489684b9",
+        "x-amplitude-device-id": "3dc7a656-93de-4afc-80d7-514d033acb4d",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2873,7 +3395,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "f479d09c-fffd-4bc2-98b4-0ba1a9138c01",
+        "x-amplitude-device-id": "c71e05b6-b1ab-491c-b521-2ce644877a1a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2891,7 +3413,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "a597c5c8-4907-4d55-9f09-9528a672ba35",
+        "x-amplitude-device-id": "2903bb07-f694-4965-9be5-9b276b0ee214",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2909,7 +3431,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "3407bd17-e316-4dae-a71e-82bcc6ddb318",
+        "x-amplitude-device-id": "4bb9c73e-7f1e-4352-90ad-fdff958e2f56",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2927,7 +3449,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "da5c9d0f-524f-4ad1-ad47-6e1c3763f821",
+        "x-amplitude-device-id": "c8a0a02c-a35c-46bf-bfd3-d9a061610e8b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2945,7 +3467,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c33544b2-f84b-4883-b209-1c0fdc7b6111",
+        "x-amplitude-device-id": "aa0b275f-c4ac-4b4d-8005-8caa0f3556ed",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2963,7 +3485,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "17197665-b93e-4b55-b116-591793665f90",
+        "x-amplitude-device-id": "af24ca43-0d1c-4d32-85d2-fe9540d0aad2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2981,7 +3503,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7615ba35-7dfb-4752-a46e-7f5599dad5a4",
+        "x-amplitude-device-id": "1b77b665-859a-445c-bcaa-77ee78a18ea3",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -2999,7 +3521,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "fb68c992-fa9f-462a-a578-7991d3002f13",
+        "x-amplitude-device-id": "9f170964-84d3-47a8-ad1e-2d3fb8e6dd56",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3017,7 +3539,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "21364119-b438-4c20-94c0-be29878a36d6",
+        "x-amplitude-device-id": "2ed0b202-3e9f-42e9-baf4-f63749386d05",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3035,7 +3557,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c9a80006-0a17-4364-b1b2-7fa08e11054a",
+        "x-amplitude-device-id": "a2c74a49-edcc-4d6e-88fc-00b90e7472be",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3053,7 +3575,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "0588cac3-5395-4851-85ed-3600a223e2dc",
+        "x-amplitude-device-id": "5ab090d8-b6ba-49e8-96ca-8644e84f26a0",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3071,7 +3593,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "afc4cc8e-98ba-4063-be27-ae7db0a99504",
+        "x-amplitude-device-id": "60eed1fe-c1ef-4738-a9c9-4e58077f74e3",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3089,7 +3611,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1a4ea430-b96d-4bd6-95dc-8ec7e6203a5a",
+        "x-amplitude-device-id": "751568a9-6450-45cc-a405-b41c95aa417e",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3107,7 +3629,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "17a66ba0-d410-42b2-86f8-7037a45563cd",
+        "x-amplitude-device-id": "0b591a93-f60d-4d0c-a170-17aaac544d98",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3125,7 +3647,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "06c47a11-7be4-4dcc-a513-34ed17a02123",
+        "x-amplitude-device-id": "bee5aae2-f259-4fad-a32f-1878c3a5669a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3143,7 +3665,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "bfb63c7d-c74d-4920-a4c3-ce5a87d02348",
+        "x-amplitude-device-id": "c24befc6-e4b2-4d42-bed4-3a3fe2e00f7b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3161,7 +3683,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "97c0a1a6-1110-4313-85fe-b728b9252e13",
+        "x-amplitude-device-id": "60b7c786-d965-447a-8e9e-f62eb232a6f4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3179,7 +3701,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "dc2d9295-6292-4f61-a7ba-ed3d631b60a4",
+        "x-amplitude-device-id": "539a2dd8-cec9-48c3-9503-c6f9c1d45559",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3197,7 +3719,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "81eb2724-ec9c-4b58-992e-0f1676db7bd9",
+        "x-amplitude-device-id": "ccd88244-fd81-4787-9304-8285ed21e846",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3215,7 +3737,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2553d7ae-c30c-4d48-a481-6738b87354e1",
+        "x-amplitude-device-id": "de4deacc-0a9b-43d5-b293-4df4157b8c71",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3233,7 +3755,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "529b488f-120c-4a40-b96e-ff1bf219a2c0",
+        "x-amplitude-device-id": "ad008a4f-e3c7-43b6-9408-d00a1bfc8783",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3251,7 +3773,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "2db3d245-3676-4427-9e56-6b93f93b39fc",
+        "x-amplitude-device-id": "6fa14bb2-8734-405f-bfa8-338554591e80",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3269,7 +3791,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "7884e15d-bee8-40c4-ab29-9f359cf31b1e",
+        "x-amplitude-device-id": "28e22364-bd51-4dab-9b04-ad4535517da2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3287,7 +3809,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "919799d4-ca3d-4e69-a304-e871e8ca9e26",
+        "x-amplitude-device-id": "619783ac-4e50-4301-80e3-353fe6aaaa57",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3305,7 +3827,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "4eda190f-5455-42a5-a431-61431ed98696",
+        "x-amplitude-device-id": "bdd21894-fc0b-45ad-9a2a-a5eb9d22e20b",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3323,7 +3845,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c5440437-2eb8-4ec0-8d0c-7c46d3d7d178",
+        "x-amplitude-device-id": "80f4ee06-e905-45db-b5f3-a0452a8ba7d0",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3341,7 +3863,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c61d908e-3962-453c-a6c6-8175e8867b72",
+        "x-amplitude-device-id": "b0df9bd1-debe-402c-9dbf-a05843d6c333",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3359,7 +3881,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "1c111d70-3343-4983-98ff-e38d5901099f",
+        "x-amplitude-device-id": "f84e58f8-2ae5-40a2-b17f-c2c13006aa49",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3377,7 +3899,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "8d7f7993-2abb-421f-b8ca-b4db38547ad1",
+        "x-amplitude-device-id": "df47bf85-4faf-48e9-ae8d-14d5305505c5",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3395,7 +3917,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "b226db04-3c5b-45c5-a478-0a087f4c0ca6",
+        "x-amplitude-device-id": "5a9eee0c-914f-47b1-9d0b-012367a376a7",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3413,7 +3935,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "0bba6768-56e8-43f5-af74-b4d0f0b99994",
+        "x-amplitude-device-id": "b77660d1-6fed-42f5-90fe-55a01c3b7a48",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3431,7 +3953,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "ef64dbb8-ca7c-45d1-986d-6f6ec59a5094",
+        "x-amplitude-device-id": "7c22afa7-7ae4-47c3-b267-2ee62a043b83",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3449,7 +3971,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "e379b3fc-ccd5-4372-a957-b15548baf6cc",
+        "x-amplitude-device-id": "1f52b605-d136-41ce-9a94-81fcaedbcff7",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3467,7 +3989,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "6b2ad866-40d5-482f-96d2-60b8e19b6131",
+        "x-amplitude-device-id": "3c58fb2c-4108-4ed2-b960-4e0602aca1cd",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3485,7 +4007,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "167c4468-3246-4787-abf6-a4f16b4da87d",
+        "x-amplitude-device-id": "5f4010c7-03d1-46de-9cab-4f7ed626ee11",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3503,7 +4025,97 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "e34b1977-1376-43ae-bf2c-d859f38021cf",
+        "x-amplitude-device-id": "15b1664c-1207-4faf-8502-00d3b956a495",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied94",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!7755d34a-fff2-47b6-9f2f-56d8356b235d!1a2c9b51-15c4-4460-bc19-e264fd0f74ff",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "a36a1fc1-5351-4f20-8e2a-870067cdfe4b",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied95",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!6bd06f29-7607-4d0f-b073-4b4e3efc8f02!a16beca0-8db3-4d08-b5eb-3105e9e4e239",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "c75741e6-17f2-4dcf-8198-762406783d20",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied96",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!155bf6a6-c955-46a3-a73c-d2955b7ef1eb!108de834-58e3-4197-8043-6ce745090392",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "f633356b-467a-4940-bee7-28a6e4783001",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied98",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!54a260fb-eaf2-4e7d-b883-e22e333b50a0!53ea33f4-acb5-42da-ae33-c1711189b2a2",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "ea8c2bef-8a1a-46d4-8b06-7c45139a343e",
+        "x-client-location": "scorecard",
+        "x-vidiq-client": "ext vch/3.151.0"
+      }
+    }
+  },
+  {
+    "name": "proxied99",
+    "extension": {
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": "Bearer UKP!5d7b823e-8644-48dd-be20-7729db61aed3!4d00fc38-72d5-46d9-823a-c56b62b45594",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-amplitude-device-id": "18abd420-c4aa-4a54-b132-f61bd34ea6aa",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3521,7 +4133,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "119a228f-e93c-46cc-ba89-730ca2bf2d7a",
+        "x-amplitude-device-id": "4fe07031-ce2b-4596-ac5b-8254c3aae6d5",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3539,7 +4151,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "c5fcc64e-a4cf-471d-b24b-e105d5905eb0",
+        "x-amplitude-device-id": "d6ca3465-5267-4ee7-8e7f-ab7a757059fc",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3557,7 +4169,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "b6a36ec8-1c97-4252-b934-41fb59c705cf",
+        "x-amplitude-device-id": "cd93c273-f6fb-47ff-826e-ee3b0fa3cba7",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3575,7 +4187,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "810a8b52-6718-4bbe-a3d7-24e483a95431",
+        "x-amplitude-device-id": "c54ed9cf-a01e-4e72-a6c2-63fee091301f",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3593,7 +4205,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "dfc123b2-d1ad-4c05-8c10-e356b4b3f664",
+        "x-amplitude-device-id": "b4ee628f-3af1-485d-a7ba-93d1a02dc5f3",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3611,7 +4223,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "8901266c-c79a-4612-bdb5-9d97a7304110",
+        "x-amplitude-device-id": "9468518d-eeef-4ad9-8d9c-d151fb14a88a",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3629,7 +4241,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "33197b0f-ce73-44b1-99aa-6265b9a18446",
+        "x-amplitude-device-id": "23b7e65c-18ed-4f61-8b6c-e88d070761a2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3647,7 +4259,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "9dbe846a-0e5b-4e75-b493-7c4a4de66d7d",
+        "x-amplitude-device-id": "5ac1548d-e28c-4b8f-a6ea-2cfd1b24a141",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3665,7 +4277,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "49a2408d-d0ae-47a2-ac63-436b48a79e73",
+        "x-amplitude-device-id": "e10b0bdb-1496-40f1-9835-c5e7804f330c",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3683,7 +4295,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "4b4eaa5d-215f-42f9-9f6f-392dcbb8a998",
+        "x-amplitude-device-id": "0dd1e4e6-483e-43b3-9b21-125545bce4b2",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3701,7 +4313,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "a5938d64-fd51-4862-8c5b-348dcbb2db30",
+        "x-amplitude-device-id": "0b231606-6853-4c9a-92d3-05ea6df84fa6",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3719,7 +4331,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "4e461d44-7c43-4452-b3cb-b7c97c7d2787",
+        "x-amplitude-device-id": "1e686955-13dd-4d7c-917f-e48bf464c9c5",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3737,7 +4349,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "6ec465fd-348a-4976-9abd-5366d8b6c1c4",
+        "x-amplitude-device-id": "a05f7428-414b-4e78-9ea2-81e7417e0e86",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3755,7 +4367,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "061ec43c-a709-4f1b-8e6a-e602e50ae637",
+        "x-amplitude-device-id": "839d279d-f359-474a-a1a7-c5974072a5dd",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
@@ -3773,7 +4385,7 @@
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-        "x-amplitude-device-id": "54b2aea7-3771-4a93-bec5-ff52a5cc3d6f",
+        "x-amplitude-device-id": "f51f795e-ba11-43f5-a86b-e9ca527e65e4",
         "x-client-location": "scorecard",
         "x-vidiq-client": "ext vch/3.151.0"
       }
