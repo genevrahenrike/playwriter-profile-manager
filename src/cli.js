@@ -19,6 +19,25 @@ const chromiumImporter = new ChromiumImporter();
 // ProfileLauncher will be created only when needed to avoid loading all systems
 let profileLauncher = null;
 
+// Global defensive error handlers to ensure we never quit without diagnostics
+process.on('unhandledRejection', (reason, promise) => {
+    const msg = reason instanceof Error ? (reason.stack || reason.message) : String(reason);
+    console.error(chalk.red('[UnhandledRejection]'), msg);
+    console.error(chalk.yellow('Context: This may happen during proxy IP checks. Review recent logs above (e.g., "Trying IP service ...").'));
+});
+
+process.on('uncaughtException', (err) => {
+    const msg = err && err.stack ? err.stack : (err && err.message ? err.message : String(err));
+    console.error(chalk.red('[UncaughtException]'), msg);
+    console.error(chalk.yellow('Context: A fatal error occurred, likely during network/proxy requests. The process will exit with code 1.'));
+    // Prefer setting exitCode so upstream can decide when to exit; Node will still terminate after an uncaught exception.
+    process.exitCode = 1;
+});
+
+process.on('multipleResolves', (type, promise, reason) => {
+    console.error(chalk.yellow('[MultipleResolves]'), type, reason && (reason.stack || reason.message || String(reason)));
+});
+
 // Helper function to get ProfileLauncher instance
 function getProfileLauncher(options = {}) {
     if (!profileLauncher) {
@@ -1247,6 +1266,405 @@ program
         }
     });
 
+// Batch account refresh for existing profiles (VidIQ app session/state check)
+program
+    .command('refresh')
+    .description('Batch refresh existing profiles by opening VidIQ app, detecting token refresh or login-required state, and exporting captured requests')
+    .option('--all', 'Process all profiles')
+    .option('--prefix <prefix>', 'Filter profiles by name prefix')
+    .option('--limit <n>', 'Maximum number of profiles to process (0 = no limit)', '0')
+    .option('--earliest', 'Process the earliest-used profile only')
+    .option('--latest', 'Process the latest-used profile only')
+    .option('--headless', 'Run in headless mode')
+    .option('--timeout <ms>', 'Per-profile timeout window (ms)', '120000')
+    .option('--captcha-grace <ms>', 'Extra grace if CAPTCHA is present (ms)', '45000')
+    .option('--disable-images', 'Disable image loading for faster proxy performance')
+    .option('--disable-proxy-wait-increase', 'Disable proxy-mode wait time increases (use normal timeouts with proxies)')
+    // Proxy options (re-use same flags as other commands)
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
+    .option('--proxy-start <label>', 'Proxy label to start rotation from (skip already-used proxies)')
+    .option('--proxy-type <type>', 'Proxy type filter: http')
+    .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fast but may allow duplicate IPs)')
+    .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
+    .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
+    .action(async (options) => {
+        const resultsDir = path.resolve('./automation-results');
+        await fs.ensureDir(resultsDir);
+        const runStamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const resultsFile = path.join(resultsDir, `refresh-${runStamp}.jsonl`);
+
+        const writeResult = async (obj) => {
+            const line = JSON.stringify({ timestamp: new Date().toISOString(), ...obj });
+            await fs.appendFile(resultsFile, line + '\n');
+        };
+
+        // Resolve target profiles
+        const pm = new ProfileManager();
+        let allProfiles = await pm.listProfiles();
+
+        const pickEarliest = () => {
+            const arr = [...allProfiles];
+            arr.sort((a, b) => {
+                const au = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
+                const bu = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
+                if (au !== bu) return au - bu;
+                const ac = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const bc = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return ac - bc;
+            });
+            return arr[0] || null;
+        };
+
+        const pickLatest = () => {
+            const arr = [...allProfiles];
+            arr.sort((a, b) => {
+                const au = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
+                const bu = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
+                if (au !== bu) return bu - au;
+                const ac = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const bc = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return bc - ac;
+            });
+            return arr[0] || null;
+        };
+
+        let targets = [];
+
+        if (options.earliest) {
+            const p = pickEarliest();
+            if (p) targets.push(p);
+        } else if (options.latest) {
+            const p = pickLatest();
+            if (p) targets.push(p);
+        } else if (options.all || options.prefix) {
+            let filtered = allProfiles;
+            if (options.prefix) {
+                filtered = filtered.filter(p => typeof p.name === 'string' && p.name.startsWith(options.prefix));
+            }
+            // Stable order: sort by name
+            filtered.sort((a, b) => a.name.localeCompare(b.name));
+            targets = filtered;
+        } else {
+            // Default: spot-check earliest and latest if no selector given
+            const e = pickEarliest();
+            const l = pickLatest();
+            if (e) targets.push(e);
+            if (l && (!e || l.id !== e.id)) targets.push(l);
+            console.log(chalk.dim('No --all or --prefix specified; defaulting to spot-check earliest and latest profiles.'));
+        }
+
+        // Apply limit if provided
+        const limit = parseInt(options.limit, 10) || 0;
+        if (limit > 0 && targets.length > limit) {
+            targets = targets.slice(0, limit);
+        }
+
+        if (targets.length === 0) {
+            console.log(chalk.yellow('No profiles selected for refresh.'));
+            return;
+        }
+
+        // Proxy-aware defaults
+        const hasProxyOptions = options.proxyStrategy || options.proxyStart || options.proxy;
+        const perRunTimeout = parseInt(options.timeout, 10) || (hasProxyOptions ? 180000 : 120000);
+        const captchaGrace = parseInt(options.captchaGrace, 10) || (hasProxyOptions ? 60000 : 45000);
+
+        if (hasProxyOptions) {
+            console.log(`🌐 Proxy mode detected - using extended timeouts:`);
+            console.log(`   Per-profile timeout: ${perRunTimeout/1000}s`);
+            console.log(`   CAPTCHA grace: ${captchaGrace/1000}s`);
+        }
+
+        const analyzeCaptured = (captured) => {
+            const result = {
+                success: false,
+                reason: null,
+                signals: [],
+                api2xxCount: 0
+            };
+
+            if (!Array.isArray(captured) || captured.length === 0) return result;
+
+            // Count api.vidiq.com 2xx responses
+            result.api2xxCount = captured.filter(r =>
+                r.type === 'response' &&
+                [200, 201].includes(r.status) &&
+                typeof r.url === 'string' &&
+                r.url.includes('api.vidiq.com/')
+            ).length;
+
+            // Look for app-auth capture signals
+            for (const r of captured) {
+                if (r.type === 'response' && (r.hookName === 'vidiq-app-capture' || r.hookName === 'vidiq-capture')) {
+                    const url = r.url || '';
+                    const sigs = (r.custom && Array.isArray(r.custom.signals)) ? r.custom.signals : [];
+                    if (sigs.includes('token_refresh_success') && [200, 201].includes(r.status)) {
+                        result.success = true;
+                        result.reason = 'token_refresh';
+                        result.signals = sigs;
+                        return result;
+                    }
+                    if (sigs.includes('signin_success') && [200, 201].includes(r.status)) {
+                        result.success = true;
+                        result.reason = 'signin_success';
+                        result.signals = sigs;
+                        return result;
+                    }
+                    if (sigs.includes('session_validated') && [200, 201].includes(r.status)) {
+                        result.success = true;
+                        result.reason = 'session_valid';
+                        result.signals = sigs;
+                        return result;
+                    }
+                    // Fallback: explicit API endpoints
+                    if ([200, 201].includes(r.status) && typeof url === 'string') {
+                        if (url.includes('/users/me')) {
+                            result.success = true;
+                            result.reason = 'session_valid';
+                            return result;
+                        }
+                        if (url.includes('/token') || url.includes('/auth')) {
+                            result.success = true;
+                            result.reason = 'token_refresh';
+                            return result;
+                        }
+                        if (url.includes('/signin') || url.includes('/login')) {
+                            result.success = true;
+                            result.reason = 'signin_success';
+                            return result;
+                        }
+                    }
+                }
+            }
+
+            // Soft success: plenty of API activity (e.g., dashboard streaming)
+            if (result.api2xxCount >= 5) {
+                result.success = true;
+                result.reason = 'api_activity_detected';
+            }
+
+            return result;
+        };
+
+        const detectLoginPage = async (page) => {
+            try {
+                // Quick wait to allow client-side router to mount
+                await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
+                const url = page.url();
+
+                const emailSel = 'input[type="email"], input[name="email"], input[data-testid="form-input-email"]';
+                const passwordSel = 'input[type="password"], input[name="password"], input[data-testid="form-input-password"]';
+                const continueSel = 'button:has-text("Continue"), a:has-text("Continue"), button:has-text("Next"), [data-testid*="continue"]';
+
+                const emailCount = await page.locator(emailSel).count().catch(() => 0);
+                const pwCount = await page.locator(passwordSel).count().catch(() => 0);
+                const contCount = await page.locator(continueSel).count().catch(() => 0);
+
+                let loginRequired = false;
+                let flow = 'unknown';
+
+                // Only consider login on app/auth domains
+                if (/\.vidiq\.com/i.test(url)) {
+                    if (emailCount > 0 || pwCount > 0) {
+                        loginRequired = true;
+                        if (emailCount > 0 && pwCount === 0 && contCount > 0) {
+                            flow = 'email_first';
+                        } else if (emailCount > 0 && pwCount > 0) {
+                            flow = 'email_password_same_page';
+                        } else if (pwCount > 0) {
+                            flow = 'password_only_visible';
+                        }
+                    }
+                }
+
+                return { loginRequired, flow, url };
+            } catch (_) {
+                return { loginRequired: false, flow: 'unknown', url: '' };
+            }
+        };
+
+        console.log(chalk.cyan(`🔄 Refreshing ${targets.length} profile(s)`));
+        console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
+
+        let processed = 0;
+        let successes = 0;
+
+        for (const profile of targets) {
+            processed += 1;
+            console.log(chalk.blue(`\n▶️  Refresh ${processed}/${targets.length}: ${profile.name}`));
+
+            const launcher = new ProfileLauncher(pm, {});
+            let sessionId = null;
+            let exportedPath = null;
+
+            try {
+                const launchOptions = {
+                    browserType: 'chromium',
+                    headless: !!options.headless,
+                    // Disable autofill monitoring for refresh flows to avoid interacting with login pages
+                    enableAutofillMonitoring: false,
+                    enableAutomation: false,
+                    enableRequestCapture: true,
+                    autoCloseOnSuccess: false,
+                    autoCloseOnFailure: false,
+                    autoCloseTimeout: 0,
+                    disableImages: options.disableImages,
+                    disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                    // Proxy options
+                    proxyStrategy: options.proxyStrategy,
+                    proxyStart: options.proxyStart,
+                    proxyType: options.proxyType,
+                    skipIpCheck: !!options.skipIpCheck,
+                    ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,
+                    ipCheckRetries: parseInt(options.ipCheckRetries) || 3
+                };
+
+                const res = await launcher.launchProfile(profile.id, launchOptions);
+                sessionId = res.sessionId;
+
+                // Navigate to VidIQ dashboard
+                const page = res.page;
+                console.log(chalk.dim('↪️  Navigating to https://app.vidiq.com/dashboard ...'));
+                try {
+                    await page.goto('https://app.vidiq.com/dashboard', { waitUntil: 'domcontentloaded', timeout: Math.min(perRunTimeout, 45000) });
+                } catch (navErr) {
+                    console.log(chalk.yellow(`⚠️  Navigation warning: ${navErr.message}`));
+                }
+
+                // Monitor for success or login-required
+                const start = Date.now();
+                let outcome = { success: false, reason: null, signals: [], api2xxCount: 0 };
+                let loginProbeSaved = false;
+                let loginFlow = 'unknown';
+                let loginDetected = false;
+
+                const probeAndSnapshotLogin = async () => {
+                    const probe = await detectLoginPage(page);
+                    loginDetected = probe.loginRequired;
+                    loginFlow = probe.flow;
+                    if (loginDetected && !loginProbeSaved) {
+                        // Save HTML and screenshot sample for later analysis
+                        try {
+                            const samplesDir = path.join(resultsDir, 'login-samples');
+                            await fs.ensureDir(samplesDir);
+                            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+                            const base = `${profile.name}-${ts}`;
+                            const htmlPath = path.join(samplesDir, `${base}.html`);
+                            const pngPath = path.join(samplesDir, `${base}.png`);
+                            let html = '';
+                            try { html = await page.content(); } catch (_) {}
+                            await fs.writeFile(htmlPath, `<!-- URL: ${probe.url} -->\n${html}`);
+                            try { await page.screenshot({ path: pngPath, fullPage: true }); } catch (_) {}
+                            console.log(chalk.yellow(`📝 Saved login sample: ${htmlPath}`));
+                            console.log(chalk.yellow(`📸 Saved login screenshot: ${pngPath}`));
+                        } catch (e) {
+                            console.log(chalk.yellow(`⚠️  Could not save login sample: ${e.message}`));
+                        }
+                        loginProbeSaved = true;
+                    }
+                };
+
+                // Initial quick probe after navigation
+                await probeAndSnapshotLogin();
+
+                while (true) {
+                    const captured = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                    outcome = analyzeCaptured(captured);
+                    if (outcome.success) break;
+
+                    const elapsed = Date.now() - start;
+
+                    // If likely on login page and no success yet, leave as login-required soon
+                    if (!outcome.success && !loginProbeSaved && elapsed > 3000) {
+                        await probeAndSnapshotLogin();
+                        if (loginDetected) {
+                            outcome.success = false;
+                            outcome.reason = 'login_required';
+                            break;
+                        }
+                    }
+
+                    // CAPTCHA grace handling (heuristic)
+                    let captchaLikely = false;
+                    try {
+                        const pages = res.context.pages();
+                        for (const p of pages) {
+                            const a = await p.locator('iframe[src*="recaptcha"], div.g-recaptcha').count().catch(() => 0);
+                            const b = await p.locator('iframe[src*="hcaptcha"], div.h-captcha').count().catch(() => 0);
+                            if (a > 0 || b > 0) { captchaLikely = true; break; }
+                        }
+                    } catch (_) {}
+
+                    const effective = captchaLikely ? (perRunTimeout + captchaGrace) : perRunTimeout;
+                    if (perRunTimeout > 0 && elapsed >= effective) {
+                        outcome.success = false;
+                        outcome.reason = captchaLikely ? 'timeout_with_captcha' : 'timeout';
+                        break;
+                    }
+
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+
+                // Export captured requests (best-effort)
+                try {
+                    const exp = await launcher.requestCaptureSystem.exportCapturedRequests(sessionId, 'jsonl');
+                    exportedPath = exp?.filePath || null;
+                } catch (_) {}
+
+                // Close
+                await launcher.closeBrowser(sessionId, { clearCache: false }).catch(() => {});
+
+                const resultLine = {
+                    runId: `${profile.id}-${runStamp}`,
+                    profileId: profile.id,
+                    profileName: profile.name,
+                    success: outcome.success,
+                    reason: outcome.reason,
+                    signals: outcome.signals || [],
+                    api2xxCount: outcome.api2xxCount || 0,
+                    loginRequired: outcome.reason === 'login_required',
+                    loginFlow: outcome.reason === 'login_required' ? loginFlow : undefined,
+                    captureExport: exportedPath || undefined
+                };
+
+                await writeResult(resultLine);
+
+                if (outcome.success) {
+                    successes += 1;
+                    const label = outcome.reason === 'token_refresh' ? 'Token refreshed' :
+                                  outcome.reason === 'signin_success' ? 'Signin OK' :
+                                  outcome.reason === 'session_valid' ? 'Session valid' :
+                                  outcome.reason === 'api_activity_detected' ? 'API active' : 'Success';
+                    console.log(chalk.green(`✅ ${label} for ${profile.name} (api2xx=${resultLine.api2xxCount})`));
+                } else if (outcome.reason === 'login_required') {
+                    console.log(chalk.yellow(`🔐 Login required for ${profile.name} (${loginFlow})`));
+                    console.log(chalk.dim('Saved login page sample for analysis. Credentials-based autofill can be added later.'));
+                } else {
+                    console.log(chalk.red(`❌ Refresh failed for ${profile.name}: ${outcome.reason}`));
+                }
+            } catch (err) {
+                console.error(chalk.red(`💥 Refresh error for ${profile.name}: ${err.message}`));
+                if (sessionId) {
+                    try { await launcher.closeBrowser(sessionId, { clearCache: false }); } catch (_) {}
+                }
+                await writeResult({
+                    runId: `${profile.id}-${runStamp}`,
+                    profileId: profile.id,
+                    profileName: profile.name,
+                    success: false,
+                    reason: 'error',
+                    error: err.message
+                });
+            } finally {
+                try { await profileLauncher?.closeAllBrowsers({}); } catch (_) {}
+            }
+        }
+
+        console.log(chalk.cyan(`\n📊 Refresh summary: processed=${processed}, successes=${successes}`));
+        console.log(chalk.dim(`Results file: ${resultsFile}`));
+        console.log(chalk.dim('Success criteria: token refresh/signin/session validation or significant API activity.'));
+        console.log(chalk.dim('Login-required profiles saved with HTML/screenshot for flow analysis (email-first vs email+password).'));
+    });
 // Clone profile command
 program
     .command('clone')

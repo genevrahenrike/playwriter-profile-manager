@@ -531,6 +531,7 @@ export class ProfileLauncher {
             args = [],
             loadExtensions = [],
             autoLoadExtensions = true,
+            enableAutofillMonitoring = true, // NEW: allow disabling autofill monitor for refresh flows
             enableAutomation = false, // Default OFF; enable via CLI flag
             enableRequestCapture = true, // Enable request capture by default
             maxStealth = true, // Enable maximum stealth by default
@@ -616,6 +617,9 @@ export class ProfileLauncher {
             if (browserType === 'chromium') {
                 // Set up profile preferences before launching
                 await this.setupChromiumProfilePreferences(profile);
+                
+                // Preflight: Clean up stale Chromium singleton lock files to avoid "profile already in use"
+                await this.cleanupChromiumSingletons(profile.userDataDir);
                 
                 // Check for imported data
                 const importedData = await this.loadImportedData(profile.userDataDir);
@@ -863,8 +867,12 @@ export class ProfileLauncher {
                 await this.setupAutomation(sessionId, { browser, context, profile, page }, automationTasks);
             }
             
-            // Start autofill monitoring
-            await this.autofillSystem.startMonitoring(sessionId, context);
+            // Start autofill monitoring (can be disabled for refresh flows)
+            if (enableAutofillMonitoring !== false) {
+                await this.autofillSystem.startMonitoring(sessionId, context);
+            } else {
+                console.log('⏸️  Autofill monitoring disabled for this session');
+            }
             
             // Start automation if enabled
             if (enableAutomation) {
@@ -1592,6 +1600,37 @@ export class ProfileLauncher {
         } catch (error) {
             // Don't fail if we can't set preferences, just log it
             console.warn(`Could not set profile preferences: ${error.message}`);
+        }
+    }
+
+    /**
+     * Remove stale Chromium singleton lock/cookie files that can block persistent context launch.
+     * Safe to run when we know no real Chromium instance is using this profile (our manager controls launches).
+     * @param {string} userDataDir
+     */
+    async cleanupChromiumSingletons(userDataDir) {
+        try {
+            const candidates = [
+                'SingletonLock',
+                'SingletonCookie',
+                'SingletonSocket',
+                // Some variants observed with suffixes
+                'SingletonCookie.lock',
+                'SingletonLock.lock'
+            ];
+            for (const name of candidates) {
+                const p = path.join(userDataDir, name);
+                if (await fs.pathExists(p)) {
+                    try {
+                        await fs.remove(p);
+                        console.log(`🗑️  Removed stale Chromium singleton file: ${p}`);
+                    } catch (e) {
+                        console.warn(`⚠️  Could not remove ${p}: ${e.message}`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn(`⚠️  Singleton cleanup skipped: ${e.message}`);
         }
     }
 

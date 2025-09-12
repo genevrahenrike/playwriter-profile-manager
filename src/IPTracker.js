@@ -62,89 +62,120 @@ export class IPTracker {
      */
     async fetchIPFromURL(url, proxyConfig, timeoutMs = 10000) {
         return new Promise((resolve, reject) => {
-            const timeout = timeoutMs; // per-request timeout
-            
-            // Parse the target URL
-            const targetUrl = new URL(url);
-            
-            let options = {
-                timeout,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-                    'Host': targetUrl.hostname
-                }
-            };
+            try {
+                const timeout = timeoutMs;
+                const targetUrl = new URL(url);
 
-            // Handle different proxy types
-            if (proxyConfig.server.startsWith('socks5://')) {
-                // For SOCKS5, use the agent
-                options.agent = new SocksProxyAgent(proxyConfig.server);
-                options.hostname = targetUrl.hostname;
-                options.port = targetUrl.port || 80;
-                options.path = targetUrl.pathname + targetUrl.search;
-                options.method = 'GET';
-            } else if (proxyConfig.server.startsWith('http://')) {
-                // For HTTP proxy, connect to proxy and request full URL
-                const proxyUrl = new URL(proxyConfig.server);
-                options.hostname = proxyUrl.hostname;
-                options.port = proxyUrl.port;
-                options.path = url; // Full URL for HTTP proxy
-                options.method = 'GET';
-                
-                // Add proxy authentication if available
-                if (proxyConfig.username && proxyConfig.password) {
-                    const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
-                    options.headers['Proxy-Authorization'] = `Basic ${auth}`;
-                }
-            } else {
-                // Direct connection (no proxy)
-                options.hostname = targetUrl.hostname;
-                options.port = targetUrl.port || 80;
-                options.path = targetUrl.pathname + targetUrl.search;
-                options.method = 'GET';
-            }
+                // Choose protocol module for direct/SOCKS5 requests
+                const isHttpsTarget = targetUrl.protocol === 'https:';
+                const httpModule = isHttpsTarget ? https : http;
 
-            const req = http.request(options, (res) => {
-                let data = '';
-                
-                res.on('data', (chunk) => {
-                    data += chunk;
-                });
-                
-                res.on('end', () => {
-                    try {
-                        // Try to parse as JSON first
-                        let ip;
-                        try {
-                            const parsed = JSON.parse(data);
-                            ip = parsed.ip || parsed.origin?.split(',')[0]?.trim();
-                        } catch {
-                            // If not JSON, assume the response body is the IP
-                            ip = data.trim();
-                        }
-                        
-                        if (ip && /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
-                            resolve(ip);
-                        } else {
-                            reject(new Error(`Invalid IP response: ${data}`));
-                        }
-                    } catch (error) {
-                        reject(error);
+                // Base options
+                const options = {
+                    timeout,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                        'Host': targetUrl.hostname
+                    },
+                    method: 'GET'
+                };
+
+                // Defensive: ensure proxyConfig is sane
+                if (!proxyConfig || !proxyConfig.server) {
+                    return reject(new Error('Invalid proxy configuration: missing server'));
+                }
+
+                // Proxy handling
+                const server = String(proxyConfig.server || '');
+                if (server.startsWith('socks5://')) {
+                    // SOCKS5 agent handles both http and https targets
+                    options.agent = new SocksProxyAgent(server);
+                    options.hostname = targetUrl.hostname;
+                    options.port = targetUrl.port || (isHttpsTarget ? 443 : 80);
+                    options.path = targetUrl.pathname + targetUrl.search;
+                } else if (server.startsWith('http://')) {
+                    // HTTP proxy: request absolute URL through proxy
+                    // Note: we only target http:// IP services to avoid CONNECT tunneling
+                    const proxyUrl = new URL(server);
+                    options.hostname = proxyUrl.hostname;
+                    options.port = proxyUrl.port || 80;
+                    options.path = url; // absolute URL for proxy
+                    // Proxy auth
+                    if (proxyConfig.username && proxyConfig.password) {
+                        const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
+                        options.headers['Proxy-Authorization'] = `Basic ${auth}`;
                     }
+                } else {
+                    // Direct request (no proxy)
+                    options.hostname = targetUrl.hostname;
+                    options.port = targetUrl.port || (isHttpsTarget ? 443 : 80);
+                    options.path = targetUrl.pathname + targetUrl.search;
+                }
+
+                const req = (server.startsWith('http://') ? http : httpModule).request(options, (res) => {
+                    let data = '';
+                    // Ensure we consume or handle stream errors to avoid crashes
+                    res.setEncoding('utf8');
+
+                    res.on('data', (chunk) => { data += chunk; });
+
+                    res.on('aborted', () => {
+                        reject(new Error('Response aborted'));
+                    });
+
+                    res.on('error', (err) => {
+                        reject(new Error(`Response error: ${err.message}`));
+                    });
+
+                    res.on('end', () => {
+                        try {
+                            let ip;
+                            // Attempt JSON parse (httpbin/others)
+                            try {
+                                const parsed = JSON.parse(data);
+                                ip = parsed.ip || parsed.origin?.split(',')[0]?.trim();
+                            } catch {
+                                ip = (data || '').trim();
+                            }
+
+                            // Validate IPv4
+                            if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+                                return resolve(ip);
+                            }
+                            reject(new Error(`Invalid IP response: ${data?.slice(0, 200) || ''}`));
+                        } catch (error) {
+                            reject(error);
+                        }
+                    });
                 });
-            });
 
-            req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('Request timeout'));
-            });
+                // Attach low-level error/abort/timeouts defensively
+                req.on('timeout', () => {
+                    try { req.destroy(); } catch (_) {}
+                    reject(new Error('Request timeout'));
+                });
 
-            req.on('error', (error) => {
-                reject(error);
-            });
+                req.on('abort', () => {
+                    reject(new Error('Request aborted'));
+                });
 
-            req.setTimeout(timeout);
-            req.end();
+                req.on('error', (error) => {
+                    reject(error);
+                });
+
+                req.on('socket', (socket) => {
+                    // Prevent unhandled socket errors from crashing the process
+                    const onSockErr = (err) => {
+                        try { req.destroy(err); } catch (_) {}
+                    };
+                    socket.on('error', onSockErr);
+                });
+
+                req.setTimeout(timeout);
+                req.end();
+            } catch (outerErr) {
+                reject(outerErr);
+            }
         });
     }
 
