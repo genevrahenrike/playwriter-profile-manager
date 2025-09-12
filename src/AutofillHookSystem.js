@@ -751,7 +751,7 @@ export class AutofillHookSystem {
             const baseSettings = {
                 maxAttempts: 3,           // More attempts for better reliability
                 pollInterval: 1500,       // Longer polling for dynamic forms
-                waitAfterFill: 500,       // More time for fields to stabilize
+                waitAfterFill: 250,       // Reduced wait time for fields to stabilize
                 fieldRetries: 3,          // Retries per field
                 fieldRetryDelay: 100,     // Delay between field retries
                 verifyFill: true,         // Verify field values after filling

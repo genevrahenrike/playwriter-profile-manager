@@ -541,6 +541,7 @@ export class ProfileLauncher {
             isTemporary = false, // Mark as temporary profile for cleanup
             disableCompression = undefined, // Optional override per launch
             disableImages = false, // Disable image loading for faster proxy connections
+            disableProxyWaitIncrease = false, // Disable proxy mode wait time increases
             proxy = null, // Legacy proxy configuration (deprecated, use proxyStrategy)
             proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin'
             proxyStart = null, // Proxy label to start rotation from
@@ -825,13 +826,16 @@ export class ProfileLauncher {
                 }
                 
                 // Configure proxy-aware timeouts
-                if (proxyConfig) {
+                if (proxyConfig && !disableProxyWaitIncrease) {
                     console.log(`🌐 Proxy mode detected - increasing wait times for slower connections`);
                     this.autofillSystem.options.proxyMode = true;
                     this.autofillSystem.options.proxyTimeoutMultiplier = 2.5; // 2.5x longer timeouts
                     this.automationSystem.options.proxyMode = true;
                     this.automationSystem.options.proxyTimeoutMultiplier = 2.5;
                 } else {
+                    if (proxyConfig && disableProxyWaitIncrease) {
+                        console.log(`🌐 Proxy mode detected - but wait time increases disabled, using normal timeouts`);
+                    }
                     this.autofillSystem.options.proxyMode = false;
                     this.autofillSystem.options.proxyTimeoutMultiplier = 1.0;
                     this.automationSystem.options.proxyMode = false;

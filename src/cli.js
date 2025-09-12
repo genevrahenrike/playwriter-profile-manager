@@ -500,6 +500,7 @@ program
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
+    .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--list-proxies', 'List all available proxies and exit')
     .action(async (profileName, options) => {
         try {
@@ -568,7 +569,8 @@ program
                 proxyStrategy: options.proxyStrategy,
                 proxyStart: options.proxyStart,
                 proxyType: options.proxyType,
-                disableImages: options.disableImages
+                disableImages: options.disableImages,
+                disableProxyWaitIncrease: options.disableProxyWaitIncrease
             };
             
             if (hasProxyOptions) {
@@ -700,6 +702,7 @@ program
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
+    .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .action(async (template, instanceName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -761,7 +764,8 @@ program
                 proxyStrategy: options.proxyStrategy,
                 proxyStart: options.proxyStart,
                 proxyType: options.proxyType,
-                disableImages: options.disableImages
+                disableImages: options.disableImages,
+                disableProxyWaitIncrease: options.disableProxyWaitIncrease
             };
             
             if (hasProxyOptions) {
@@ -854,6 +858,7 @@ program
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
+    .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
     .action(async (options) => {
         const pathMod = (await import('path')).default;
@@ -1107,7 +1112,8 @@ program
                     stealthPreset: 'balanced',
                     // Keep the new instance uncompressed until batch completes decisions
                     disableCompression: false,
-                    disableImages: options.disableImages
+                    disableImages: options.disableImages,
+                    disableProxyWaitIncrease: options.disableProxyWaitIncrease
                 };
                 
                 // Add proxy configuration if available

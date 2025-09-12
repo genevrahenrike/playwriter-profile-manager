@@ -324,7 +324,7 @@ export class AutomationHookSystem {
         const baseTimeout = stepConfig.timeout || this.options.defaultTimeout;
         const timeout = Math.round(baseTimeout * proxyMultiplier);
         const allowProceedWithoutFields = stepConfig.allowProceedWithoutFields === true;
-        const baseGraceMs = stepConfig.postAutofillGraceMs || (400 + Math.floor(Math.random() * 600));
+        const baseGraceMs = stepConfig.postAutofillGraceMs || (200 + Math.floor(Math.random() * 300));
         const postAutofillGraceMs = Math.round(baseGraceMs * proxyMultiplier);
         
         if (this.options.proxyMode) {
