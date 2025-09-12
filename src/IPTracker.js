@@ -141,10 +141,10 @@ export class IPTracker {
     /**
      * Record proxy usage and IP
      */
-    async recordProxyUsage(proxyConfig, proxyLabel) {
+    async recordProxyUsage(proxyConfig, proxyLabel, preFetchedIP = null) {
         try {
-            // Get current IP
-            const currentIP = await this.getCurrentIP(proxyConfig, proxyLabel);
+            // Get current IP (or use provided one to avoid duplicate fetch)
+            const currentIP = preFetchedIP || await this.getCurrentIP(proxyConfig, proxyLabel);
             
             // Initialize tracking for this proxy if needed
             if (!this.ipHistory.has(proxyLabel)) {

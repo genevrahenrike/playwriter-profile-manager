@@ -32,22 +32,39 @@ export class ProxyRotator {
             throw new Error('No working proxies available');
         }
 
-        // First, try to find a proxy that hasn't hit the limit
-        for (let i = 0; i < this.workingProxies.length; i++) {
+        // Track IPs we've already used in this rotation pass to avoid duplicate IPs (different labels, same exit IP)
+        const seenIPsThisPass = new Set();
+        let attempts = 0;
+
+        while (attempts < this.workingProxies.length) {
+            attempts++;
             this.currentProxyIndex = (this.currentProxyIndex + 1) % this.workingProxies.length;
             const proxy = this.workingProxies[this.currentProxyIndex];
-            
-            if (this.ipTracker.canUseProxy(proxy.label)) {
-                const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
-                
-                try {
-                    // Record usage and get IP
-                    await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label);
-                    return { proxy, proxyConfig };
-                } catch (error) {
-                    console.warn(`⚠️  Failed to use proxy ${proxy.label}: ${error.message}`);
-                    continue;
+
+            // Skip if usage cap reached for this proxy
+            if (!this.ipTracker.canUseProxy(proxy.label)) {
+                continue;
+            }
+
+            const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
+
+            try {
+                // Fetch IP first (so we can detect duplicates before counting usage)
+                const currentIP = await this.ipTracker.getCurrentIP(proxyConfig, proxy.label);
+                console.log(`🔎 Rotation probe: ${proxy.label} (${proxy.type}) -> IP ${currentIP}`);
+
+                if (seenIPsThisPass.has(currentIP)) {
+                    console.log(`⏭️  Skipping proxy ${proxy.label} (${proxy.type}) duplicate IP ${currentIP}`);
+                    continue; // Don't count usage, skip silently
                 }
+
+                // Mark IP as seen and record usage with pre-fetched IP to avoid double lookup
+                seenIPsThisPass.add(currentIP);
+                await this.ipTracker.recordProxyUsage(proxyConfig, proxy.label, currentIP);
+                return { proxy, proxyConfig };
+            } catch (error) {
+                console.warn(`⚠️  Failed to use proxy ${proxy.label}: ${error.message}`);
+                continue;
             }
         }
 
@@ -79,16 +96,26 @@ export class ProxyRotator {
         let foundNewIP = false;
         
         console.log('🔍 Checking all proxies for IP changes...');
+        const seenIPs = new Set();
         
         for (const proxy of this.workingProxies) {
             const proxyConfig = this.proxyManager.toPlaywrightProxy(proxy);
             
             try {
-                if (await this.ipTracker.hasNewIP(proxyConfig, proxy.label)) {
-                    console.log(`✅ Proxy ${proxy.label} has a new IP`);
+                const currentIP = await this.ipTracker.getCurrentIP(proxyConfig, proxy.label);
+                const duplicate = seenIPs.has(currentIP);
+                if (!duplicate) {
+                    seenIPs.add(currentIP);
+                }
+                const lastKnownIP = this.ipTracker.currentBatchIPs.get(proxy.label);
+                const changed = lastKnownIP && currentIP !== lastKnownIP;
+                if (changed && !duplicate) {
+                    console.log(`✅ Proxy ${proxy.label} has a new unique IP ${currentIP}`);
                     foundNewIP = true;
+                } else if (duplicate) {
+                    console.log(`🔁 Proxy ${proxy.label} shares IP ${currentIP} (duplicate)`);
                 } else {
-                    console.log(`❌ Proxy ${proxy.label} still has the same IP`);
+                    console.log(`❌ Proxy ${proxy.label} still has the same IP ${currentIP}`);
                 }
             } catch (error) {
                 console.warn(`⚠️  Could not check IP for ${proxy.label}: ${error.message}`);
