@@ -935,7 +935,7 @@ export class AutofillHookSystem {
             let criticalFieldsFilled = 0;
             const criticalFieldSelectors = [
                 'input[data-testid="form-input-email"]',
-                'input[name="email"]', 
+                'input[name="email"]',
                 'input[type="email"]'
             ];
             const passwordFieldSelectors = [
@@ -943,14 +943,29 @@ export class AutofillHookSystem {
                 'input[name="password"]',
                 'input[type="password"]'
             ];
-            
+
+            // Detect presence of email/password fields on the page
+            let emailFieldPresent = false;
+            let passwordFieldPresent = false;
+            try {
+                for (const selector of criticalFieldSelectors) {
+                    const cnt = await page.locator(selector).count().catch(() => 0);
+                    if (cnt > 0) { emailFieldPresent = true; break; }
+                }
+                for (const selector of passwordFieldSelectors) {
+                    const cnt = await page.locator(selector).count().catch(() => 0);
+                    if (cnt > 0) { passwordFieldPresent = true; break; }
+                }
+            } catch (_) {}
+
             // Check email fields
             let emailFilled = false;
             for (const selector of criticalFieldSelectors) {
                 try {
-                    const element = await page.locator(selector).first();
-                    if (await element.count() > 0) {
-                        const value = await element.inputValue();
+                    const loc = page.locator(selector).first();
+                    const cnt = await loc.count().catch(() => 0);
+                    if (cnt > 0) {
+                        const value = await loc.inputValue().catch(() => '');
                         if (value && value.includes('@') && value.length > 5) {
                             emailFilled = true;
                             criticalFieldsFilled++;
@@ -964,9 +979,10 @@ export class AutofillHookSystem {
             let passwordFilled = false;
             for (const selector of passwordFieldSelectors) {
                 try {
-                    const element = await page.locator(selector).first();
-                    if (await element.count() > 0) {
-                        const value = await element.inputValue();
+                    const loc = page.locator(selector).first();
+                    const cnt = await loc.count().catch(() => 0);
+                    if (cnt > 0) {
+                        const value = await loc.inputValue().catch(() => '');
                         if (value && value.length >= 8) {
                             passwordFilled = true;
                             criticalFieldsFilled++;
@@ -976,16 +992,19 @@ export class AutofillHookSystem {
                 } catch (_) {}
             }
             
-            console.log(`🔍 Critical fields status: email=${emailFilled}, password=${passwordFilled}, total filled=${finalFilledCount}`);
+            console.log(`🔍 Critical fields status: present(email=${emailFieldPresent}, password=${passwordFieldPresent}) filled(email=${emailFilled}, password=${passwordFilled}), total filled=${finalFilledCount}`);
             
-            // Only mark completion if both critical fields are filled OR we have enough non-critical fields
-            const shouldMarkComplete = (emailFilled && passwordFilled) || 
-                                      (finalFilledCount >= this.options.minFieldsForSuccess && criticalFieldsFilled >= 1);
+            // Completion policy:
+            // - If a password field is present, require BOTH email and password to be filled
+            // - If no password field is present, allow completion when either email is filled OR enough fields overall
+            const shouldMarkComplete = passwordFieldPresent
+                ? (emailFilled && passwordFilled)
+                : (emailFilled || finalFilledCount >= this.options.minFieldsForSuccess);
             
             if (shouldMarkComplete) {
                 this.markSessionCompleted(sessionId, hook.name, finalFilledCount);
                 
-                console.log(`✅ Autofill completion marked: ${finalFilledCount} fields (email: ${emailFilled}, password: ${passwordFilled})`);
+                console.log(`✅ Autofill completion marked: ${finalFilledCount} fields (email: ${emailFilled}, password: ${passwordFilled}, pwdPresent: ${passwordFieldPresent})`);
                 
                 // Emit autofill completed event
                 if (this.eventBus) {
@@ -995,6 +1014,8 @@ export class AutofillHookSystem {
                         fieldsFilledCount: finalFilledCount,
                         emailFilled,
                         passwordFilled,
+                        emailFieldPresent,
+                        passwordFieldPresent,
                         url: page.url()
                     });
                 }
@@ -1004,7 +1025,7 @@ export class AutofillHookSystem {
                     console.log(`🛑 Autofill goal achieved for ${hook.name} - stopping further attempts`);
                 }
             } else if (finalFilledCount > 0) {
-                console.log(`⚠️  Partial success (${finalFilledCount}/${this.options.minFieldsForSuccess} fields, critical: ${criticalFieldsFilled}), will retry if page changes`);
+                console.log(`⚠️  Partial success (${finalFilledCount}/${this.options.minFieldsForSuccess} fields, criticalFilled: ${criticalFieldsFilled}, pwdPresent: ${passwordFieldPresent}) — will retry if page changes`);
             }
             
             // Detect submit buttons (but don't click unless autoSubmit is enabled)

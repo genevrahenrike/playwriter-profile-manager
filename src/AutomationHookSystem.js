@@ -332,7 +332,7 @@ export class AutomationHookSystem {
         }
 
         // Special-case bypasses (e.g., extension install flows)
-        // Only bypass if the page truly has NO input fields after a short probe.
+        // Only bypass if the page truly has NO input fields after a short, proxy-aware probe.
         const url = page.url() || '';
         const isInstallFlow = url.includes('extension_install') || url.includes('extension_login_success');
         if (isInstallFlow && allowProceedWithoutFields) {
@@ -347,9 +347,13 @@ export class AutomationHookSystem {
                         'input[name="password"]',
                         'input[type="password"]'
                     ];
-                // Probe a few times briefly to see if fields appear
+                // Probe with proxy-aware attempts/delay to avoid premature bypass on slow pages
+                const baseProbeAttempts = stepConfig.bypassAfterAttempts || 3;
+                const probeAttempts = Math.max(baseProbeAttempts, Math.ceil(baseProbeAttempts * proxyMultiplier));
+                const baseProbeDelay = 300;
+                const probeDelay = Math.round(baseProbeDelay * proxyMultiplier);
                 let hasAnyField = false;
-                for (let i = 0; i < 3 && !hasAnyField; i++) {
+                for (let i = 0; i < probeAttempts && !hasAnyField; i++) {
                     for (const sel of probeSelectors) {
                         try {
                             const count = await page.locator(sel).count().catch(() => 0);
@@ -357,11 +361,11 @@ export class AutomationHookSystem {
                         } catch (_) {}
                     }
                     if (!hasAnyField) {
-                        await page.waitForTimeout(300);
+                        await page.waitForTimeout(probeDelay);
                     }
                 }
                 if (!hasAnyField) {
-                    console.log(`⤴️  Bypassing autofill wait for extension install flow (no fields detected)`);
+                    console.log(`⤴️  Bypassing autofill wait for extension install flow (no fields detected after ${probeAttempts}x${probeDelay}ms probes)`);
                     await page.waitForTimeout(600 + Math.floor(Math.random() * 900));
                     return;
                 } else {
@@ -404,11 +408,24 @@ export class AutomationHookSystem {
         };
 
         return new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(async () => {
+            let done = false;
+            const safeResolve = async () => {
+                if (done) return;
+                done = true;
                 cleanup();
+                resolve();
+            };
+            const safeReject = (err) => {
+                if (done) return;
+                done = true;
+                cleanup();
+                reject(err);
+            };
+ 
+            const timeoutId = setTimeout(async () => {
                 if (allowProceedWithoutFields) {
                     console.log(`⏰ Autofill wait timed out but bypass is allowed; proceeding`);
-                    return resolve();
+                    return safeResolve();
                 }
                 // As a last-ditch, try DOM verification
                 try {
@@ -416,12 +433,12 @@ export class AutomationHookSystem {
                     if (ok) {
                         console.log(`⏰ Event timeout, but DOM verification passed. Proceeding.`);
                         await page.waitForTimeout(postAutofillGraceMs);
-                        return resolve();
+                        return safeResolve();
                     }
                 } catch (_) {}
-                return reject(new Error(`Autofill completion event not received within ${timeout}ms`));
+                return safeReject(new Error(`Autofill completion event not received within ${timeout}ms`));
             }, timeout);
-
+ 
             const cleanup = () => {
                 clearTimeout(timeoutId);
                 const unsubscribe = this.autofillCompletionListeners.get(sessionId);
@@ -430,15 +447,16 @@ export class AutomationHookSystem {
                     this.autofillCompletionListeners.delete(sessionId);
                 }
             };
-
+ 
             const unsubscribe = this.eventBus.onSessionEvent(
                 sessionId,
                 EVENTS.AUTOFILL_COMPLETED,
                 async (event) => {
+                    if (done) return;
                     // Check critical fields if configured
                     const requireCritical = (stepConfig.requiredCriticalFields || 0) > 0;
                     let criticalOk = true;
-
+ 
                     // Preferred: use event payload if it includes signals
                     if (requireCritical && (typeof event?.emailFilled !== 'undefined' || typeof event?.passwordFilled !== 'undefined')) {
                         const needCount = stepConfig.requiredCriticalFields || 2;
@@ -451,19 +469,18 @@ export class AutomationHookSystem {
                             return;
                         }
                     }
-
+ 
                     // If event lacks details, verify DOM if expected fields provided
                     if (!event || (typeof event.emailFilled === 'undefined' && typeof event.passwordFilled === 'undefined')) {
                         const ok = await verifyDomIfNeeded();
                         if (!ok) return; // keep waiting
                     }
-
-                    cleanup();
+ 
                     console.log(`✅ Autofill completed. Grace wait ${postAutofillGraceMs}ms`);
-                    setTimeout(resolve, postAutofillGraceMs);
+                    setTimeout(safeResolve, postAutofillGraceMs);
                 }
             );
-
+ 
             // Track for cleanup
             this.autofillCompletionListeners.set(sessionId, unsubscribe);
             console.log(`📡 Listening for autofill completion event on session ${sessionId}`);
@@ -673,7 +690,7 @@ export class AutomationHookSystem {
      */
     async clickSubmit(stepConfig, page, sessionId) {
         console.log(`🔘 Clicking submit button...`);
-
+ 
         const selectors = stepConfig.selectors || [
             'button[type="submit"]',
             'input[type="submit"]',
@@ -683,26 +700,25 @@ export class AutomationHookSystem {
             '.submit-btn',
             '#submit'
         ];
-
-    // Optional pre-submit verification to avoid race with autofill
+ 
+        // Optional pre-submit verification to avoid race with autofill
         const verifySelectors = stepConfig.verifySelectors || [];
         const requireAllVerifySelectors = stepConfig.requireAllVerifySelectors === true;
         const verifyStabilityTries = stepConfig.verifyStabilityTries || 3;
         const verifyStabilityDelayMs = stepConfig.verifyStabilityDelayMs || 150;
         const preSubmitValidation = stepConfig.preSubmitValidation || null;
-    const pauseAutofill = stepConfig.pauseAutofill === true;
-
+        const pauseAutofill = stepConfig.pauseAutofill === true;
+ 
         const readInputValue = async (sel) => {
             try {
                 const loc = page.locator(sel).first();
                 if (await loc.count() === 0) return '';
-                // Ensure the element is attached before reading
                 await loc.waitFor({ state: 'attached', timeout: 1000 }).catch(() => {});
                 const val = await loc.inputValue().catch(() => '');
                 return typeof val === 'string' ? val.trim() : '';
             } catch (_) { return ''; }
         };
-
+ 
         const valuesStable = async (sels) => {
             const first = {};
             for (const sel of sels) {
@@ -719,64 +735,105 @@ export class AutomationHookSystem {
             }
             return false;
         };
-
+ 
         const ensurePreSubmitReady = async () => {
             if (verifySelectors.length === 0 && !preSubmitValidation) return true;
-
-            // Gather unique verify selectors and read their values
+ 
+            // Gather unique verify selectors
             const uniqueSels = Array.from(new Set(verifySelectors));
+            const emailSels = uniqueSels.filter(s => /email/i.test(s));
+            const pwdSels = uniqueSels.filter(s => /password/i.test(s));
+ 
             const vals = {};
             for (const sel of uniqueSels) {
                 vals[sel] = await readInputValue(sel);
             }
-
+ 
             const hasValue = (v) => typeof v === 'string' && v.length > 0;
-
-            // Optionally require all to have values or at least one
-            const valueChecks = uniqueSels.map(sel => hasValue(vals[sel]));
-            const valuesOk = requireAllVerifySelectors ? valueChecks.every(Boolean) : valueChecks.some(Boolean);
+            const looksEmail = (v) => /@/.test(v);
+            const minPwdLen = (preSubmitValidation && preSubmitValidation.minPasswordLength) ? preSubmitValidation.minPasswordLength : 8;
+ 
+            // Grouped logic: if both groups exist, require one valid email AND one valid password
+            let valuesOk = false;
+            let stabilityTargets = uniqueSels;
+            if (emailSels.length > 0 && pwdSels.length > 0) {
+                const emailOk = emailSels.some(sel => {
+                    const v = vals[sel];
+                    return hasValue(v) && looksEmail(v);
+                });
+                const pwdOk = pwdSels.some(sel => {
+                    const v = vals[sel];
+                    return hasValue(v) && v.length >= minPwdLen;
+                });
+                valuesOk = emailOk && pwdOk;
+                // Only check stability for selectors that currently have values
+                stabilityTargets = [
+                    ...emailSels.filter(sel => hasValue(vals[sel])),
+                    ...pwdSels.filter(sel => hasValue(vals[sel]))
+                ];
+            } else {
+                // Fallback to legacy behavior if we can't group
+                const valueChecks = uniqueSels.map(sel => hasValue(vals[sel]));
+                valuesOk = requireAllVerifySelectors ? valueChecks.every(Boolean) : valueChecks.some(Boolean);
+                stabilityTargets = uniqueSels.filter(sel => hasValue(vals[sel]));
+            }
+ 
             if (!valuesOk) {
                 console.log(`⏳ Pre-submit check: required fields not yet filled, retrying...`);
                 return false;
             }
-
-            // Optional validation rules
+ 
+            // Optional validation rules (redundant when grouped, but keep for safety)
             if (preSubmitValidation) {
-                if (preSubmitValidation.checkEmailField) {
-                    const emailSel = uniqueSels.find(s => /email/i.test(s));
-                    if (emailSel) {
-                        const emailVal = vals[emailSel];
-                        const looksEmail = /@/.test(emailVal);
-                        if (!looksEmail) {
-                            console.log(`⏳ Pre-submit check: email field not valid yet`);
-                            return false;
-                        }
+                if (preSubmitValidation.checkEmailField && emailSels.length > 0) {
+                    const someEmailValid = emailSels.some(sel => looksEmail(vals[sel] || ''));
+                    if (!someEmailValid) {
+                        console.log(`⏳ Pre-submit check: email field not valid yet`);
+                        return false;
                     }
                 }
-                if (preSubmitValidation.checkPasswordField) {
-                    const pwdSel = uniqueSels.find(s => /password/i.test(s));
-                    if (pwdSel) {
-                        const minLen = preSubmitValidation.minPasswordLength || 6;
-                        const pwdVal = vals[pwdSel];
-                        if (!pwdVal || pwdVal.length < minLen) {
-                            console.log(`⏳ Pre-submit check: password too short (${(pwdVal||'').length})`);
-                            return false;
-                        }
+                if (preSubmitValidation.checkPasswordField && pwdSels.length > 0) {
+                    const somePwdValid = pwdSels.some(sel => (vals[sel] || '').length >= minPwdLen);
+                    if (!somePwdValid) {
+                        const len = Math.max(0, ...pwdSels.map(sel => (vals[sel] || '').length));
+                        console.log(`⏳ Pre-submit check: password too short (${len})`);
+                        return false;
                     }
                 }
             }
-
-            // Ensure values are stable for a few checks to avoid racing with autofill
-            const stable = await valuesStable(uniqueSels);
-            if (!stable) {
-                console.log(`⏳ Pre-submit check: field values not stable yet`);
-                return false;
+ 
+            // Ensure values are stable to avoid racing with autofill
+            if (stabilityTargets.length > 0) {
+                const stable = await valuesStable(stabilityTargets);
+                if (!stable) {
+                    console.log(`⏳ Pre-submit check: field values not stable yet`);
+                    return false;
+                }
             }
-
+ 
             return true;
         };
-
-        // Optionally pause autofill to avoid interference at click time
+ 
+        // Wait a short window for the pre-submit readiness if configured (proxy-aware)
+        let ready = false;
+        const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+        const basePreSubmitWindowMs = 5000;
+        const preSubmitWindowMs = Math.round(basePreSubmitWindowMs * proxyMultiplier);
+        const preSubmitDeadline = Date.now() + preSubmitWindowMs;
+        while (Date.now() < preSubmitDeadline) {
+            if (await ensurePreSubmitReady()) { ready = true; break; }
+            await page.waitForTimeout(250);
+        }
+        if (!ready) {
+            const msg = `Pre-submit readiness not satisfied after ${preSubmitWindowMs}ms; skipping click to avoid race`;
+            console.log(`⏭️  ${msg}`);
+            if (stepConfig.required === true) {
+                throw new Error(msg);
+            }
+            return; // Optional step: skip click
+        }
+ 
+        // Pause autofill now that fields are verified and stable
         if (pauseAutofill) {
             try {
                 const automation = this.activeAutomations.get(sessionId);
@@ -788,15 +845,7 @@ export class AutomationHookSystem {
                 console.log(`⚠️  Could not pause autofill: ${e.message}`);
             }
         }
-
-        // Wait a short window for the pre-submit readiness if configured
-        const preSubmitDeadline = Date.now() + 5000; // up to 5s to become ready
-        while (Date.now() < preSubmitDeadline) {
-            const ready = await ensurePreSubmitReady();
-            if (ready) break;
-            await page.waitForTimeout(250);
-        }
-
+ 
         // Small randomized humanization before clicking
         const preJitterScrolls = Math.floor(Math.random() * 2); // 0-1
         for (let i = 0; i < preJitterScrolls; i++) {
@@ -806,18 +855,18 @@ export class AutomationHookSystem {
                 await page.waitForTimeout(150 + Math.floor(Math.random() * 250));
             } catch (_) {}
         }
-
+ 
         for (const selector of selectors) {
             try {
                 const locator = page.locator(selector);
                 if (await locator.count() === 0) continue;
                 const element = locator.first();
-
+ 
                 await element.waitFor({ state: 'visible', timeout: 4000 }).catch(() => {});
                 const isVisible = await element.isVisible().catch(() => false);
                 const isEnabled = await element.isEnabled().catch(() => false);
                 if (!isVisible || !isEnabled) continue;
-
+ 
                 const box = await element.boundingBox().catch(() => null);
                 if (box) {
                     const jitterX = (Math.random() - 0.5) * Math.min(10, box.width / 5);
@@ -828,16 +877,16 @@ export class AutomationHookSystem {
                     await page.waitForTimeout(200 + Math.floor(Math.random() * 500));
                     await element.hover().catch(() => {});
                 }
-
+ 
                 const preClickDelay = 300 + Math.floor(Math.random() * 1200);
                 await page.waitForTimeout(preClickDelay);
-
+ 
                 await element.click({ delay: 10 + Math.floor(Math.random() * 40) });
                 console.log(`✅ Clicked submit button: ${selector}`);
-
+ 
                 const postClickDelay = 400 + Math.floor(Math.random() * 1200);
                 await page.waitForTimeout(postClickDelay);
-
+ 
                 if (stepConfig.screenshotAfterClick !== false) {
                     try {
                         const screenshotsDir = path.resolve('./automation-results');
@@ -850,13 +899,13 @@ export class AutomationHookSystem {
                         console.log(`⚠️  Could not save screenshot after submit: ${e.message}`);
                     }
                 }
-
+ 
                 return;
             } catch (error) {
                 console.log(`⚠️  Could not click selector ${selector}:`, error.message);
             }
         }
-
+ 
         throw new Error('No submit button found or clickable');
     }
 
