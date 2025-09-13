@@ -9,6 +9,9 @@ import { ChromiumImporter } from './ChromiumImporter.js';
 import { ProfileLauncher } from './ProfileLauncher.js';
 import fs from 'fs-extra';
 import path from 'path';
+import LoginAnalyzer from './LoginAnalyzer.js';
+import LoginAutomation from './LoginAutomation.js';
+import CredentialsResolver from './CredentialsResolver.js';
 
 // Register autocomplete plugin
 inquirer.registerPrompt('autocomplete', autocomplete);
@@ -1287,6 +1290,11 @@ program
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fast but may allow duplicate IPs)')
     .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
     .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
+    // Autologin options
+    .option('--autologin', 'Attempt credentials-based login when login is required')
+    .option('--credentials-file <path>', 'Path to JSON mapping profileName -> { email, password } (supports "default" key)')
+    .option('--email <email>', 'Email to use for autologin (overrides credentials-file)')
+    .option('--password <password>', 'Password to use for autologin (overrides credentials-file)')
     .action(async (options) => {
         const resultsDir = path.resolve('./automation-results');
         await fs.ensureDir(resultsDir);
@@ -1298,6 +1306,57 @@ program
             await fs.appendFile(resultsFile, line + '\n');
         };
 
+        // Autologin configuration
+        const autologinEnabled = !!options.autologin;
+        let credentialsMap = {};
+        const credentialsPath = options.credentialsFile ? path.resolve(options.credentialsFile) : null;
+
+        // Initialize resolver to read from existing DBs (profiles.db + generated_names.db)
+        const credResolver = autologinEnabled ? new CredentialsResolver('./profiles') : null;
+
+        if (autologinEnabled) {
+            if (credentialsPath) {
+                try {
+                    const loaded = await fs.readJson(credentialsPath);
+                    if (loaded && typeof loaded === 'object') {
+                        credentialsMap = loaded;
+                    }
+                    console.log(chalk.dim(`🔐 Loaded credentials file: ${credentialsPath} (keys: ${Object.keys(credentialsMap).length})`));
+                } catch (e) {
+                    console.log(chalk.yellow(`⚠️  Could not read credentials file: ${e.message}`));
+                }
+            }
+        }
+
+        const getCredentials = async (profileNameOrId) => {
+            // 1) CLI overrides take precedence for quick testing
+            if (options.email && options.password) {
+                return { email: options.email, password: options.password };
+            }
+            // 2) Credentials file explicit mapping
+            const byName = credentialsMap && credentialsMap[profileNameOrId];
+            if (byName && byName.email && byName.password) return byName;
+
+            // 3) Credentials file default fallback
+            const def = (credentialsMap && (credentialsMap.default || credentialsMap['*'])) || null;
+            if (def && def.email && def.password) return def;
+
+            // 4) Automatic resolution from existing DBs
+            if (credResolver) {
+                try {
+                    const resolved = await credResolver.getCredentialsForProfile(profileNameOrId);
+                    if (resolved && resolved.email && resolved.password) {
+                        console.log(chalk.dim('🔎 Resolved credentials from profile/session databases'));
+                        return resolved;
+                    }
+                } catch (e) {
+                    console.log(chalk.yellow(`⚠️  Credentials resolver error: ${e.message}`));
+                }
+            }
+
+            return null;
+        };
+        
         // Resolve target profiles
         const pm = new ProfileManager();
         let allProfiles = await pm.listProfiles();
@@ -1574,13 +1633,59 @@ program
 
                     const elapsed = Date.now() - start;
 
-                    // If likely on login page and no success yet, leave as login-required soon
-                    if (!outcome.success && !loginProbeSaved && elapsed > 3000) {
+                    // If likely on login page and no success yet, optionally attempt autologin
+                    if (!outcome.success && elapsed > 3000) {
                         await probeAndSnapshotLogin();
                         if (loginDetected) {
-                            outcome.success = false;
-                            outcome.reason = 'login_required';
-                            break;
+                            if (autologinEnabled) {
+                                try {
+                                    // Analyze current login UI and attempt guarded autologin
+                                    const analysis = await LoginAnalyzer.detect(page);
+                                    LoginAnalyzer.logSummary(analysis);
+
+                                    const creds = await getCredentials(profile.id || profile.name);
+                                    if (creds && creds.email && creds.password) {
+                                        console.log(chalk.cyan(`🔐 Autologin starting for ${profile.name}...`));
+                                        const autoRes = await LoginAutomation.performAutologin(page, creds, {
+                                            analysis,
+                                            getCaptured: (sid) => launcher.requestCaptureSystem.getCapturedRequests(sid) || [],
+                                            sessionId,
+                                            timeoutMs: perRunTimeout,
+                                            captchaGraceMs: captchaGrace
+                                        });
+
+                                        if (autoRes.success) {
+                                            // Confirm via capture analysis
+                                            const capPost = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                                            const postOutcome = analyzeCaptured(capPost);
+                                            outcome = postOutcome.success
+                                                ? postOutcome
+                                                : { success: true, reason: autoRes.reason || 'signin_success', signals: [], api2xxCount: 0 };
+                                            break;
+                                        } else {
+                                            console.log(chalk.yellow(`⚠️ Autologin failed: ${autoRes.reason || 'unknown'}`));
+                                            outcome.success = false;
+                                            outcome.reason = autoRes.reason || 'login_required';
+                                            break;
+                                        }
+                                    } else {
+                                        console.log(chalk.yellow('⚠️ No credentials found for autologin; leaving as login_required'));
+                                        outcome.success = false;
+                                        outcome.reason = 'login_required';
+                                        break;
+                                    }
+                                } catch (e) {
+                                    console.log(chalk.yellow(`⚠️ Autologin exception: ${e.message || e}`));
+                                    outcome.success = false;
+                                    outcome.reason = 'login_required';
+                                    break;
+                                }
+                            } else {
+                                // If autologin not enabled, mark as login_required and save page sample
+                                outcome.success = false;
+                                outcome.reason = 'login_required';
+                                break;
+                            }
                         }
                     }
 

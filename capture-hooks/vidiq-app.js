@@ -142,23 +142,26 @@ export default {
           // Not JSON; skip
         }
 
-        // Lightweight success heuristics
-        if (
-          /\/token\b|\/oauth\b|\/auth\b/i.test(url) &&
-          (status === 200 || status === 201)
-        ) {
+        // Lightweight success heuristics (tightened to reduce false positives)
+        const ok = (status === 200 || status === 201);
+
+        // Consider token_refresh only on explicit token/refresh/oauth endpoints AND when tokens are present
+        const isTokenEndpoint = /\/(token|oauth|refresh)\b/i.test(url);
+        const isGenericAuth = /\/auth\b/i.test(url) && !/\/auth\/email-check\b/i.test(url);
+        const hasAnyToken =
+          (info.tokens && Object.keys(info.tokens).length > 0);
+
+        if (ok && (isTokenEndpoint || isGenericAuth) && hasAnyToken) {
           info.signals.push('token_refresh_success');
         }
-        if (
-          /\/signin\b|\/login\b/i.test(url) &&
-          (status === 200 || status === 201)
-        ) {
+
+        // Sign-in success only on signin/login endpoints (200/201)
+        if (ok && /\/(signin|login)\b/i.test(url)) {
           info.signals.push('signin_success');
         }
-        if (
-          /\/users\/me\b/i.test(url) &&
-          (status === 200 || status === 201)
-        ) {
+
+        // Session validation only for users/me (200/201)
+        if (ok && /\/users\/me\b/i.test(url)) {
           info.signals.push('session_validated');
         }
       }

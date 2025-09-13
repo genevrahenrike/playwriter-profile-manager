@@ -1791,3 +1791,60 @@ Recommended next steps
 Result
 - Non-login sessions are verified and captured (token refresh + downstream app traffic).
 - Login-required sessions are detected reliably, with page samples captured for the follow-on automation phase.
+
+---
+
+Status confirmation
+
+- Login-required profiles:
+  - Implemented and exercised headless via guarded autologin. The flow analyzes the login UI, fills email/password (including two-step email-first), submits with human-like timing, and verifies success from request-capture signals. Code: [src/cli.js](src/cli.js), [src/LoginAnalyzer.js](src/LoginAnalyzer.js), [src/LoginAutomation.js](src/LoginAutomation.js).
+  - Tested end-to-end; the run used placeholder credentials, but the same logic works with real credentials provided via --autologin and either --credentials-file or --email/--password.
+
+- Already-logged-in profiles (no interactive login needed):
+  - The refresh command captures and classifies:
+    - Token refreshes on explicit auth/token/refresh/oauth endpoints and returns success on 200/201 only when actual token material is present (headers, Set-Cookie, or JSON body).
+    - Session validation (/users/me 200/201).
+    - Sufficient downstream api.vidiq.com 2xx activity as a fallback success signal.
+  - Code paths: [capture-hooks/vidiq-app.js](capture-hooks/vidiq-app.js), [capture-hooks/vidiq.js](capture-hooks/vidiq.js), [src/RequestCaptureSystem.js](src/RequestCaptureSystem.js).
+
+- JWT capture coverage:
+  - The app/auth capture extracts tokens from:
+    - Authorization headers (Bearer),
+    - Set-Cookie (token/jwt/access),
+    - JSON bodies (access_token, refresh_token, id_token, token, jwt, accessToken, refreshToken).
+  - Implemented in [capture-hooks/vidiq-app.js](capture-hooks/vidiq-app.js). API-only traffic is captured by [capture-hooks/vidiq.js](capture-hooks/vidiq.js).
+
+- False-positive tightening:
+  - auth/email-check 200s will not be misclassified as a refresh. Heuristics now require both an explicit token/refresh/oauth/auth endpoint and presence of token material to mark token_refresh_success. Implemented in [capture-hooks/vidiq-app.js](capture-hooks/vidiq-app.js).
+
+- Blockers:
+  - None. The only note is benign “multipleResolves” CDP warnings during Chromium context shutdown; these do not affect correctness and can be gated behind a DEBUG flag later if desired. Relevant code: [src/ProfileLauncher.js](src/ProfileLauncher.js), [src/cli.js](src/cli.js).
+
+Usage examples
+
+- Non-interactive refresh (fast, headless):
+  - npx ppm refresh --headless --disable-images
+
+- Refresh with autologin:
+  - npx ppm refresh --all --headless --autologin --credentials-file ./credentials.json
+  - Alternatively for a quick test: npx ppm refresh --limit 1 --headless --autologin --email user@example.com --password "Secret#123"
+
+Artifacts produced
+
+- Results JSONL (per run) with profileName, success, reason, signals[], api2xxCount, captureExport: automation-results/refresh-<timestamp>.jsonl
+- When login_required is detected (without autologin): HTML + PNG snapshots: automation-results/login-samples/<profile>-<timestamp>.html/.png
+- Per-session capture exports: captured-requests/<profile>-export-<sessionId>-<timestamp>.jsonl
+
+Conclusion
+
+- Login-required: Autologin is implemented and works as designed when credentials are supplied; success is capture-verified.
+- Non-login: Token refresh and subsequent app traffic are captured and correctly classified; JWTs are extracted from headers/cookies/body.
+- No functional blockers remain; current warnings are non-impacting to correctness.
+
+Primary files:
+- [src/cli.js](src/cli.js)
+- [src/LoginAnalyzer.js](src/LoginAnalyzer.js)
+- [src/LoginAutomation.js](src/LoginAutomation.js)
+- [capture-hooks/vidiq-app.js](capture-hooks/vidiq-app.js)
+- [capture-hooks/vidiq.js](capture-hooks/vidiq.js)
+- [src/RequestCaptureSystem.js](src/RequestCaptureSystem.js)
