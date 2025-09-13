@@ -1,0 +1,2715 @@
+{
+  "timestamp": "2025-09-13T21:07:01.976Z",
+  "summary": {
+    "totalPersisted": 855,
+    "alreadyExtracted": 625,
+    "missingExtraction": 230,
+    "potentiallySuccessful": 4,
+    "incompleteCapture": 9,
+    "noCapture": 107
+  },
+  "categories": {
+    "no-capture": [
+      {
+        "name": "proxied644",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied629",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied622",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied620",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied616",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied595",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied479",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied429",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied395",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied388",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied289",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied261",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied244",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied211",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied191",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied190",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied184",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied183",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied182",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied175",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied174",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied168",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied167",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied166",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied159",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied158",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied152",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied151",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied150",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied144",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied136",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied135",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied109",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied108",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied88",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied87",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied59",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied58",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied54",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied52",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied47",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-fallback1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-socks5-auth1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-socks5-fixed1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-socks51",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied37",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied26",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied2",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-no-proxy1-pupk",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-no-proxy1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "direct1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied1-xn5e",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-test1-amy9",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-clean",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-fix21",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-proxy-fix1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-test1-f7wu",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test3",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test2-mx7y",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-puw4",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test2",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-vkq6",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-qvm3",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-bf18",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-cfya",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-kl8e",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-b9aw",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-x57p",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-US-1-3ocb",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-lcem",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-proxy-1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-US-1-h4f4",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-US-1-xwlw",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-US-1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1-5jyr",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "dup-ip-test1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-working-test1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-test1-l2wy",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-test1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "vpn-clean",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "stealth1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "auto94",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "auto39",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "auto17",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "auto13",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "auto8",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-fixed",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-test-7",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-test-6",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-test-5",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-test-4",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-test-3",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-test-2",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "automation-test-1",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "viq0",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-temp",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-permanent",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "vidiq3",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-profile",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test-clean-import",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "manual-test-session",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied396",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxied389",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "proxy-test",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "direct-clean",
+        "reason": "No captured traffic found"
+      },
+      {
+        "name": "test5",
+        "reason": "No captured traffic found"
+      }
+    ],
+    "failed-sessions": [
+      {
+        "name": "proxied568",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "no_auth_attempt",
+            "requests": 1,
+            "duration": 1405
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 5,
+            "duration": 14459
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 971
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 9654
+          }
+        ]
+      },
+      {
+        "name": "proxied638",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 17190
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 2220
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 12255
+          }
+        ]
+      },
+      {
+        "name": "proxied635",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14481
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 283
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 11067
+          }
+        ]
+      },
+      {
+        "name": "proxied632",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 13503
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 696
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 12665
+          }
+        ]
+      },
+      {
+        "name": "proxied630",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 19851
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 21764
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 18140
+          }
+        ]
+      },
+      {
+        "name": "proxied623",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 13752
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1827
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 8558
+          }
+        ]
+      },
+      {
+        "name": "proxied621",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 291
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 10133
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 12086
+          }
+        ]
+      },
+      {
+        "name": "proxied619",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14465
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1671
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 10584
+          }
+        ]
+      },
+      {
+        "name": "proxied609",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 14759
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 2342
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 10940
+          }
+        ]
+      },
+      {
+        "name": "proxied608",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 13280
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 890
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 10959
+          }
+        ]
+      },
+      {
+        "name": "proxied605",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 14614
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 2585
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 10179
+          }
+        ]
+      },
+      {
+        "name": "proxied603",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14835
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1204
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 10711
+          }
+        ]
+      },
+      {
+        "name": "proxied601",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 13676
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1966
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 10028
+          }
+        ]
+      },
+      {
+        "name": "proxied569",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14986
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1210
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 10854
+          }
+        ]
+      },
+      {
+        "name": "proxied571",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "no_auth_attempt",
+            "requests": 5,
+            "duration": 4167
+          },
+          {
+            "status": "no_auth_attempt",
+            "requests": 5,
+            "duration": 4167
+          },
+          {
+            "status": "no_auth_attempt",
+            "requests": 5,
+            "duration": 4167
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 13120
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 557
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 13108
+          }
+        ]
+      },
+      {
+        "name": "proxied594",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14923
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1306
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 9897
+          }
+        ]
+      },
+      {
+        "name": "proxied559",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14795
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1005
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 10748
+          }
+        ]
+      },
+      {
+        "name": "proxied555",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 13084
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1291
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 8728
+          }
+        ]
+      },
+      {
+        "name": "proxied551",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 13269
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1267
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 9821
+          }
+        ]
+      },
+      {
+        "name": "proxied544",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 11363
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1679
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 8150
+          }
+        ]
+      },
+      {
+        "name": "proxied529",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 13639
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1088
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 9705
+          }
+        ]
+      },
+      {
+        "name": "proxied513",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 8070
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1187
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 4159
+          }
+        ]
+      },
+      {
+        "name": "proxied499",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1361
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1361
+          }
+        ]
+      },
+      {
+        "name": "proxied496",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 13734
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1794
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 9376
+          }
+        ]
+      },
+      {
+        "name": "proxied478",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 13318
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 2254
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 8868
+          }
+        ]
+      },
+      {
+        "name": "proxied476",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 12815
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1317
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 8871
+          }
+        ]
+      },
+      {
+        "name": "proxied474",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14930
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1675
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 10902
+          }
+        ]
+      },
+      {
+        "name": "proxied460",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 13261
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1133
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 8889
+          }
+        ]
+      },
+      {
+        "name": "proxied453",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 5,
+            "duration": 14143
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 932
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 10043
+          }
+        ]
+      },
+      {
+        "name": "proxied449",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 14722
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1054
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 10697
+          }
+        ]
+      },
+      {
+        "name": "proxied448",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 12344
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1014
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 8938
+          }
+        ]
+      },
+      {
+        "name": "proxied446",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 14241
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 2376
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 9737
+          }
+        ]
+      },
+      {
+        "name": "proxied438",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 8638
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1741
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 6958
+          }
+        ]
+      },
+      {
+        "name": "proxied432",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1555
+          }
+        ]
+      },
+      {
+        "name": "proxied424",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1540
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1540
+          }
+        ]
+      },
+      {
+        "name": "proxied420",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 52745
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 52745
+          }
+        ]
+      },
+      {
+        "name": "proxied419",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2287
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2287
+          }
+        ]
+      },
+      {
+        "name": "proxied416",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1035
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1035
+          }
+        ]
+      },
+      {
+        "name": "proxied415",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1042
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1042
+          }
+        ]
+      },
+      {
+        "name": "proxied413",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 920
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 920
+          }
+        ]
+      },
+      {
+        "name": "proxied408",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2656
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2656
+          }
+        ]
+      },
+      {
+        "name": "proxied404",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1835
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1835
+          }
+        ]
+      },
+      {
+        "name": "proxied397",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 7,
+            "duration": 26486
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1568
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 6,
+            "duration": 22497
+          }
+        ]
+      },
+      {
+        "name": "proxied392",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1155
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1155
+          }
+        ]
+      },
+      {
+        "name": "proxied382",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1929
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1929
+          }
+        ]
+      },
+      {
+        "name": "proxied377",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 896
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 896
+          }
+        ]
+      },
+      {
+        "name": "proxied372",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 951
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 951
+          }
+        ]
+      },
+      {
+        "name": "proxied366",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 963
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 963
+          }
+        ]
+      },
+      {
+        "name": "proxied360",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 946
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 946
+          }
+        ]
+      },
+      {
+        "name": "proxied359",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1049
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1049
+          }
+        ]
+      },
+      {
+        "name": "proxied354",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 5,
+            "duration": 196872
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 196872
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 741
+          }
+        ]
+      },
+      {
+        "name": "proxied348",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 915
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 915
+          }
+        ]
+      },
+      {
+        "name": "proxied343",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1310
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1310
+          }
+        ]
+      },
+      {
+        "name": "proxied342",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1063
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1063
+          }
+        ]
+      },
+      {
+        "name": "proxied336",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 6077
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 6077
+          }
+        ]
+      },
+      {
+        "name": "proxied330",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1083
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1083
+          }
+        ]
+      },
+      {
+        "name": "proxied329",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 855
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 855
+          }
+        ]
+      },
+      {
+        "name": "proxied327",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1677
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1677
+          }
+        ]
+      },
+      {
+        "name": "proxied324",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1128
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1128
+          }
+        ]
+      },
+      {
+        "name": "proxied323",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 940
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 940
+          }
+        ]
+      },
+      {
+        "name": "proxied322",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1205
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1205
+          }
+        ]
+      },
+      {
+        "name": "proxied318",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1075
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1075
+          }
+        ]
+      },
+      {
+        "name": "proxied315",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1448
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1448
+          }
+        ]
+      },
+      {
+        "name": "proxied312",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1063
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1063
+          }
+        ]
+      },
+      {
+        "name": "proxied306",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1094
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1094
+          }
+        ]
+      },
+      {
+        "name": "proxied304",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1387
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1387
+          }
+        ]
+      },
+      {
+        "name": "proxied301",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1034
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1034
+          }
+        ]
+      },
+      {
+        "name": "proxied299",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1434
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1434
+          }
+        ]
+      },
+      {
+        "name": "proxied296",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 907
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 907
+          }
+        ]
+      },
+      {
+        "name": "proxied290",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1025
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1025
+          }
+        ]
+      },
+      {
+        "name": "proxied281",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1169
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1169
+          }
+        ]
+      },
+      {
+        "name": "proxied279",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1081
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1081
+          }
+        ]
+      },
+      {
+        "name": "proxied278",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1036
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1036
+          }
+        ]
+      },
+      {
+        "name": "proxied276",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 932
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 932
+          }
+        ]
+      },
+      {
+        "name": "proxied273",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 3831
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 3831
+          }
+        ]
+      },
+      {
+        "name": "proxied271",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 923
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 923
+          }
+        ]
+      },
+      {
+        "name": "proxied270",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 916
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 916
+          }
+        ]
+      },
+      {
+        "name": "proxied262",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 927
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 927
+          }
+        ]
+      },
+      {
+        "name": "proxied254",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1360
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1360
+          }
+        ]
+      },
+      {
+        "name": "proxied236",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 928
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 928
+          }
+        ]
+      },
+      {
+        "name": "proxied235",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 851
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 851
+          }
+        ]
+      },
+      {
+        "name": "proxied232",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 41309
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 41309
+          }
+        ]
+      },
+      {
+        "name": "proxied227",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1128
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1128
+          }
+        ]
+      },
+      {
+        "name": "proxied222",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1061
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1061
+          }
+        ]
+      },
+      {
+        "name": "proxied220",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 907
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 907
+          }
+        ]
+      },
+      {
+        "name": "proxied201",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 935
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 935
+          }
+        ]
+      },
+      {
+        "name": "proxied189",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 927
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 927
+          }
+        ]
+      },
+      {
+        "name": "proxied145",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 38352
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 38352
+          }
+        ]
+      },
+      {
+        "name": "proxied137",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 21469
+          }
+        ]
+      },
+      {
+        "name": "proxied132",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2593
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2593
+          }
+        ]
+      },
+      {
+        "name": "proxied126",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 6983
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 6983
+          }
+        ]
+      },
+      {
+        "name": "proxied120",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2786
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2786
+          }
+        ]
+      },
+      {
+        "name": "proxied119",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 922
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 922
+          }
+        ]
+      },
+      {
+        "name": "proxied97",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1945
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1945
+          }
+        ]
+      },
+      {
+        "name": "proxied86",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 3,
+            "duration": 19545
+          }
+        ]
+      },
+      {
+        "name": "proxied73",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1540
+          }
+        ]
+      },
+      {
+        "name": "proxied64",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 3815
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 3815
+          }
+        ]
+      },
+      {
+        "name": "proxied53",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1323
+          }
+        ]
+      },
+      {
+        "name": "proxied43",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1315
+          }
+        ]
+      },
+      {
+        "name": "proxied19",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1031
+          }
+        ]
+      },
+      {
+        "name": "proxied11",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2083
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2083
+          }
+        ]
+      },
+      {
+        "name": "proxied6",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1174
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 1174
+          }
+        ]
+      },
+      {
+        "name": "net-test1",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 2017
+          }
+        ]
+      },
+      {
+        "name": "auto105",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 10220
+          }
+        ]
+      },
+      {
+        "name": "test3",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 2,
+            "duration": 899
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 459
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 459
+          }
+        ]
+      },
+      {
+        "name": "auto-run-test",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 326
+          }
+        ]
+      },
+      {
+        "name": "auto-run3",
+        "reason": "Has failed authentication sessions",
+        "sessions": [
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 380
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 1,
+            "duration": 380
+          }
+        ]
+      }
+    ],
+    "incomplete-capture": [],
+    "network-issues": [
+      {
+        "name": "proxied633",
+        "reason": "Network/proxy issues detected",
+        "sessions": [
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 0
+          },
+          {
+            "status": "network_error",
+            "requests": 2,
+            "duration": 12437
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1309
+          }
+        ]
+      },
+      {
+        "name": "proxied541",
+        "reason": "Network/proxy issues detected",
+        "sessions": [
+          {
+            "status": "network_error",
+            "requests": 4,
+            "duration": 14566
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 31
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 3,
+            "duration": 10473
+          }
+        ]
+      },
+      {
+        "name": "proxied540",
+        "reason": "Network/proxy issues detected",
+        "sessions": [
+          {
+            "status": "network_error",
+            "requests": 4,
+            "duration": 13624
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 36
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 3,
+            "duration": 9835
+          }
+        ]
+      },
+      {
+        "name": "proxied539",
+        "reason": "Network/proxy issues detected",
+        "sessions": [
+          {
+            "status": "network_error",
+            "requests": 4,
+            "duration": 13988
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 32
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 3,
+            "duration": 10187
+          }
+        ]
+      },
+      {
+        "name": "proxied538",
+        "reason": "Network/proxy issues detected",
+        "sessions": [
+          {
+            "status": "network_error",
+            "requests": 4,
+            "duration": 14582
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 27
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 3,
+            "duration": 10971
+          }
+        ]
+      },
+      {
+        "name": "proxied537",
+        "reason": "Network/proxy issues detected",
+        "sessions": [
+          {
+            "status": "network_error",
+            "requests": 4,
+            "duration": 14225
+          },
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 34
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 3,
+            "duration": 10180
+          }
+        ]
+      },
+      {
+        "name": "proxied441",
+        "reason": "Network/proxy issues detected",
+        "sessions": [
+          {
+            "status": "network_error",
+            "requests": 1,
+            "duration": 1089
+          }
+        ]
+      }
+    ],
+    "early-exit": [
+      {
+        "name": "proxied386",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "no_auth_attempt",
+            "requests": 1,
+            "duration": 0
+          },
+          {
+            "status": "no_auth_attempt",
+            "requests": 1,
+            "duration": 0
+          }
+        ]
+      },
+      {
+        "name": "proxied305",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 0
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 0
+          }
+        ]
+      },
+      {
+        "name": "proxied284",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "no_auth_attempt",
+            "requests": 1,
+            "duration": 0
+          },
+          {
+            "status": "no_auth_attempt",
+            "requests": 1,
+            "duration": 0
+          }
+        ]
+      },
+      {
+        "name": "proxied186",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "auth_failure_unclear",
+            "requests": 4,
+            "duration": 109041
+          }
+        ]
+      },
+      {
+        "name": "proxied154",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 0
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 0
+          }
+        ]
+      },
+      {
+        "name": "proxied56",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 0
+          },
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 0
+          }
+        ]
+      },
+      {
+        "name": "auto122",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 223
+          }
+        ]
+      },
+      {
+        "name": "auto116",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "auth_failure_unclear",
+            "requests": 1,
+            "duration": 204
+          }
+        ]
+      },
+      {
+        "name": "auto38",
+        "reason": "Possible early exit or incomplete capture",
+        "sessions": [
+          {
+            "status": "no_auth_attempt",
+            "requests": 36,
+            "duration": 2800
+          }
+        ]
+      }
+    ],
+    "potentially-successful": [
+      {
+        "name": "proxied651",
+        "reason": "Has successful session but not extracted",
+        "sessions": [
+          {
+            "status": "success",
+            "requests": 10,
+            "duration": 9336
+          }
+        ]
+      },
+      {
+        "name": "proxied650",
+        "reason": "Has successful session but not extracted",
+        "sessions": [
+          {
+            "status": "success",
+            "requests": 11,
+            "duration": 6893
+          },
+          {
+            "status": "success",
+            "requests": 11,
+            "duration": 6893
+          }
+        ]
+      },
+      {
+        "name": "proxied139",
+        "reason": "Has successful session but not extracted",
+        "sessions": [
+          {
+            "status": "success",
+            "requests": 20,
+            "duration": 16979
+          }
+        ]
+      },
+      {
+        "name": "auto-headless-2",
+        "reason": "Has successful session but not extracted",
+        "sessions": [
+          {
+            "status": "success",
+            "requests": 11,
+            "duration": 1929
+          },
+          {
+            "status": "auth_failure_400",
+            "requests": 4,
+            "duration": 100775
+          }
+        ]
+      }
+    ]
+  },
+  "potentiallySuccessful": [
+    {
+      "name": "proxied651",
+      "reason": "Has successful session but not extracted",
+      "sessions": 1,
+      "successfulSessions": 1
+    },
+    {
+      "name": "proxied650",
+      "reason": "Has successful session but not extracted",
+      "sessions": 2,
+      "successfulSessions": 2
+    },
+    {
+      "name": "proxied139",
+      "reason": "Has successful session but not extracted",
+      "sessions": 1,
+      "successfulSessions": 1
+    },
+    {
+      "name": "auto-headless-2",
+      "reason": "Has successful session but not extracted",
+      "sessions": 2,
+      "successfulSessions": 1
+    }
+  ],
+  "incompleteCapture": [
+    {
+      "name": "proxied386",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 2,
+      "avgRequests": 1,
+      "avgDuration": 0
+    },
+    {
+      "name": "proxied305",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 2,
+      "avgRequests": 1,
+      "avgDuration": 0
+    },
+    {
+      "name": "proxied284",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 2,
+      "avgRequests": 1,
+      "avgDuration": 0
+    },
+    {
+      "name": "proxied186",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 1,
+      "avgRequests": 4,
+      "avgDuration": 109041
+    },
+    {
+      "name": "proxied154",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 2,
+      "avgRequests": 1,
+      "avgDuration": 0
+    },
+    {
+      "name": "proxied56",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 2,
+      "avgRequests": 1,
+      "avgDuration": 0
+    },
+    {
+      "name": "auto122",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 1,
+      "avgRequests": 1,
+      "avgDuration": 223
+    },
+    {
+      "name": "auto116",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 1,
+      "avgRequests": 1,
+      "avgDuration": 204
+    },
+    {
+      "name": "auto38",
+      "reason": "Minimal traffic or short duration - possible early exit",
+      "sessions": 1,
+      "avgRequests": 36,
+      "avgDuration": 2800
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-09-13T21:03:30.737Z",
+  "summary": {
+    "totalSuccessfulSessions": 624,
+    "profilesInAllProfiles": 625,
+    "missingProfiles": 3
+  },
+  "missingProfiles": [
+    "auto-headless-2",
+    "auto-nonheadless-5",
+    "proxied139"
+  ],
+  "groupedMissingProfiles": {
+    "proxied": [
+      "proxied139"
+    ],
+    "auto-nonheadless-": [
+      "auto-nonheadless-5"
+    ],
+    "auto-headless-": [
+      "auto-headless-2"
+    ]
+  }
+}
