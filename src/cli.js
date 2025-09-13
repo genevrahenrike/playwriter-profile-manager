@@ -1808,6 +1808,373 @@ program
         console.log(chalk.dim('Success criteria: token refresh/signin/session validation or significant API activity.'));
         console.log(chalk.dim('Login-required profiles saved with HTML/screenshot for flow analysis (email-first vs email+password).'));
     });
+
+// Enhanced refresh for profiles without credentials (extension install detection + signup flow)
+program
+    .command('refresh-missing')
+    .description('Enhanced refresh for profiles without valid credentials - detects extension install vs signup flow and executes appropriate action')
+    .option('--all-missing', 'Process all profiles without valid credentials')
+    .option('--prefix <prefix>', 'Filter profiles by name prefix (e.g., "proxied")')
+    .option('--limit <n>', 'Maximum number of profiles to process (0 = no limit)', '10')
+    .option('--headless', 'Run in headless mode')
+    .option('--timeout <ms>', 'Per-profile timeout window (ms)', '120000')
+    .option('--captcha-grace <ms>', 'Extra grace if CAPTCHA is present (ms)', '45000')
+    .option('--disable-images', 'Disable image loading for faster proxy performance')
+    .option('--disable-proxy-wait-increase', 'Disable proxy-mode wait time increases')
+    // Proxy options (same as other commands)
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin', 'auto')
+    .option('--proxy-start <label>', 'Proxy label to start rotation from')
+    .option('--proxy-type <type>', 'Proxy type filter: http')
+    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
+    .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
+    .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks')
+    .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
+    .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
+    // Flow control options
+    .option('--dry-run', 'Analyze flows without executing signup/login actions')
+    .option('--execute-signup', 'Execute signup flow when detected (default: false)')
+    .option('--execute-login', 'Execute login flow when detected (default: false)')
+    .option('--credentials-file <path>', 'Path to JSON credentials file for login flows')
+    .option('--email <email>', 'Email for login flows (overrides credentials file)')
+    .option('--password <password>', 'Password for login flows (overrides credentials file)')
+    .action(async (options) => {
+        const { ExtensionFlowDetector } = await import('./ExtensionFlowDetector.js');
+        const { analyzeProfiles } = await import('../analyze-missing-credentials.js');
+        
+        const resultsDir = path.resolve('./automation-results');
+        await fs.ensureDir(resultsDir);
+        const runStamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const resultsFile = path.join(resultsDir, `refresh-missing-${runStamp}.jsonl`);
+
+        const writeResult = async (obj) => {
+            const line = JSON.stringify({ timestamp: new Date().toISOString(), ...obj });
+            await fs.appendFile(resultsFile, line + '\n');
+        };
+
+        // Helper functions for executing flows
+        const executeSignupFlow = async (page, context, launcher, sessionId, options) => {
+            try {
+                console.log(chalk.cyan('🚀 Starting signup automation...'));
+                
+                // Enable automation for signup
+                launcher.automationSystem = launcher.automationSystem || await launcher.createAutomationSystem();
+                launcher.autofillSystem = launcher.autofillSystem || await launcher.createAutofillSystem();
+                
+                // Navigate to signup if not already there
+                const currentUrl = page.url();
+                if (!currentUrl.includes('/signup')) {
+                    console.log(chalk.dim('↪️  Navigating to signup page...'));
+                    await page.goto('https://vidiq.com/signup', { waitUntil: 'domcontentloaded', timeout: 30000 });
+                }
+                
+                // Start automation systems
+                await launcher.automationSystem.startMonitoring(sessionId, context, { profileName: 'temp' });
+                await launcher.autofillSystem.startMonitoring(sessionId, context, { profileName: 'temp' });
+                
+                // Wait for automation completion or timeout
+                const start = Date.now();
+                while (Date.now() - start < options.timeout) {
+                    // Check for automation success
+                    const completions = Array.from(launcher.automationSystem.completedAutomations.values())
+                        .filter(c => c.sessionId === sessionId && c.status === 'success');
+                    
+                    if (completions.length > 0) {
+                        return { executed: true, success: true, reason: 'signup_automation_success' };
+                    }
+                    
+                    // Check for capture success
+                    const captured = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                    const successDetected = captured.some(r =>
+                        r.type === 'response' && [200, 201].includes(r.status) &&
+                        r.url && (r.url.includes('/subscriptions/active') || r.url.includes('/auth/signup'))
+                    );
+                    
+                    if (successDetected) {
+                        return { executed: true, success: true, reason: 'signup_capture_success' };
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                
+                return { executed: true, success: false, reason: 'signup_timeout' };
+                
+            } catch (error) {
+                return { executed: true, success: false, reason: `signup_error: ${error.message}` };
+            }
+        };
+
+        const executeLoginFlow = async (page, context, launcher, sessionId, options) => {
+            try {
+                console.log(chalk.cyan('🔐 Starting login automation...'));
+                
+                // Get credentials
+                let credentials = null;
+                if (options.email && options.password) {
+                    credentials = { email: options.email, password: options.password };
+                } else if (options.credentialsFile) {
+                    try {
+                        const credMap = await fs.readJson(options.credentialsFile);
+                        credentials = credMap.default || credMap['*'] || Object.values(credMap)[0];
+                    } catch (e) {
+                        console.log(chalk.yellow(`⚠️  Could not load credentials: ${e.message}`));
+                    }
+                }
+                
+                if (!credentials) {
+                    return { executed: false, success: false, reason: 'no_credentials' };
+                }
+                
+                // Use existing login automation
+                const analysis = await LoginAnalyzer.detect(page);
+                const autoRes = await LoginAutomation.performAutologin(page, credentials, {
+                    analysis,
+                    getCaptured: (sid) => launcher.requestCaptureSystem.getCapturedRequests(sid) || [],
+                    sessionId,
+                    timeoutMs: options.timeout,
+                    captchaGraceMs: options.captchaGrace
+                });
+                
+                return {
+                    executed: true,
+                    success: autoRes.success,
+                    reason: autoRes.success ? 'login_success' : `login_failed: ${autoRes.reason}`
+                };
+                
+            } catch (error) {
+                return { executed: true, success: false, reason: `login_error: ${error.message}` };
+            }
+        };
+
+        // Get profiles without credentials
+        console.log(chalk.blue('🔍 Loading profiles without valid credentials...'));
+        
+        let targetProfiles = [];
+        
+        // Load analysis or generate it
+        const analysisFile = './output/missing-credentials-analysis.json';
+        let missingProfiles = [];
+        
+        if (await fs.pathExists(analysisFile)) {
+            const analysis = await fs.readJson(analysisFile);
+            missingProfiles = analysis.profilesNeedingRefresh || [];
+            console.log(chalk.dim(`📋 Loaded ${missingProfiles.length} profiles from analysis file`));
+        } else {
+            console.log(chalk.yellow('⚠️  No analysis file found, generating fresh analysis...'));
+            const analysis = await analyzeProfiles();
+            missingProfiles = analysis.profilesNeedingRefresh || [];
+        }
+
+        // Filter by prefix if specified
+        if (options.prefix) {
+            missingProfiles = missingProfiles.filter(p => p.name.startsWith(options.prefix));
+            console.log(chalk.dim(`🔍 Filtered to ${missingProfiles.length} profiles with prefix: ${options.prefix}`));
+        }
+
+        // Apply limit
+        const limit = parseInt(options.limit, 10) || 10;
+        if (limit > 0 && missingProfiles.length > limit) {
+            missingProfiles = missingProfiles.slice(0, limit);
+            console.log(chalk.dim(`📏 Limited to first ${limit} profiles`));
+        }
+
+        if (missingProfiles.length === 0) {
+            console.log(chalk.yellow('No profiles found matching criteria.'));
+            return;
+        }
+
+        // Proxy-aware defaults
+        const hasProxyOptions = options.proxyStrategy || options.proxyStart;
+        const perRunTimeout = parseInt(options.timeout, 10) || (hasProxyOptions ? 180000 : 120000);
+        const captchaGrace = parseInt(options.captchaGrace, 10) || (hasProxyOptions ? 60000 : 45000);
+
+        if (hasProxyOptions) {
+            console.log(`🌐 Proxy mode detected - using extended timeouts:`);
+            console.log(`   Per-profile timeout: ${perRunTimeout/1000}s`);
+            console.log(`   CAPTCHA grace: ${captchaGrace/1000}s`);
+        }
+
+        console.log(chalk.cyan(`🔄 Enhanced refresh for ${missingProfiles.length} profile(s) without credentials`));
+        console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
+        console.log(chalk.dim(`Mode: ${options.dryRun ? 'DRY RUN (analysis only)' : 'ACTIVE (will execute flows)'}`));
+
+        let processed = 0;
+        let flowsDetected = { signup_required: 0, login_required: 0, valid_session: 0, unclear_state: 0, error: 0 };
+        let actionsExecuted = { signup: 0, login: 0, capture_only: 0 };
+
+        for (const profileInfo of missingProfiles) {
+            processed += 1;
+            console.log(chalk.blue(`\n▶️  Enhanced refresh ${processed}/${missingProfiles.length}: ${profileInfo.name}`));
+
+            const pm = new ProfileManager();
+            const launcher = new ProfileLauncher(pm, {});
+            const detector = new ExtensionFlowDetector({
+                timeout: perRunTimeout,
+                captchaGrace: captchaGrace,
+                quiet: false
+            });
+            
+            let sessionId = null;
+            let exportedPath = null;
+            let flowResult = null;
+
+            try {
+                const launchOptions = {
+                    browserType: 'chromium',
+                    headless: !!options.headless,
+                    enableAutofillMonitoring: false, // Start disabled, enable based on flow detection
+                    enableAutomation: false, // Start disabled, enable based on flow detection
+                    enableRequestCapture: true,
+                    autoCloseOnSuccess: false,
+                    autoCloseOnFailure: false,
+                    autoCloseTimeout: 0,
+                    disableImages: options.disableImages,
+                    disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                    // Random proxy selection to avoid burning first IP
+                    proxyStrategy: options.proxyStrategy || 'auto',
+                    proxyStart: options.proxyStart,
+                    proxyType: options.proxyType,
+                    proxyConnectionType: options.proxyConnectionType,
+                    proxyCountry: options.proxyCountry,
+                    skipIpCheck: !!options.skipIpCheck,
+                    ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,
+                    ipCheckRetries: parseInt(options.ipCheckRetries) || 3
+                };
+
+                // Launch profile
+                const res = await launcher.launchProfile(profileInfo.id, launchOptions);
+                sessionId = res.sessionId;
+                const page = res.page;
+                const context = res.context;
+
+                console.log(chalk.dim('🧩 Waiting for extension popup and analyzing flow...'));
+                
+                // Use ExtensionFlowDetector to analyze what happens
+                flowResult = await detector.waitForExtensionPopupAndAnalyze(
+                    page, context, launcher.requestCaptureSystem, sessionId
+                );
+
+                flowsDetected[flowResult.flowType] = (flowsDetected[flowResult.flowType] || 0) + 1;
+
+                console.log(chalk.cyan(`🎯 Flow detected: ${flowResult.flowType}`));
+                console.log(chalk.dim(`   ${flowResult.reason}`));
+
+                // Execute appropriate action based on detection
+                let actionResult = { executed: false, success: false, reason: 'no_action' };
+
+                if (!options.dryRun) {
+                    if (flowResult.needsSignup && options.executeSignup) {
+                        console.log(chalk.green('🚀 Executing signup flow...'));
+                        actionResult = await executeSignupFlow(page, context, launcher, sessionId, {
+                            timeout: perRunTimeout,
+                            captchaGrace: captchaGrace
+                        });
+                        actionsExecuted.signup += 1;
+                    } else if (flowResult.needsLogin && options.executeLogin) {
+                        console.log(chalk.green('🔐 Executing login flow...'));
+                        actionResult = await executeLoginFlow(page, context, launcher, sessionId, {
+                            timeout: perRunTimeout,
+                            captchaGrace: captchaGrace,
+                            credentialsFile: options.credentialsFile,
+                            email: options.email,
+                            password: options.password
+                        });
+                        actionsExecuted.login += 1;
+                    } else if (flowResult.hasValidSession) {
+                        console.log(chalk.green('✅ Valid session - capturing traffic only'));
+                        // Just wait a bit more to capture additional traffic
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        actionsExecuted.capture_only += 1;
+                        actionResult = { executed: true, success: true, reason: 'valid_session_captured' };
+                    }
+                }
+
+                // Export captured requests
+                try {
+                    const exp = await launcher.requestCaptureSystem.exportCapturedRequests(sessionId, 'jsonl');
+                    exportedPath = exp?.filePath || null;
+                } catch (_) {}
+
+                // Close browser
+                await launcher.closeBrowser(sessionId, { clearCache: false }).catch(() => {});
+
+                // Write result
+                const resultLine = {
+                    runId: `${profileInfo.id}-${runStamp}`,
+                    profileId: profileInfo.id,
+                    profileName: profileInfo.name,
+                    flowType: flowResult.flowType,
+                    flowReason: flowResult.reason,
+                    needsSignup: flowResult.needsSignup,
+                    needsLogin: flowResult.needsLogin,
+                    hasValidSession: flowResult.hasValidSession,
+                    capturedRequests: flowResult.capturedRequests,
+                    actionExecuted: actionResult.executed,
+                    actionSuccess: actionResult.success,
+                    actionReason: actionResult.reason,
+                    captureExport: exportedPath || undefined,
+                    dryRun: !!options.dryRun
+                };
+
+                await writeResult(resultLine);
+
+                // Display result
+                if (actionResult.executed) {
+                    const status = actionResult.success ? chalk.green('✅ SUCCESS') : chalk.red('❌ FAILED');
+                    console.log(`${status}: ${profileInfo.name} - ${actionResult.reason}`);
+                } else {
+                    console.log(chalk.yellow(`📋 ANALYZED: ${profileInfo.name} - ${flowResult.flowType}`));
+                }
+
+            } catch (err) {
+                console.error(chalk.red(`💥 Enhanced refresh error for ${profileInfo.name}: ${err.message}`));
+                flowsDetected.error = (flowsDetected.error || 0) + 1;
+                
+                if (sessionId) {
+                    try { await launcher.closeBrowser(sessionId, { clearCache: false }); } catch (_) {}
+                }
+                
+                await writeResult({
+                    runId: `${profileInfo.id}-${runStamp}`,
+                    profileId: profileInfo.id,
+                    profileName: profileInfo.name,
+                    flowType: 'error',
+                    error: err.message,
+                    dryRun: !!options.dryRun
+                });
+            } finally {
+                try { await launcher?.closeAllBrowsers({}); } catch (_) {}
+            }
+        }
+
+        // Display summary
+        console.log(chalk.cyan(`\n📊 Enhanced refresh summary:`));
+        console.log(`   Processed: ${processed} profiles`);
+        console.log(`   Flow types detected:`);
+        Object.entries(flowsDetected).forEach(([type, count]) => {
+            if (count > 0) {
+                const color = type === 'error' ? chalk.red :
+                             type === 'valid_session' ? chalk.green :
+                             type === 'signup_required' ? chalk.yellow :
+                             type === 'login_required' ? chalk.blue : chalk.dim;
+                console.log(`     ${color(type)}: ${count}`);
+            }
+        });
+        
+        if (!options.dryRun) {
+            console.log(`   Actions executed:`);
+            Object.entries(actionsExecuted).forEach(([action, count]) => {
+                if (count > 0) {
+                    console.log(`     ${action}: ${count}`);
+                }
+            });
+        }
+        
+        console.log(chalk.dim(`   Results file: ${resultsFile}`));
+        
+        if (options.dryRun) {
+            console.log(chalk.yellow('\n💡 This was a dry run. Use --execute-signup and/or --execute-login to perform actions.'));
+        }
+    });
 // Clone profile command
 program
     .command('clone')

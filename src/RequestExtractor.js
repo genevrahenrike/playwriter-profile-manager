@@ -152,10 +152,12 @@ export class RequestExtractor {
             details: {
                 hasSignup: false,
                 signupSuccess: false,
-                hasLogin: false, 
+                hasLogin: false,
                 loginSuccess: false,
                 hasAuthenticatedRequests: false,
-                authTokenFound: false
+                authTokenFound: false,
+                hasApiTraffic: false,
+                isRefreshSession: false
             }
         };
 
@@ -163,8 +165,24 @@ export class RequestExtractor {
         const responses = allRequests.filter(req => req.type === 'response');
         const requests = allRequests.filter(req => req.type === 'request');
 
+        // Check for any VidIQ API traffic (indicates active session)
+        const apiResponses = responses.filter(resp =>
+            resp.url && resp.url.includes('api.vidiq.com') && resp.status >= 200 && resp.status < 300
+        );
+        if (apiResponses.length > 0) {
+            validation.details.hasApiTraffic = true;
+        }
+
+        // Check if this looks like a refresh session (has API traffic but no signup/login flow)
+        const hasAuthFlow = requests.some(req =>
+            req.url && (req.url.includes('/auth/signup') || req.url.includes('/auth/login'))
+        );
+        if (apiResponses.length > 0 && !hasAuthFlow) {
+            validation.details.isRefreshSession = true;
+        }
+
         // Check signup flow
-        const signupResponse = responses.find(resp => 
+        const signupResponse = responses.find(resp =>
             resp.url && resp.url.includes('/auth/signup')
         );
         if (signupResponse) {
@@ -172,8 +190,8 @@ export class RequestExtractor {
             validation.details.signupSuccess = signupResponse.status === 200;
         }
 
-        // Check login flow  
-        const loginResponse = responses.find(resp => 
+        // Check login flow
+        const loginResponse = responses.find(resp =>
             resp.url && resp.url.includes('/auth/login')
         );
         if (loginResponse) {
@@ -182,7 +200,7 @@ export class RequestExtractor {
         }
 
         // Check for successful subscription check (key success indicator)
-        const subscriptionResponse = responses.find(resp => 
+        const subscriptionResponse = responses.find(resp =>
             resp.url && resp.url.includes('/subscriptions/active') && resp.status === 200
         );
         if (subscriptionResponse) {
@@ -190,8 +208,8 @@ export class RequestExtractor {
         }
 
         // Check for valid authorization tokens in requests
-        const authRequest = requests.find(req => 
-            req.headers && req.headers.authorization && 
+        const authRequest = requests.find(req =>
+            req.headers && req.headers.authorization &&
             req.headers.authorization.startsWith('Bearer UKP!')
         );
         if (authRequest) {
@@ -199,14 +217,17 @@ export class RequestExtractor {
         }
 
         // Determine overall success
-        if (validation.details.signupSuccess && validation.details.loginSuccess && 
+        if (validation.details.signupSuccess && validation.details.loginSuccess &&
             validation.details.hasAuthenticatedRequests && validation.details.authTokenFound) {
             validation.success = true;
             validation.reason = 'Complete successful authentication flow detected';
         } else if (validation.details.authTokenFound && validation.details.hasAuthenticatedRequests) {
-            // Fallback: if we have auth tokens and successful API calls, consider it successful
             validation.success = true;
             validation.reason = 'Valid authentication and API access detected';
+        } else if (validation.details.isRefreshSession && validation.details.hasApiTraffic) {
+            // NEW: Accept refresh sessions with API traffic even without auth tokens in headers
+            validation.success = true;
+            validation.reason = 'Refresh session with valid API traffic detected';
         } else if (signupResponse && signupResponse.status === 400) {
             validation.success = false;
             validation.reason = 'Signup failed with 400 error';
