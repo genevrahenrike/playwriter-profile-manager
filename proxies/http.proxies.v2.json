@@ -31,7 +31,7 @@
         "country": "US",
         "checkDate": "2025-09-11T23:48:03.458Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "5f64d8f852908e8157d9606c",
@@ -48,7 +48,7 @@
         "country": "US",
         "checkDate": "2025-09-11T23:48:08.640Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "f1c660417332f7d0c3b0da86",
@@ -82,7 +82,7 @@
         "country": "US",
         "checkDate": "2025-09-11T23:48:17.511Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "d8d34bfc8de3c7496501e204",
@@ -99,7 +99,7 @@
         "country": "US",
         "checkDate": "2025-09-11T23:48:17.511Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "3bab02f2dd9345f10ea9d740",
@@ -116,7 +116,7 @@
         "country": "US",
         "checkDate": "2025-09-11T23:48:17.511Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "8c5389f323db56d499ae46a0",
@@ -133,7 +133,7 @@
         "country": "US",
         "checkDate": "2025-09-11T23:48:17.511Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "f6528d77aa53368292aca559",
@@ -167,7 +167,7 @@
         "country": "US",
         "checkDate": "2025-09-11T23:48:17.511Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "ed9e2f2cf28dbbfe24d17ef5",
@@ -354,7 +354,7 @@
         "country": "FR",
         "checkDate": "2025-09-11T23:48:38.044Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "365ba16be949a19c0bbda804",
@@ -371,7 +371,7 @@
         "country": "FR",
         "checkDate": "2025-09-11T23:48:41.730Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "2cb7920b6a24d7b30afa217f",
@@ -405,7 +405,7 @@
         "country": "FR",
         "checkDate": "2025-09-11T23:48:50.127Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "9cb1f6f7f952e70a64824c76",
@@ -422,7 +422,7 @@
         "country": "FR",
         "checkDate": "2025-09-11T23:48:50.127Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "136ec71ab8aa9799792e76c2",
@@ -439,7 +439,7 @@
         "country": "FR",
         "checkDate": "2025-09-11T23:48:50.127Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "39c489e20197fb4aa09055d2",
@@ -473,7 +473,7 @@
         "country": "FR",
         "checkDate": "2025-09-11T23:48:50.127Z",
         "createdAt": "2025-09-13T09:11:47.478Z",
-        "connectionType": "resident"
+        "connectionType": "datacenter"
     },
     {
         "_id": "ed87621a1506188125347824",
