@@ -1068,15 +1068,24 @@ export class AutomationHookSystem {
                     try { await loc.focus(); } catch (_) {}
                     await page.waitForTimeout(60 + Math.floor(Math.random() * 120));
 
-                    // Clear if needed and type
+                    // Clear if needed
                     const existing = await loc.inputValue().catch(() => '');
                     if (existing) {
                         try { await loc.clear(); } catch (_) {}
                         await page.waitForTimeout(50);
                     }
 
-                    const perCharDelay = /password/i.test(sel) ? (40 + Math.floor(Math.random() * 50)) : (20 + Math.floor(Math.random() * 40));
-                    await loc.pressSequentially(value, { delay: perCharDelay });
+                    // Use fast paste-like filling instead of slow typing for better reliability
+                    try {
+                        // Method 1: Use fill() for fastest input (paste-like)
+                        await loc.fill(value);
+                        console.log(`📋 Fast-filled field: ${sel.substring(0, 30)}...`);
+                    } catch (fillError) {
+                        // Method 2: Fallback to typing if fill() fails
+                        console.log(`⚠️  Fill failed, using typing fallback: ${fillError.message}`);
+                        const perCharDelay = /password/i.test(sel) ? (40 + Math.floor(Math.random() * 50)) : (20 + Math.floor(Math.random() * 40));
+                        await loc.pressSequentially(value, { delay: perCharDelay });
+                    }
 
                     // Verify
                     const actual = await loc.inputValue().catch(() => '');
@@ -1397,10 +1406,42 @@ export class AutomationHookSystem {
             try { await page.reload({ waitUntil: 'domcontentloaded' }); } catch (_) {}
             await page.waitForTimeout(800 + Math.floor(Math.random() * 900));
 
-            if (automation?.automationAutofillOnly || this.options.automationAutofillOnly) {
-                const fillCfg = hook?.workflow?.automation_fill || { type: 'automation_fill', onlyWhenAutofillDisabled: true };
-                try { await this.automationFill(fillCfg, page, sessionId, hook); } catch (e) { console.log(`⚠️  automation_fill after reload failed: ${e.message}`); }
+            // Always perform automation-owned fill after reload to ensure form is filled
+            console.log('📝 Performing automation-owned fill after reload...');
+            const fillCfg = hook?.workflow?.automation_fill || {
+                type: 'automation_fill',
+                onlyWhenAutofillDisabled: false, // Force fill regardless of autofill system state
+                selectors: {
+                    email: [
+                        'input[data-testid="form-input-email"]',
+                        'input[name="email"]',
+                        'input[type="email"]'
+                    ],
+                    password: [
+                        'input[data-testid="form-input-password"]',
+                        'input[name="password"]',
+                        'input[type="password"]'
+                    ]
+                },
+                minPasswordLength: 8,
+                stabilityDelayMs: 300,
+                required: true
+            };
+            
+            try {
+                await this.automationFill(fillCfg, page, sessionId, hook);
+                console.log('✅ Form refilled successfully after reload');
+            } catch (e) {
+                console.log(`❌ automation_fill after reload failed: ${e.message}`);
+                // Don't continue if we can't fill the form
+                if (stepConfig.required === true) {
+                    throw new Error(`Failed to refill form after reload: ${e.message}`);
+                }
+                return;
             }
+
+            // Wait a bit more to ensure form is stable before attempting submit
+            await page.waitForTimeout(1000 + Math.floor(Math.random() * 500));
 
             await this.tryHumanJitterResubmit(page, submitSelectors);
             await page.waitForTimeout(900 + Math.floor(Math.random() * 600));

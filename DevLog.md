@@ -1923,3 +1923,82 @@ Files touched (clickable)
 - [src/cli.js](src/cli.js)
 
 This delivers reliable CAPTCHA detection, mitigation, and a clean automation-owned autofill path that avoids fragile coordination between systems while keeping the simple autofill available for manual sessions.
+
+---
+
+Improved the captcha situation detection system to address all the issues you mentioned. Here are the key fixes implemented:
+
+## 🛠️ **Critical Issues Fixed**
+
+### 1. **Login Screen Detection After Jittering** ✅
+- **Problem**: After jittering, system was sent back to login screen but didn't detect this and failed to refill form
+- **Solution**: Added [`isBackToLoginScreen()`](src/AutomationHookSystem.js:1218) function that detects when we're back to the login screen by checking for multiple visible login form elements
+- **Behavior**: When login screen is detected, the system now automatically refills the form and waits for completion
+
+### 2. **Proper Retry Strategy After 2 Failed Attempts** ✅
+- **Problem**: No strategy when tried 2 times and couldn't get through the screen
+- **Solution**: Implemented [`maxRetryAttempts`](automation-hooks/vidiq.js:201) configuration with retry tracking:
+  - Tracks [`captchaRetryCount`](src/AutomationHookSystem.js:1182) per session
+  - Stops after 2 failed attempts by default
+  - Logs clear message: "Maximum CAPTCHA retry attempts exceeded. Manual intervention may be required."
+  - Prevents infinite retry loops
+
+### 3. **Spammy Console Output Cleanup** ✅
+- **Problem**: "[MultipleResolves] resolve [object Object]" messages cluttering logs
+- **Solution**: Enhanced [`multipleResolves`](src/cli.js:40) handler to filter out benign CDP/Playwright internal promise races:
+  - Skips logging for "Target page, context or browser has been closed" errors
+  - Only logs actual meaningful errors that need attention
+  - Eliminates noise from normal browser context closure
+
+### 4. **Improved Form Filling After Reload** ✅
+- **Problem**: After reload, autofill didn't kick in and form was submitted with blank fields
+- **Solution**: Enhanced reload logic in [`detectCaptcha()`](src/AutomationHookSystem.js:1394) to:
+  - **Always perform automation-owned fill** after reload regardless of autofill system state
+  - Use **fast paste-like filling** ([`loc.fill()`](src/AutomationHookSystem.js:1070)) instead of slow typing
+  - **Wait for form stability** before attempting submit
+  - **Verify form is filled** before proceeding
+
+### 5. **Enhanced Event Communication** ✅
+- **Added**: [`AUTOFILL_REQUESTED`](src/ProfileEventBus.js:147) event for better coordination
+- **Enhanced**: [`AutofillHookSystem`](src/AutofillHookSystem.js:149) now listens for autofill requests and can re-trigger form filling
+- **Improved**: Event-driven coordination between automation and autofill systems
+
+## 🎯 **Key Behavioral Improvements**
+
+### **Better CAPTCHA Flow**:
+```
+1. CAPTCHA detected → jitter attempts
+2. If back to login screen → automatically refill form with fast pasting
+3. Wait for form completion before continuing
+4. If still blocked after 2 attempts → stop with clear message
+5. No more infinite loops or blank form submissions
+```
+
+### **Faster Form Filling**:
+- Uses [`loc.fill()`](src/AutomationHookSystem.js:1070) for instant paste-like input
+- Falls back to typing only if fill() fails
+- Eliminates timing issues with slow character-by-character input
+
+### **Robust Reload Handling**:
+- **Always refills form** after reload (not conditional on autofill system state)
+- **Verifies form completion** before proceeding to submit
+- **Handles both email and password** fields with proper validation
+
+## 🚀 **Usage**
+
+The improvements work automatically with your existing commands:
+
+```bash
+# Enhanced captcha handling now active
+npx ppm launch-template vidiq-clean user1 --headless-automation --auto-close-on-success
+npx ppm batch --template vidiq-clean --count 5 --prefix auto
+```
+
+The system will now:
+- ✅ **Detect login screen return** after jittering and automatically refill
+- ✅ **Use fast pasting** instead of slow typing for reliability  
+- ✅ **Stop after 2 failed attempts** instead of infinite retries
+- ✅ **Show clean logs** without spammy MultipleResolves messages
+- ✅ **Always refill form** after reload to prevent blank submissions
+
+Your captcha detection and handling is hopefully much more robust and will properly handle the reload scenario without leaving forms blank!
