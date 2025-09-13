@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Autofill</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <span class="icon">🤖</span>
+                <h1>Smart Autofill</h1>
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Enabled</span>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="action-section">
+                <button class="btn btn-primary" id="fillFormBtn">
+                    <span class="btn-icon">✨</span>
+                    Fill Current Form
+                </button>
+                
+                <button class="btn btn-secondary" id="toggleBtn">
+                    <span class="btn-icon" id="toggleIcon">⏸️</span>
+                    <span id="toggleText">Disable</span>
+                </button>
+            </div>
+
+            <div class="info-section" id="infoSection">
+                <h3>Current Page</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Forms:</span>
+                        <span class="info-value" id="formsCount">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email fields:</span>
+                        <span class="info-value" id="emailFields">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Password fields:</span>
+                        <span class="info-value" id="passwordFields">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="generated-data-section" id="generatedDataSection" style="display: none;">
+                <h3>Last Generated Data</h3>
+                <div class="data-display">
+                    <div class="data-item">
+                        <span class="data-label">Email:</span>
+                        <span class="data-value" id="generatedEmail">-</span>
+                        <button class="copy-btn" id="copyEmailBtn" title="Copy email">📋</button>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Password:</span>
+                        <span class="data-value password-field" id="generatedPassword">-</span>
+                        <button class="copy-btn" id="copyPasswordBtn" title="Copy password">📋</button>
+                        <button class="toggle-visibility-btn" id="togglePasswordBtn" title="Show/hide password">👁️</button>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Style:</span>
+                        <span class="data-value" id="generatedStyle">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Quick Settings</h3>
+                <div class="setting-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="showNotifications">
+                        <span class="checkmark"></span>
+                        Show notifications
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="keyboardShortcut">
+                        <span class="checkmark"></span>
+                        Enable Ctrl+Shift+F shortcut
+                    </label>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h3>How to Use</h3>
+                <ul class="help-list">
+                    <li>Click "Fill Current Form" or use <kbd>Ctrl+Shift+F</kbd></li>
+                    <li>Click the 🤖 indicator on any page to fill forms</li>
+                    <li>Right-click on pages for context menu options</li>
+                    <li>Extension automatically detects email and password fields</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="version">v1.0.0</div>
+            <div class="shortcuts">
+                <span class="shortcut-hint">💡 Tip: Use <kbd>Ctrl+Shift+F</kbd> to fill forms quickly</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
