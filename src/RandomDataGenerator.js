@@ -155,7 +155,7 @@ export class RandomDataGenerator {
     getDefaultBusinessEmailProviders() {
         return [
             // Major tech companies
-            { domain: 'google.com', weight: 10 },
+            // { domain: 'google.com', weight: 10 }, NOTE: reCAPCHA actually check if emails are valid or not this one got killed the fastest
             { domain: 'microsoft.com', weight: 10 },
             { domain: 'apple.com', weight: 10 },
             { domain: 'amazon.com', weight: 10 },
