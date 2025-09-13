@@ -57,6 +57,76 @@ program
     });
 
 program
+    .command('update-database')
+    .description('Scan sessions and update database with status information')
+    .option('-o, --output <file>', 'Output file for results (JSON format)')
+    .option('-q, --quiet', 'Suppress console output')
+    .option('--captured-dir <dir>', 'Directory containing captured requests', './captured-requests')
+    .option('--automation-dir <dir>', 'Directory containing automation results', './automation-results')
+    .option('--profiles-dir <dir>', 'Directory containing profiles', './profiles')
+    .action(async (options) => {
+        try {
+            const scanner = new SessionStatusScanner({
+                capturedRequestsDir: options.capturedDir,
+                automationResultsDir: options.automationDir,
+                profilesDir: options.profilesDir,
+                quiet: options.quiet
+            });
+
+            console.log('🔍 Starting database update with session status...\n');
+
+            const results = await scanner.scanAndUpdateDatabase();
+
+            // Display summary
+            displayDatabaseUpdateSummary(results);
+
+            // Export results if output file specified
+            if (options.output) {
+                await scanner.exportResults(results, options.output);
+            }
+
+        } catch (error) {
+            console.error('❌ Error during database update:', error.message);
+            process.exit(1);
+        }
+    });
+
+program
+    .command('scan-database')
+    .description('Scan all profiles from database and analyze their sessions')
+    .option('-o, --output <file>', 'Output file for results (JSON format)')
+    .option('-q, --quiet', 'Suppress console output')
+    .option('--captured-dir <dir>', 'Directory containing captured requests', './captured-requests')
+    .option('--automation-dir <dir>', 'Directory containing automation results', './automation-results')
+    .option('--profiles-dir <dir>', 'Directory containing profiles', './profiles')
+    .action(async (options) => {
+        try {
+            const scanner = new SessionStatusScanner({
+                capturedRequestsDir: options.capturedDir,
+                automationResultsDir: options.automationDir,
+                profilesDir: options.profilesDir,
+                quiet: options.quiet
+            });
+
+            console.log('🔍 Starting database-driven profile scan...\n');
+
+            const results = await scanner.scanDatabaseProfiles();
+
+            // Display summary
+            displayDatabaseScanSummary(results);
+
+            // Export results if output file specified
+            if (options.output) {
+                await scanner.exportResults(results, options.output);
+            }
+
+        } catch (error) {
+            console.error('❌ Error during database scan:', error.message);
+            process.exit(1);
+        }
+    });
+
+program
     .command('analyze-profile <profileName>')
     .description('Analyze sessions for a specific profile')
     .option('-q, --quiet', 'Suppress console output')
@@ -277,6 +347,91 @@ function displaySummary(results) {
         const disagreements = results.crossReference.filter(cr => !cr.agreement).length;
         console.log(`  Agreement with automation results: ${agreements}/${results.crossReference.length}`);
         console.log(`  Disagreements: ${disagreements}`);
+    }
+
+    console.log('\n');
+}
+
+function displayDatabaseScanSummary(results) {
+    console.log('📊 DATABASE SCAN SUMMARY');
+    console.log('=========================\n');
+    
+    console.log(`Total Profiles in Database: ${results.summary.totalProfiles}`);
+    console.log(`Profiles with Sessions: ${results.summary.profilesWithSessions}`);
+    console.log(`Profiles without Sessions: ${results.summary.profilesWithoutSessions}`);
+    console.log(`Total Sessions Found: ${results.summary.totalSessions}`);
+    console.log(`Database Mismatches: ${results.summary.dbMismatchCount}\n`);
+
+    console.log('Profile Data Status:');
+    for (const [status, count] of Object.entries(results.summary.profileDataStatus)) {
+        const emoji = status === 'compressed' ? '📦' : status === 'uncompressed' ? '📁' : '❌';
+        console.log(`  ${emoji} ${status.padEnd(15)} ${count.toString().padStart(4)}`);
+    }
+
+    if (results.summary.totalSessions > 0) {
+        console.log(`\nSession Success Rate: ${results.summary.successRate}%`);
+        console.log(`Session Failure Rate: ${results.summary.failureRate}%\n`);
+
+        console.log('Session Status Breakdown:');
+        const sortedStatuses = Object.entries(results.summary.sessionStatusCounts || {})
+            .sort(([,a], [,b]) => b - a);
+
+        for (const [status, count] of sortedStatuses) {
+            const percentage = ((count / results.summary.totalSessions) * 100).toFixed(1);
+            console.log(`  ${getStatusEmoji(status)} ${status.padEnd(25)} ${count.toString().padStart(4)} (${percentage}%)`);
+        }
+    }
+
+    if (results.summary.recommendations.length > 0) {
+        console.log('\n💡 RECOMMENDATIONS:');
+        for (const rec of results.summary.recommendations) {
+            console.log(`  • ${rec}`);
+        }
+    }
+
+    console.log('\n');
+}
+
+function displayDatabaseUpdateSummary(results) {
+    console.log('📊 DATABASE UPDATE SUMMARY');
+    console.log('===========================\n');
+    
+    console.log(`Total Profiles in Database: ${results.summary.totalProfiles}`);
+    console.log(`Profiles with Sessions: ${results.summary.profilesWithSessions}`);
+    console.log(`Total Sessions Analyzed: ${results.summary.totalSessions}`);
+    
+    if (results.databaseUpdates) {
+        console.log(`\n🔄 Database Updates:`);
+        console.log(`   Profiles Updated: ${results.databaseUpdates.updatedProfiles}`);
+        console.log(`   Update Errors: ${results.databaseUpdates.updateErrors}`);
+        console.log(`   Total Processed: ${results.databaseUpdates.totalProcessed}`);
+    }
+
+    console.log('\nProfile Data Status:');
+    for (const [status, count] of Object.entries(results.summary.profileDataStatus)) {
+        const emoji = status === 'compressed' ? '📦' : status === 'uncompressed' ? '📁' : '❌';
+        console.log(`  ${emoji} ${status.padEnd(15)} ${count.toString().padStart(4)}`);
+    }
+
+    if (results.summary.totalSessions > 0) {
+        console.log(`\nSession Success Rate: ${results.summary.successRate}%`);
+        console.log(`Session Failure Rate: ${results.summary.failureRate}%\n`);
+
+        console.log('Session Status Breakdown:');
+        const sortedStatuses = Object.entries(results.summary.sessionStatusCounts || {})
+            .sort(([,a], [,b]) => b - a);
+
+        for (const [status, count] of sortedStatuses) {
+            const percentage = ((count / results.summary.totalSessions) * 100).toFixed(1);
+            console.log(`  ${getStatusEmoji(status)} ${status.padEnd(25)} ${count.toString().padStart(4)} (${percentage}%)`);
+        }
+    }
+
+    if (results.summary.recommendations.length > 0) {
+        console.log('\n💡 RECOMMENDATIONS:');
+        for (const rec of results.summary.recommendations) {
+            console.log(`  • ${rec}`);
+        }
     }
 
     console.log('\n');

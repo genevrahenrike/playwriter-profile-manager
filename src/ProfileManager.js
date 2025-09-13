@@ -31,7 +31,13 @@ export class ProfileManager {
                 last_used DATETIME,
                 session_count INTEGER DEFAULT 0,
                 imported_from TEXT,
-                metadata TEXT
+                metadata TEXT,
+                data_status TEXT DEFAULT 'unknown',
+                last_session_status TEXT,
+                last_session_reason TEXT,
+                last_session_timestamp DATETIME,
+                success_count INTEGER DEFAULT 0,
+                failure_count INTEGER DEFAULT 0
             )
         `);
         
@@ -42,10 +48,178 @@ export class ProfileManager {
                 start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
                 end_time DATETIME,
                 session_type TEXT DEFAULT 'manual',
+                session_status TEXT,
+                status_reason TEXT,
+                request_count INTEGER DEFAULT 0,
+                response_count INTEGER DEFAULT 0,
+                auth_attempts INTEGER DEFAULT 0,
+                success_indicators INTEGER DEFAULT 0,
+                failure_indicators INTEGER DEFAULT 0,
+                captcha_detected BOOLEAN DEFAULT 0,
+                network_issues BOOLEAN DEFAULT 0,
+                proxy_issues BOOLEAN DEFAULT 0,
+                duration_ms INTEGER,
                 metadata TEXT,
                 FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE CASCADE
             )
         `);
+
+        // Migrate existing schema if needed
+        await this.migrateSchema();
+    }
+
+    async migrateSchema() {
+        const run = promisify(this.db.run.bind(this.db));
+        
+        try {
+            // Add new columns to profiles table if they don't exist
+            const profileColumns = [
+                'data_status TEXT DEFAULT "unknown"',
+                'last_session_status TEXT',
+                'last_session_reason TEXT', 
+                'last_session_timestamp DATETIME',
+                'success_count INTEGER DEFAULT 0',
+                'failure_count INTEGER DEFAULT 0'
+            ];
+
+            for (const column of profileColumns) {
+                try {
+                    await run(`ALTER TABLE profiles ADD COLUMN ${column}`);
+                } catch (error) {
+                    // Column already exists, ignore
+                    if (!error.message.includes('duplicate column name')) {
+                        console.warn(`Migration warning: ${error.message}`);
+                    }
+                }
+            }
+
+            // Add new columns to sessions table if they don't exist
+            const sessionColumns = [
+                'session_status TEXT',
+                'status_reason TEXT',
+                'request_count INTEGER DEFAULT 0',
+                'response_count INTEGER DEFAULT 0',
+                'auth_attempts INTEGER DEFAULT 0',
+                'success_indicators INTEGER DEFAULT 0',
+                'failure_indicators INTEGER DEFAULT 0',
+                'captcha_detected BOOLEAN DEFAULT 0',
+                'network_issues BOOLEAN DEFAULT 0',
+                'proxy_issues BOOLEAN DEFAULT 0',
+                'duration_ms INTEGER'
+            ];
+
+            for (const column of sessionColumns) {
+                try {
+                    await run(`ALTER TABLE sessions ADD COLUMN ${column}`);
+                } catch (error) {
+                    // Column already exists, ignore
+                    if (!error.message.includes('duplicate column name')) {
+                        console.warn(`Migration warning: ${error.message}`);
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.warn(`Schema migration failed: ${error.message}`);
+        }
+    }
+
+    async updateProfileDataStatus(profileId, dataStatus) {
+        await this.initPromise;
+        const run = promisify(this.db.run.bind(this.db));
+        await run('UPDATE profiles SET data_status = ? WHERE id = ?', [dataStatus, profileId]);
+    }
+
+    async updateProfileSessionStatus(profileId, sessionStatus, statusReason = null) {
+        await this.initPromise;
+        const run = promisify(this.db.run.bind(this.db));
+        
+        // Update profile's last session status
+        await run(`
+            UPDATE profiles 
+            SET last_session_status = ?, 
+                last_session_reason = ?, 
+                last_session_timestamp = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [sessionStatus, statusReason, profileId]);
+
+        // Update success/failure counts
+        if (sessionStatus === 'success') {
+            await run('UPDATE profiles SET success_count = success_count + 1 WHERE id = ?', [profileId]);
+        } else if (sessionStatus && (sessionStatus.includes('failure') || sessionStatus.includes('error'))) {
+            await run('UPDATE profiles SET failure_count = failure_count + 1 WHERE id = ?', [profileId]);
+        }
+    }
+
+    async updateSessionStatus(sessionId, sessionAnalysis) {
+        await this.initPromise;
+        const run = promisify(this.db.run.bind(this.db));
+        
+        await run(`
+            UPDATE sessions 
+            SET session_status = ?,
+                status_reason = ?,
+                request_count = ?,
+                response_count = ?,
+                auth_attempts = ?,
+                success_indicators = ?,
+                failure_indicators = ?,
+                captcha_detected = ?,
+                network_issues = ?,
+                proxy_issues = ?,
+                duration_ms = ?,
+                end_time = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [
+            sessionAnalysis.finalStatus,
+            sessionAnalysis.statusReason,
+            sessionAnalysis.requestCount,
+            sessionAnalysis.responseCount,
+            sessionAnalysis.authAttempts.length,
+            sessionAnalysis.successIndicators.length,
+            sessionAnalysis.failureIndicators.length,
+            sessionAnalysis.captchaDetected ? 1 : 0,
+            sessionAnalysis.networkIssues ? 1 : 0,
+            sessionAnalysis.proxyIssues ? 1 : 0,
+            sessionAnalysis.duration,
+            sessionId
+        ]);
+    }
+
+    async getProfileByName(name) {
+        await this.initPromise;
+        const get = promisify(this.db.get.bind(this.db));
+        const profile = await get('SELECT * FROM profiles WHERE name = ?', [name]);
+        
+        if (!profile) {
+            return null;
+        }
+
+        // Load metadata if present
+        let metadata = {};
+        try {
+            const meta = await this.getProfileMetadataRaw(profile.id);
+            metadata = meta || {};
+        } catch (_) {}
+
+        return {
+            id: profile.id,
+            name: profile.name,
+            description: profile.description,
+            browserType: profile.browser_type,
+            userDataDir: profile.user_data_dir,
+            createdAt: profile.created_at,
+            lastUsed: profile.last_used,
+            sessionCount: profile.session_count,
+            importedFrom: profile.imported_from,
+            dataStatus: profile.data_status,
+            lastSessionStatus: profile.last_session_status,
+            lastSessionReason: profile.last_session_reason,
+            lastSessionTimestamp: profile.last_session_timestamp,
+            successCount: profile.success_count || 0,
+            failureCount: profile.failure_count || 0,
+            metadata
+        };
     }
 
     async createProfile(name, options = {}) {
@@ -78,9 +252,10 @@ export class ProfileManager {
         
         try {
             await run(`
-                INSERT INTO profiles (id, name, description, browser_type, user_data_dir, imported_from)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `, [profileId, name, description, browserType, userDataDir, importFrom]);
+                INSERT INTO profiles (id, name, description, browser_type, user_data_dir, imported_from, data_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [profileId, name, description, browserType, userDataDir, importFrom, 'uncompressed']);
+            
             // Initialize metadata: compression preference on by default unless disabled
             const initialMeta = {
                 compressOnClose: !disableCompression,
@@ -110,7 +285,9 @@ export class ProfileManager {
         const profiles = await all(`
             SELECT 
                 id, name, description, browser_type, user_data_dir, 
-                created_at, last_used, session_count, imported_from
+                created_at, last_used, session_count, imported_from,
+                data_status, last_session_status, last_session_reason,
+                last_session_timestamp, success_count, failure_count
             FROM profiles 
             ORDER BY last_used DESC, created_at DESC
         `);
@@ -124,7 +301,13 @@ export class ProfileManager {
             createdAt: profile.created_at,
             lastUsed: profile.last_used,
             sessionCount: profile.session_count,
-            importedFrom: profile.imported_from
+            importedFrom: profile.imported_from,
+            dataStatus: profile.data_status,
+            lastSessionStatus: profile.last_session_status,
+            lastSessionReason: profile.last_session_reason,
+            lastSessionTimestamp: profile.last_session_timestamp,
+            successCount: profile.success_count || 0,
+            failureCount: profile.failure_count || 0
         }));
     }
 
@@ -157,6 +340,12 @@ export class ProfileManager {
             lastUsed: profile.last_used,
             sessionCount: profile.session_count,
             importedFrom: profile.imported_from,
+            dataStatus: profile.data_status,
+            lastSessionStatus: profile.last_session_status,
+            lastSessionReason: profile.last_session_reason,
+            lastSessionTimestamp: profile.last_session_timestamp,
+            successCount: profile.success_count || 0,
+            failureCount: profile.failure_count || 0,
             metadata
         };
     }
@@ -253,6 +442,68 @@ export class ProfileManager {
             SET end_time = CURRENT_TIMESTAMP 
             WHERE id = ?
         `, [sessionId]);
+    }
+
+    async updateProfileDataStatus(profileId, dataStatus) {
+        await this.initPromise;
+        const run = promisify(this.db.run.bind(this.db));
+        await run('UPDATE profiles SET data_status = ? WHERE id = ?', [dataStatus, profileId]);
+    }
+
+    async updateProfileSessionStatus(profileId, sessionStatus, statusReason = null) {
+        await this.initPromise;
+        const run = promisify(this.db.run.bind(this.db));
+        
+        // Update profile's last session status
+        await run(`
+            UPDATE profiles 
+            SET last_session_status = ?, 
+                last_session_reason = ?, 
+                last_session_timestamp = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [sessionStatus, statusReason, profileId]);
+
+        // Update success/failure counts
+        if (sessionStatus === 'success') {
+            await run('UPDATE profiles SET success_count = success_count + 1 WHERE id = ?', [profileId]);
+        } else if (sessionStatus && (sessionStatus.includes('failure') || sessionStatus.includes('error'))) {
+            await run('UPDATE profiles SET failure_count = failure_count + 1 WHERE id = ?', [profileId]);
+        }
+    }
+
+    async updateSessionStatus(sessionId, sessionAnalysis) {
+        await this.initPromise;
+        const run = promisify(this.db.run.bind(this.db));
+        
+        await run(`
+            UPDATE sessions 
+            SET session_status = ?,
+                status_reason = ?,
+                request_count = ?,
+                response_count = ?,
+                auth_attempts = ?,
+                success_indicators = ?,
+                failure_indicators = ?,
+                captcha_detected = ?,
+                network_issues = ?,
+                proxy_issues = ?,
+                duration_ms = ?,
+                end_time = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [
+            sessionAnalysis.finalStatus,
+            sessionAnalysis.statusReason,
+            sessionAnalysis.requestCount,
+            sessionAnalysis.responseCount,
+            sessionAnalysis.authAttempts.length,
+            sessionAnalysis.successIndicators.length,
+            sessionAnalysis.failureIndicators.length,
+            sessionAnalysis.captchaDetected ? 1 : 0,
+            sessionAnalysis.networkIssues ? 1 : 0,
+            sessionAnalysis.proxyIssues ? 1 : 0,
+            sessionAnalysis.duration,
+            sessionId
+        ]);
     }
 
     async clearProfileCache(nameOrId) {

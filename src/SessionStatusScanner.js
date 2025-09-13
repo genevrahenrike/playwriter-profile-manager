@@ -90,6 +90,236 @@ export class SessionStatusScanner {
     }
 
     /**
+     * Scan all profiles from database and analyze their sessions
+     */
+    async scanDatabaseProfiles() {
+        if (!this.quiet) {
+            console.log('🔍 Starting database-driven profile scan...');
+        }
+
+        const results = {
+            totalProfiles: 0,
+            profilesWithSessions: 0,
+            profilesWithoutSessions: 0,
+            profileDataStatus: {},
+            sessions: [],
+            dbMismatches: [],
+            summary: {}
+        };
+
+        try {
+            // Get all profiles from database
+            const profiles = await this.profileManager.listProfiles();
+            results.totalProfiles = profiles.length;
+
+            if (!this.quiet) {
+                console.log(`📊 Found ${profiles.length} profiles in database`);
+            }
+
+            for (const profile of profiles) {
+                try {
+                    const profileAnalysis = await this.analyzeProfileFromDatabase(profile);
+                    
+                    if (profileAnalysis.sessions.length > 0) {
+                        results.profilesWithSessions++;
+                        results.sessions.push(...profileAnalysis.sessions);
+                    } else {
+                        results.profilesWithoutSessions++;
+                    }
+
+                    // Track profile data status
+                    const dataStatus = profileAnalysis.profileDataStatus;
+                    results.profileDataStatus[dataStatus] = (results.profileDataStatus[dataStatus] || 0) + 1;
+
+                    // Check for mismatches
+                    if (profileAnalysis.dbMismatches.length > 0) {
+                        results.dbMismatches.push(...profileAnalysis.dbMismatches);
+                    }
+
+                    if (!this.quiet && (results.profilesWithSessions + results.profilesWithoutSessions) % 20 === 0) {
+                        console.log(`📈 Processed ${results.profilesWithSessions + results.profilesWithoutSessions}/${profiles.length} profiles...`);
+                    }
+
+                } catch (error) {
+                    if (!this.quiet) {
+                        console.error(`❌ Error analyzing profile ${profile.name}: ${error.message}`);
+                    }
+                }
+            }
+
+            // Generate summary
+            results.summary = this.generateDatabaseScanSummary(results);
+
+            if (!this.quiet) {
+                console.log('✅ Database profile scan completed');
+            }
+
+        } catch (error) {
+            throw new Error(`Failed to scan database profiles: ${error.message}`);
+        }
+
+        return results;
+    }
+
+    /**
+     * Analyze a single profile from database
+     */
+    async analyzeProfileFromDatabase(profile) {
+        const analysis = {
+            profileId: profile.id,
+            profileName: profile.name,
+            profileDataStatus: 'unknown',
+            profileDataPath: null,
+            sessions: [],
+            dbMismatches: []
+        };
+
+        // Check if profile data exists (compressed or uncompressed)
+        const profileDataDir = path.join(this.profilesDir, 'data', profile.id);
+        const profileDataTgz = `${profileDataDir}.tgz`;
+
+        if (fs.existsSync(profileDataTgz)) {
+            analysis.profileDataStatus = 'compressed';
+            analysis.profileDataPath = profileDataTgz;
+        } else if (fs.existsSync(profileDataDir)) {
+            analysis.profileDataStatus = 'uncompressed';
+            analysis.profileDataPath = profileDataDir;
+        } else {
+            analysis.profileDataStatus = 'missing';
+            analysis.dbMismatches.push({
+                type: 'profile_data_missing',
+                profileName: profile.name,
+                profileId: profile.id,
+                issue: 'Profile exists in database but data directory/archive is missing'
+            });
+        }
+
+        // Find captured sessions for this profile
+        const capturedFiles = await this.getCapturedRequestFiles();
+        const profileSessions = capturedFiles.filter(file => file.profileName === profile.name);
+
+        // Analyze each session for this profile
+        for (const sessionFile of profileSessions) {
+            try {
+                const sessionAnalysis = await this.analyzeSession(sessionFile);
+                sessionAnalysis.profileDataStatus = analysis.profileDataStatus;
+                analysis.sessions.push(sessionAnalysis);
+
+                // Check for specific database mismatches
+                const mismatch = await this.checkDatabaseMismatch(sessionAnalysis);
+                if (mismatch) {
+                    analysis.dbMismatches.push(mismatch);
+                }
+            } catch (error) {
+                // Skip sessions that can't be analyzed
+                continue;
+            }
+        }
+
+        return analysis;
+    }
+
+    /**
+     * Update database with session status and profile data status
+     */
+    async updateDatabaseWithSessionStatus(sessionAnalysis, profileId) {
+        try {
+            // Update profile data status
+            await this.profileManager.updateProfileDataStatus(profileId, sessionAnalysis.profileDataStatus || 'unknown');
+            
+            // Update profile session status
+            await this.profileManager.updateProfileSessionStatus(
+                profileId,
+                sessionAnalysis.finalStatus,
+                sessionAnalysis.statusReason
+            );
+
+            // Update session status if we have a session ID
+            if (sessionAnalysis.sessionId) {
+                await this.profileManager.updateSessionStatus(sessionAnalysis.sessionId, sessionAnalysis);
+            }
+
+            return true;
+        } catch (error) {
+            if (!this.quiet) {
+                console.warn(`⚠️  Failed to update database for ${sessionAnalysis.profileName}: ${error.message}`);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Scan and update database with session statuses
+     */
+    async scanAndUpdateDatabase() {
+        if (!this.quiet) {
+            console.log('🔍 Starting database update scan...');
+        }
+
+        const results = await this.scanDatabaseProfiles();
+        let updatedProfiles = 0;
+        let updateErrors = 0;
+
+        if (!this.quiet) {
+            console.log(`📊 Updating database with session status for ${results.sessions.length} sessions...`);
+        }
+
+        // Group sessions by profile for efficient updates
+        const sessionsByProfile = {};
+        for (const session of results.sessions) {
+            if (!sessionsByProfile[session.profileName]) {
+                sessionsByProfile[session.profileName] = [];
+            }
+            sessionsByProfile[session.profileName].push(session);
+        }
+
+        // Update database for each profile
+        for (const [profileName, sessions] of Object.entries(sessionsByProfile)) {
+            try {
+                const profile = await this.profileManager.getProfileByName(profileName);
+                if (!profile) {
+                    continue;
+                }
+
+                // Update with the latest session status
+                const latestSession = sessions.sort((a, b) =>
+                    new Date(b.lastActivity) - new Date(a.lastActivity)
+                )[0];
+
+                const success = await this.updateDatabaseWithSessionStatus(latestSession, profile.id);
+                if (success) {
+                    updatedProfiles++;
+                } else {
+                    updateErrors++;
+                }
+
+                if (!this.quiet && updatedProfiles % 50 === 0) {
+                    console.log(`📈 Updated ${updatedProfiles} profiles...`);
+                }
+
+            } catch (error) {
+                updateErrors++;
+                if (!this.quiet) {
+                    console.warn(`❌ Error updating profile ${profileName}: ${error.message}`);
+                }
+            }
+        }
+
+        if (!this.quiet) {
+            console.log(`✅ Database update completed: ${updatedProfiles} profiles updated, ${updateErrors} errors`);
+        }
+
+        return {
+            ...results,
+            databaseUpdates: {
+                updatedProfiles,
+                updateErrors,
+                totalProcessed: Object.keys(sessionsByProfile).length
+            }
+        };
+    }
+
+    /**
      * Get all captured request files
      */
     async getCapturedRequestFiles() {
@@ -456,6 +686,69 @@ export class SessionStatusScanner {
         if (results.dbMismatches.length > 0) {
             summary.recommendations.push(
                 `${results.dbMismatches.length} potential database mismatches found - review session recording logic`
+            );
+        }
+
+        return summary;
+    }
+
+    /**
+     * Generate summary statistics for database-driven scan
+     */
+    generateDatabaseScanSummary(results) {
+        const summary = {
+            totalProfiles: results.totalProfiles,
+            profilesWithSessions: results.profilesWithSessions,
+            profilesWithoutSessions: results.profilesWithoutSessions,
+            profileDataStatus: results.profileDataStatus,
+            totalSessions: results.sessions.length,
+            dbMismatchCount: results.dbMismatches.length,
+            recommendations: []
+        };
+
+        // Calculate session status counts
+        const statusCounts = {};
+        for (const session of results.sessions) {
+            const status = session.finalStatus;
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
+        }
+        summary.sessionStatusCounts = statusCounts;
+
+        // Calculate rates
+        const successCount = (statusCounts.success || 0);
+        const failureCount = Object.keys(statusCounts)
+            .filter(status => status.includes('failure') || status.includes('error') ||
+                             status.includes('blocked') || status.includes('timeout'))
+            .reduce((sum, status) => sum + statusCounts[status], 0);
+
+        summary.successRate = results.sessions.length > 0 ?
+            ((successCount / results.sessions.length) * 100).toFixed(1) : '0.0';
+        summary.failureRate = results.sessions.length > 0 ?
+            ((failureCount / results.sessions.length) * 100).toFixed(1) : '0.0';
+
+        // Profile data recommendations
+        if (results.profileDataStatus.missing > 0) {
+            summary.recommendations.push(
+                `${results.profileDataStatus.missing} profiles have missing data directories - these profiles may be corrupted`
+            );
+        }
+
+        if (results.profilesWithoutSessions > 0) {
+            summary.recommendations.push(
+                `${results.profilesWithoutSessions} profiles in database have no captured sessions - they may never have been used`
+            );
+        }
+
+        // Session-based recommendations
+        if (statusCounts.auth_failure_400 > 0) {
+            summary.recommendations.push(
+                `${statusCounts.auth_failure_400} sessions failed with 400 errors - check email validation and input data`
+            );
+        }
+
+        if (statusCounts.captcha_blocked > 0) {
+            summary.recommendations.push(
+                `${statusCounts.captcha_blocked} sessions blocked by CAPTCHA - consider CAPTCHA solving or rate limiting`
             );
         }
 
