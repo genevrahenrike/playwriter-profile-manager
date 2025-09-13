@@ -257,36 +257,36 @@ export class ProfileLauncher {
     /**
      * Setup image blocking for faster page loading through proxies
      * @param {object} context - Playwright context
+     * @param {object} launchOptions - Launch options to modify (for Chrome args)
+     * @param {boolean} useNativeBlocking - Use native Chrome flags instead of route interception
      */
-    async setupImageBlocking(context) {
+    async setupImageBlocking(context, launchOptions = null, useNativeBlocking = true) {
         console.log(`🚫 Setting up image blocking for faster proxy performance`);
         
-        // Block image requests to speed up page loading
-        await context.route('**/*.{png,jpg,jpeg,gif,webp,svg,ico,bmp,tiff}', async (route) => {
-            await route.abort();
-        });
+        if (useNativeBlocking && launchOptions) {
+            // Method 1: Native Chrome flags (most efficient)
+            const imageBlockingArgs = [
+                '--blink-settings=imagesEnabled=false',  // Disable all images natively
+                '--disable-remote-fonts',                // Also disable web fonts for speed
+                '--disable-background-media-suspend',    // Prevent media loading delays
+            ];
+            
+            launchOptions.args = [...(launchOptions.args || []), ...imageBlockingArgs];
+            console.log(`✅ Native image blocking configured via Chrome flags`);
+            return;
+        }
         
-        // Also block common image MIME types
+        // Method 2: Playwright native resource blocking (more efficient than manual route checking)
         await context.route('**/*', async (route, request) => {
             const resourceType = request.resourceType();
             if (resourceType === 'image') {
                 await route.abort();
-                return;
+            } else {
+                await route.continue();
             }
-            
-            // Check content-type header for images
-            const headers = await request.allHeaders();
-            const contentType = headers['content-type'] || '';
-            if (contentType.startsWith('image/')) {
-                await route.abort();
-                return;
-            }
-            
-            // Continue with non-image requests
-            await route.continue();
         });
         
-        console.log(`✅ Image blocking configured - images will be blocked for faster loading`);
+        console.log(`✅ Image blocking configured via Playwright resource filtering`);
     }
 
     /**
@@ -547,6 +547,8 @@ export class ProfileLauncher {
             proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin'
             proxyStart = null, // Proxy label to start rotation from
             proxyType = null, // Proxy type filter: null, 'http', 'socks5'
+            proxyConnectionType = null, // Proxy connection type filter: 'resident', 'datacenter', 'mobile'
+            proxyCountry = null, // Proxy country filter: ISO code or name
             // IP check controls (for rotator path)
             skipIpCheck = false,
             ipCheckTimeout = 10000,
@@ -588,6 +590,8 @@ export class ProfileLauncher {
                     strategy: 'round-robin',
                     startProxyLabel: proxyStart,
                     proxyType: proxyType,
+                    connectionType: proxyConnectionType,
+                    country: proxyCountry,
                     // Wire IP-check behavior
                     skipIPCheck: !!skipIpCheck,
                     ipCheckTimeoutMs: parseInt(ipCheckTimeout) || 10000,
@@ -603,8 +607,11 @@ export class ProfileLauncher {
                     console.warn(`⚠️  Proxy rotation failed, launching without proxy`);
                 }
             } else if (proxySelection) {
-                // Use standard proxy selection
-                proxyConfig = await this.proxyManager.getProxyConfig(proxySelection, proxyType);
+                // Use standard proxy selection with filtering options
+                proxyConfig = await this.proxyManager.getProxyConfig(proxySelection, proxyType, {
+                    connectionType: proxyConnectionType,
+                    country: proxyCountry
+                });
                 if (!proxyConfig) {
                     console.warn(`⚠️  Proxy configuration failed, launching without proxy`);
                 }
@@ -681,6 +688,12 @@ export class ProfileLauncher {
                         ...args
                     ]
                 };
+                
+                // Setup native image blocking if requested (most efficient method)
+                if (disableImages) {
+                    console.log(`🚫 Image loading disabled - using native Chrome flags for optimal performance`);
+                    await this.setupImageBlocking(context, launchOptions, true);
+                }
                 
                 // Add proxy configuration only if specified
                 if (proxyConfig) {
@@ -894,10 +907,10 @@ export class ProfileLauncher {
             // Setup VidIQ device ID spoofing for this profile
             await this.setupVidiqDeviceIdSpoofing(context, profile.name);
             
-            // Setup image blocking if requested (helps with proxy speed)
-            if (disableImages) {
-                console.log(`🚫 Image loading disabled - blocking images for faster proxy performance`);
-                await this.setupImageBlocking(context);
+            // Setup image blocking if requested (fallback method for non-Chromium or if native failed)
+            if (disableImages && browserType !== 'chromium') {
+                console.log(`🚫 Image loading disabled - using Playwright route blocking for ${browserType}`);
+                await this.setupImageBlocking(context, null, false);
             }
             
             // Apply stealth configuration if enabled

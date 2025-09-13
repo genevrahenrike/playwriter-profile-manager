@@ -18,6 +18,8 @@ export class ProxyRotator {
         this.strategy = options.strategy || 'round-robin'; // Default to round-robin
         this.startProxyLabel = options.startProxyLabel || null; // Specific proxy to start from
         this.proxyType = options.proxyType || null; // Filter by proxy type: 'http', 'socks5', or null for all
+        this.connectionType = options.connectionType || null; // Filter by connection type: 'resident', 'datacenter', 'mobile'
+        this.country = options.country || null; // Filter by country code or name
     }
 
     /**
@@ -36,18 +38,12 @@ export class ProxyRotator {
             this.proxyType = 'http'; // Fall back to HTTP
         }
         
-        // Filter proxies by type if specified
-        let candidateProxies = [];
-        if (this.proxyType) {
-            if (this.proxyType === 'http' && this.proxyManager.loadedProxies.http) {
-                candidateProxies = this.proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' }));
-            }
-        } else {
-            // Only include HTTP proxies (SOCKS5 not supported)
-            candidateProxies = this.proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' }));
-        }
-        
-        this.workingProxies = candidateProxies;
+        // Get filtered proxies based on all criteria
+        this.workingProxies = this.proxyManager.getFilteredProxies({
+            type: this.proxyType,
+            connectionType: this.connectionType,
+            country: this.country
+        });
         
         // Set starting position if specified
         if (this.startProxyLabel) {
@@ -60,8 +56,12 @@ export class ProxyRotator {
             }
         }
         
-        const typeFilter = this.proxyType ? ` (${this.proxyType} only)` : '';
-        console.log(`🔄 ProxyRotator initialized with ${this.workingProxies.length} working proxies (strategy: ${this.strategy}${typeFilter})`);
+        const filters = [];
+        if (this.proxyType) filters.push(`type: ${this.proxyType}`);
+        if (this.connectionType) filters.push(`connectionType: ${this.connectionType}`);
+        if (this.country) filters.push(`country: ${this.country}`);
+        const filterDesc = filters.length > 0 ? ` (${filters.join(', ')})` : '';
+        console.log(`🔄 ProxyRotator initialized with ${this.workingProxies.length} working proxies (strategy: ${this.strategy}${filterDesc})`);
         return this.workingProxies.length > 0;
     }
 

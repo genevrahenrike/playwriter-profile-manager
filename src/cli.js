@@ -521,6 +521,8 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
+    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
+    .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--list-proxies', 'List all available proxies and exit')
@@ -594,6 +596,8 @@ program
                 proxyStrategy: options.proxyStrategy,
                 proxyStart: options.proxyStart,
                 proxyType: options.proxyType,
+                proxyConnectionType: options.proxyConnectionType,
+                proxyCountry: options.proxyCountry,
                 disableImages: options.disableImages,
                 disableProxyWaitIncrease: options.disableProxyWaitIncrease,
                 // IP check controls (affects round-robin rotation path)
@@ -730,6 +734,8 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
+    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
+    .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
@@ -796,6 +802,8 @@ program
                 proxyStrategy: options.proxyStrategy,
                 proxyStart: options.proxyStart,
                 proxyType: options.proxyType,
+                proxyConnectionType: options.proxyConnectionType,
+                proxyCountry: options.proxyCountry,
                 disableImages: options.disableImages,
                 disableProxyWaitIncrease: options.disableProxyWaitIncrease,
                 // IP check controls (affects round-robin rotation path)
@@ -893,6 +901,8 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
+    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
+    .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
@@ -1038,6 +1048,8 @@ program
                 strategy: options.proxyStrategy || 'round-robin',
                 startProxyLabel: options.proxyStart,
                 proxyType: options.proxyType,
+                connectionType: options.proxyConnectionType,
+                country: options.proxyCountry,
                 skipIPCheck: !!options.skipIpCheck,
                 ipCheckTimeoutMs: parseInt(options.ipCheckTimeout) || 10000,
                 ipCheckMaxAttempts: parseInt(options.ipCheckRetries) || 3
@@ -1287,6 +1299,8 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (skip already-used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http')
+    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
+    .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fast but may allow duplicate IPs)')
     .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
     .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
@@ -1573,6 +1587,8 @@ program
                     proxyStrategy: options.proxyStrategy,
                     proxyStart: options.proxyStart,
                     proxyType: options.proxyType,
+                    proxyConnectionType: options.proxyConnectionType,
+                    proxyCountry: options.proxyCountry,
                     skipIpCheck: !!options.skipIpCheck,
                     ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,
                     ipCheckRetries: parseInt(options.ipCheckRetries) || 3
@@ -2485,6 +2501,8 @@ program
     .option('-l, --list', 'List all available proxies')
     .option('-t, --test <selection>', 'Test proxy connectivity (selection: auto, fastest, proxy-label)')
     .option('--type <type>', 'Filter by proxy type: http or socks5')
+    .option('--connection-type <type>', 'Filter by connection type: resident, datacenter, mobile')
+    .option('--country <country>', 'Filter by country (ISO code like US, GB, DE or name like Germany)')
     .option('-s, --stats', 'Show proxy statistics and performance')
     .action(async (options) => {
         const launcher = getProfileLauncher();
@@ -2501,7 +2519,10 @@ program
             console.log(`🔍 Testing proxy: ${options.test}${options.type ? ` (type: ${options.type})` : ''}`);
             
             try {
-                const proxyConfig = await launcher.proxyManager.getProxyConfig(options.test, options.type);
+                const proxyConfig = await launcher.proxyManager.getProxyConfig(options.test, options.type, {
+                    connectionType: options.connectionType,
+                    country: options.country
+                });
                 if (proxyConfig) {
                     console.log(chalk.green('✅ Proxy configuration is valid'));
                     console.log(chalk.dim(`   Server: ${proxyConfig.server}`));

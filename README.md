@@ -83,10 +83,21 @@ npx ppm launch temp-profile --fresh
 npx ppm launch my-profile --browser chromium --devtools
 
 # Launch with proxy support
-npx ppm launch my-profile --proxy auto                    # Random working proxy
-npx ppm launch my-profile --proxy fastest                 # Lowest latency proxy  
-npx ppm launch my-profile --proxy "Germany"               # Specific proxy by label
-npx ppm launch my-profile --proxy auto --proxy-type http  # HTTP proxies only
+npx ppm launch my-profile --proxy-strategy auto                    # Random working proxy
+npx ppm launch my-profile --proxy-strategy fastest                 # Lowest latency proxy
+npx ppm launch my-profile --proxy-strategy "Germany"               # Specific proxy by label
+npx ppm launch my-profile --proxy-strategy auto --proxy-type http  # HTTP proxies only
+
+# Launch with connection type filtering
+npx ppm launch my-profile --proxy-strategy auto --proxy-connection-type resident    # Resident proxies only
+npx ppm launch my-profile --proxy-strategy auto --proxy-connection-type datacenter  # Datacenter proxies only
+
+# Launch with country filtering
+npx ppm launch my-profile --proxy-strategy auto --proxy-country US        # US proxies only
+npx ppm launch my-profile --proxy-strategy auto --proxy-country Germany   # Germany proxies only
+
+# Launch with combined filtering
+npx ppm launch my-profile --proxy-strategy auto --proxy-country US --proxy-connection-type resident
 
 # Disable compression for this session (will keep unpacked on close)
 npx ppm launch my-profile --no-compress
@@ -1087,9 +1098,32 @@ The Playwright Profile Manager now includes comprehensive proxy support for both
 
 ## Proxy Configuration Files
 
-Proxy configurations are stored in JSON files in the `./proxies` folder:
+Proxy configurations are stored in JSON files in the `./proxies` folder. The system supports both v1 and v2 formats:
 
-### HTTP Proxies (`./proxies/http.proxies.json`)
+### HTTP Proxies v2 Format (`./proxies/http.proxies.v2.json`) - **Recommended**
+```json
+[
+  {
+    "_id": "89aec17b1a74ffc1036fffc9",
+    "id": "89aec17b1a74ffc1036fffc9",
+    "mode": "geolocation",
+    "host": "geo.floppydata.com",
+    "port": 10080,
+    "username": "kNNvsbBulieuiY6i",
+    "password": "zvvuztDlOHf4b75I",
+    "profiles": [],
+    "profilesCount": 1,
+    "customName": "United States",
+    "status": true,
+    "country": "US",
+    "checkDate": "2025-09-11T23:47:58.620Z",
+    "createdAt": "2025-09-13T09:11:47.477Z",
+    "connectionType": "resident"
+  }
+]
+```
+
+### HTTP Proxies v1 Format (`./proxies/http.proxies.json`) - **Legacy**
 ```json
 [
   {
@@ -1097,7 +1131,7 @@ Proxy configurations are stored in JSON files in the `./proxies` folder:
     "host": "geo.floppydata.com",
     "port": 10080,
     "login": "username",
-    "password": "password", 
+    "password": "password",
     "url": "http://username:password@geo.floppydata.com:10080",
     "status": "OK",
     "lastChecked": "2025-09-07T09:01:31.299Z",
@@ -1110,6 +1144,8 @@ Proxy configurations are stored in JSON files in the `./proxies` folder:
   }
 ]
 ```
+
+**Format Priority**: The system automatically loads v2 format if available, otherwise falls back to v1 format.
 
 ### SOCKS5 Proxies (`./proxies/socks5.proxies.json`)
 ```json
@@ -1139,7 +1175,7 @@ Proxy configurations are stored in JSON files in the `./proxies` folder:
 
 ```bash
 # Use round-robin proxy selection (default strategy)
-npx ppm launch my-profile
+npx ppm launch my-profile --proxy-strategy round-robin
 
 # Use specific strategy
 npx ppm launch my-profile --proxy-strategy auto
@@ -1154,6 +1190,17 @@ npx ppm launch my-profile --proxy-strategy round-robin --proxy-start Germany
 # Filter by proxy type
 npx ppm launch my-profile --proxy-strategy auto --proxy-type http
 npx ppm launch my-profile --proxy-strategy fastest --proxy-type socks5
+
+# Filter by connection type (v2 format feature)
+npx ppm launch my-profile --proxy-strategy auto --proxy-connection-type resident
+npx ppm launch my-profile --proxy-strategy auto --proxy-connection-type datacenter
+
+# Filter by country (v2 format feature)
+npx ppm launch my-profile --proxy-strategy auto --proxy-country US
+npx ppm launch my-profile --proxy-strategy auto --proxy-country Germany
+
+# Combined filtering (v2 format feature)
+npx ppm launch my-profile --proxy-strategy auto --proxy-country US --proxy-connection-type resident
 
 # List available proxies
 npx ppm launch my-profile --list-proxies
@@ -1345,22 +1392,33 @@ const playwrightConfig = proxyManager.toPlaywrightProxy(proxy);
 
 ## Proxy File Format
 
-### Required Fields
+### v2 Format Fields (Recommended)
+- `_id`/`id`: Unique identifier for the proxy
+- `host`: Proxy server hostname/IP
+- `port`: Proxy server port
+- `username`: Username for proxy authentication
+- `password`: Password for proxy authentication
+- `customName`: Human-readable name (e.g., "United States", "Germany")
+- `country`: ISO country code (e.g., "US", "DE", "GB")
+- `connectionType`: Connection type ("resident", "datacenter", "mobile")
+- `status`: Boolean status (true for working, false for non-working)
+- `checkDate`: ISO timestamp of last status check
+- `mode`: Proxy mode (e.g., "geolocation")
+- `profiles`: Array of associated profiles
+- `profilesCount`: Number of profiles using this proxy
+- `createdAt`: ISO timestamp of proxy creation
+- `timezone`: Timezone for the proxy location (optional)
+
+### v1 Format Fields (Legacy)
 - `label`: Human-readable identifier
 - `host`: Proxy server hostname/IP
 - `port`: Proxy server port
-
-### Authentication Fields
 - `username`/`login`: Username for proxy authentication
 - `password`: Password for proxy authentication
-
-### Status Fields
 - `status`: "OK" for working proxies, "ERROR" for non-working
 - `lastChecked`: ISO timestamp of last status check
 - `avgLatencyMs`: Average latency in milliseconds
 - `latenciesByEndpoint`: Latency breakdown by test endpoint
-
-### Generated Fields
 - `url`: Complete proxy URL (auto-generated from other fields)
 
 ## Browser Compatibility

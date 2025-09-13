@@ -9,6 +9,7 @@ export class ProxyManager {
     constructor(options = {}) {
         this.proxiesDir = options.proxiesDir || path.join(__dirname, '../proxies');
         this.httpProxiesFile = path.join(this.proxiesDir, 'http.proxies.json');
+        this.httpProxiesV2File = path.join(this.proxiesDir, 'http.proxies.v2.json');
         this.socks5ProxiesFile = path.join(this.proxiesDir, 'socks5.proxies.json');
         this.loadedProxies = {
             http: [],
@@ -25,11 +26,15 @@ export class ProxyManager {
      */
     async loadProxies() {
         try {
-            // Load HTTP proxies
-            if (await fs.pathExists(this.httpProxiesFile)) {
+            // Load HTTP proxies - try v2 format first, then fallback to v1
+            if (await fs.pathExists(this.httpProxiesV2File)) {
+                const httpV2Data = await fs.readJson(this.httpProxiesV2File);
+                this.loadedProxies.http = Array.isArray(httpV2Data) ? this.convertV2ToV1Format(httpV2Data) : [];
+                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v2 format)`);
+            } else if (await fs.pathExists(this.httpProxiesFile)) {
                 const httpData = await fs.readJson(this.httpProxiesFile);
                 this.loadedProxies.http = Array.isArray(httpData) ? httpData : [];
-                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies`);
+                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v1 format)`);
             }
 
             // Load SOCKS5 proxies
@@ -48,6 +53,69 @@ export class ProxyManager {
     }
 
     /**
+     * Convert v2 proxy format to v1 format for compatibility
+     */
+    convertV2ToV1Format(v2Proxies) {
+        return v2Proxies.map((proxy, index) => {
+            // Generate a label based on country and connection type
+            const countryName = this.getCountryName(proxy.country);
+            const connectionTypeSuffix = proxy.connectionType === 'datacenter' ? '-DC' : '';
+            
+            // Count how many proxies we've seen for this country to create unique labels
+            const countryCount = v2Proxies.slice(0, index + 1)
+                .filter(p => p.country === proxy.country && p.connectionType === proxy.connectionType)
+                .length;
+            
+            const label = `${countryName}${countryCount}${connectionTypeSuffix}`;
+
+            return {
+                // v1 format fields
+                label: label,
+                host: proxy.host,
+                port: proxy.port,
+                login: proxy.username, // v2 uses 'username', v1 uses 'login'
+                username: proxy.username, // Keep both for compatibility
+                password: proxy.password,
+                url: `http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`,
+                status: proxy.status === true ? 'OK' : 'ERROR',
+                lastChecked: proxy.checkDate,
+                
+                // v2 format fields (preserved for filtering)
+                _id: proxy._id,
+                id: proxy.id,
+                customName: proxy.customName,
+                country: proxy.country,
+                connectionType: proxy.connectionType,
+                mode: proxy.mode,
+                profiles: proxy.profiles,
+                profilesCount: proxy.profilesCount,
+                checkDate: proxy.checkDate,
+                createdAt: proxy.createdAt,
+                timezone: proxy.timezone
+            };
+        });
+    }
+
+    /**
+     * Get country name from ISO code
+     */
+    getCountryName(countryCode) {
+        const countryMap = {
+            'US': 'US',
+            'GB': 'UK',
+            'DE': 'Germany',
+            'FR': 'France',
+            'AU': 'Australia',
+            'CA': 'Canada',
+            'JP': 'Japan',
+            'NL': 'Netherlands',
+            'IT': 'Italy',
+            'ES': 'Spain'
+        };
+        return countryMap[countryCode] || countryCode;
+    }
+
+    /**
      * Filter out proxies with ERROR status
      */
     filterWorkingProxies() {
@@ -63,6 +131,63 @@ export class ProxyManager {
 
         this.loadedProxies.http = httpWorking;
         this.loadedProxies.socks5 = socks5Working;
+    }
+
+    /**
+     * Filter proxies by connection type (resident, datacenter, mobile)
+     */
+    filterByConnectionType(proxies, connectionType) {
+        if (!connectionType) return proxies;
+        return proxies.filter(proxy => proxy.connectionType === connectionType);
+    }
+
+    /**
+     * Filter proxies by country
+     */
+    filterByCountry(proxies, country) {
+        if (!country) return proxies;
+        const countryLower = country.toLowerCase();
+        return proxies.filter(proxy => {
+            // Exact match on country code
+            if (proxy.country === country) return true;
+            
+            // Exact match on custom name (avoid partial matches like "US" in "Australia")
+            if (proxy.customName) {
+                const customNameLower = proxy.customName.toLowerCase();
+                // Check for exact word match to avoid "US" matching "Australia"
+                const words = customNameLower.split(/\s+/);
+                return words.includes(countryLower) || customNameLower === countryLower;
+            }
+            
+            return false;
+        });
+    }
+
+    /**
+     * Get filtered proxies based on criteria
+     */
+    getFilteredProxies(options = {}) {
+        const { type, connectionType, country } = options;
+        let proxies = [];
+
+        if (type && this.loadedProxies[type]) {
+            proxies = this.loadedProxies[type].map(proxy => ({ ...proxy, type }));
+        } else {
+            proxies = [
+                ...this.loadedProxies.http.map(proxy => ({ ...proxy, type: 'http' })),
+                ...this.loadedProxies.socks5.map(proxy => ({ ...proxy, type: 'socks5' }))
+            ];
+        }
+
+        // Apply filters
+        if (connectionType) {
+            proxies = this.filterByConnectionType(proxies, connectionType);
+        }
+        if (country) {
+            proxies = this.filterByCountry(proxies, country);
+        }
+
+        return proxies;
     }
 
     /**
@@ -102,18 +227,8 @@ export class ProxyManager {
     /**
      * Get random proxy of specified type or any type
      */
-    getRandomProxy(type = null) {
-        let availableProxies = [];
-        
-        if (type && this.loadedProxies[type]) {
-            availableProxies = this.loadedProxies[type].map(proxy => ({ ...proxy, type }));
-        } else {
-            // Get from all types
-            availableProxies = [
-                ...this.loadedProxies.http.map(proxy => ({ ...proxy, type: 'http' })),
-                ...this.loadedProxies.socks5.map(proxy => ({ ...proxy, type: 'socks5' }))
-            ];
-        }
+    getRandomProxy(type = null, options = {}) {
+        const availableProxies = this.getFilteredProxies({ type, ...options });
 
         if (availableProxies.length === 0) {
             return null;
@@ -126,29 +241,8 @@ export class ProxyManager {
     /**
      * Get next proxy in round-robin fashion
      */
-    getNextProxy(type = null) {
-        if (type && this.loadedProxies[type]) {
-            const proxies = this.loadedProxies[type];
-            if (proxies.length === 0) return null;
-            
-            this.lastProxyIndex[type] = (this.lastProxyIndex[type] + 1) % proxies.length;
-            return { ...proxies[this.lastProxyIndex[type]], type };
-        }
-
-        // Round-robin across all types, but filter by type if specified
-        let candidateProxies = [];
-        if (type) {
-            // Only include proxies of the specified type
-            if (this.loadedProxies[type]) {
-                candidateProxies = this.loadedProxies[type].map(proxy => ({ ...proxy, type }));
-            }
-        } else {
-            // Include all types
-            candidateProxies = [
-                ...this.loadedProxies.http.map(proxy => ({ ...proxy, type: 'http' })),
-                ...this.loadedProxies.socks5.map(proxy => ({ ...proxy, type: 'socks5' }))
-            ];
-        }
+    getNextProxy(type = null, options = {}) {
+        const candidateProxies = this.getFilteredProxies({ type, ...options });
 
         if (candidateProxies.length === 0) return null;
 
@@ -160,28 +254,19 @@ export class ProxyManager {
     /**
      * Get fastest proxy (lowest latency)
      */
-    getFastestProxy(type = null) {
-        let candidates = [];
-        
-        if (type && this.loadedProxies[type]) {
-            candidates = this.loadedProxies[type].map(proxy => ({ ...proxy, type }));
-        } else {
-            candidates = [
-                ...this.loadedProxies.http.map(proxy => ({ ...proxy, type: 'http' })),
-                ...this.loadedProxies.socks5.map(proxy => ({ ...proxy, type: 'socks5' }))
-            ];
-        }
+    getFastestProxy(type = null, options = {}) {
+        const candidates = this.getFilteredProxies({ type, ...options });
 
         if (candidates.length === 0) return null;
 
         // Filter out proxies without latency data
-        const proxiesWithLatency = candidates.filter(proxy => 
+        const proxiesWithLatency = candidates.filter(proxy =>
             proxy.avgLatencyMs && proxy.avgLatencyMs > 0
         );
 
         if (proxiesWithLatency.length === 0) {
             // Fallback to random if no latency data
-            return this.getRandomProxy(type);
+            return this.getRandomProxy(type, options);
         }
 
         // Sort by average latency (ascending)
@@ -223,7 +308,7 @@ export class ProxyManager {
     /**
      * Get proxy configuration for Playwright context
      */
-    async getProxyConfig(selection = 'auto', type = null) {
+    async getProxyConfig(selection = 'auto', type = null, options = {}) {
         // Ensure proxies are loaded
         if (this.loadedProxies.http.length === 0 && this.loadedProxies.socks5.length === 0) {
             await this.loadProxies();
@@ -247,13 +332,13 @@ export class ProxyManager {
         switch (selection) {
             case 'auto':
             case 'random':
-                selectedProxy = this.getRandomProxy(type);
+                selectedProxy = this.getRandomProxy(type, options);
                 break;
             case 'fastest':
-                selectedProxy = this.getFastestProxy(type);
+                selectedProxy = this.getFastestProxy(type, options);
                 break;
             case 'round-robin':
-                selectedProxy = this.getNextProxy(type);
+                selectedProxy = this.getNextProxy(type, options);
                 break;
             default:
                 // Assume it's a label/name
@@ -262,18 +347,31 @@ export class ProxyManager {
         }
 
         if (!selectedProxy) {
-            console.warn(`⚠️  No proxy found for selection: ${selection} (type: ${type || 'any'})`);
+            const filterDesc = this.getFilterDescription(options);
+            console.warn(`⚠️  No proxy found for selection: ${selection} (type: ${type || 'any'}${filterDesc})`);
             return null;
         }
 
         const config = this.toPlaywrightProxy(selectedProxy);
-        console.log(`🌐 Selected proxy: ${selectedProxy.label} (${selectedProxy.type}) - ${selectedProxy.host}:${selectedProxy.port}`);
+        const connectionInfo = selectedProxy.connectionType ? ` [${selectedProxy.connectionType}]` : '';
+        const countryInfo = selectedProxy.country ? ` (${selectedProxy.country})` : '';
+        console.log(`🌐 Selected proxy: ${selectedProxy.label}${connectionInfo}${countryInfo} - ${selectedProxy.host}:${selectedProxy.port}`);
         
         if (selectedProxy.avgLatencyMs) {
             console.log(`   📊 Average latency: ${selectedProxy.avgLatencyMs}ms`);
         }
 
         return config;
+    }
+
+    /**
+     * Get human-readable filter description
+     */
+    getFilterDescription(options) {
+        const filters = [];
+        if (options.connectionType) filters.push(`connectionType: ${options.connectionType}`);
+        if (options.country) filters.push(`country: ${options.country}`);
+        return filters.length > 0 ? `, ${filters.join(', ')}` : '';
     }
 
     /**
