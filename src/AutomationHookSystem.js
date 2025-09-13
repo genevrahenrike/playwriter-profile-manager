@@ -1013,9 +1013,16 @@ export class AutomationHookSystem {
         const automation = this.activeAutomations.get(sessionId);
         if (!automation) return;
 
+        // If onlyWhenAutofillDisabled is true, check if autofill system is active and skip if so
+        // If onlyWhenAutofillDisabled is false, always proceed (force fill)
         if (onlyWhenAutofillDisabled && !(automation.automationAutofillOnly || this.options.automationAutofillOnly)) {
             console.log(`⏭️  Skipping automation_fill (Autofill system active)`);
             return;
+        }
+        
+        // Log when we're forcing fill regardless of autofill system state
+        if (!onlyWhenAutofillDisabled) {
+            console.log(`🔧 Forcing automation_fill (ignoring autofill system state)`);
         }
 
         const selectors = stepConfig.selectors || {};
@@ -1363,7 +1370,13 @@ export class AutomationHookSystem {
                 
                 // If we have automation autofill, trigger it
                 if (automation?.automationAutofillOnly || this.options.automationAutofillOnly) {
-                    const fillCfg = hook?.workflow?.automation_fill || { type: 'automation_fill', onlyWhenAutofillDisabled: true };
+                    const baseFillCfg = hook?.workflow?.automation_fill || {};
+                    const fillCfg = {
+                        type: 'automation_fill',
+                        onlyWhenAutofillDisabled: false, // Force fill after login screen return
+                        ...baseFillCfg,
+                        onlyWhenAutofillDisabled: false // Ensure this override takes precedence
+                    };
                     try {
                         await this.automationFill(fillCfg, page, sessionId, hook);
                         console.log('✅ Form refilled after returning to login screen');
@@ -1408,7 +1421,8 @@ export class AutomationHookSystem {
 
             // Always perform automation-owned fill after reload to ensure form is filled
             console.log('📝 Performing automation-owned fill after reload...');
-            const fillCfg = hook?.workflow?.automation_fill || {
+            const baseFillCfg = hook?.workflow?.automation_fill || {};
+            const fillCfg = {
                 type: 'automation_fill',
                 onlyWhenAutofillDisabled: false, // Force fill regardless of autofill system state
                 selectors: {
@@ -1425,7 +1439,10 @@ export class AutomationHookSystem {
                 },
                 minPasswordLength: 8,
                 stabilityDelayMs: 300,
-                required: true
+                required: true,
+                // Merge in any other settings from the hook but override the critical flag
+                ...baseFillCfg,
+                onlyWhenAutofillDisabled: false // Ensure this override takes precedence
             };
             
             try {

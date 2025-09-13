@@ -2281,3 +2281,30 @@ Of the 230 missing profiles:
 ### **✅ Conclusion**
 
 The profile extraction system is working exceptionally well with a 99.4% success rate. The 4 profiles with successful sessions that weren't extracted represent edge cases with timing issues rather than systematic problems. The enhanced refresh flow can detect valid sessions but cannot recover full Bearer tokens without complete re-authentication, making manual recovery not cost-effective for such a small number of profiles.
+
+---
+
+Fixed the CAPTCHA autofill issue where forms weren't being refilled after page reload. The problem was in the AutomationHookSystem's `detectCaptcha` method.
+
+**Root Cause:**
+When CAPTCHA was detected and the page was reloaded, the system tried to force autofill by setting `onlyWhenAutofillDisabled: false`, but the configuration merging logic was flawed. It used the `||` operator which meant if the hook had an existing `automation_fill` configuration (which VidIQ does with `onlyWhenAutofillDisabled: true`), it would use that restrictive setting instead of the forced override.
+
+**Changes Made:**
+
+1. **Fixed configuration override in page reload scenario** (lines 1418-1440):
+   - Changed from `hook?.workflow?.automation_fill || { ... }` to proper configuration merging
+   - Now explicitly overrides `onlyWhenAutofillDisabled: false` after merging base configuration
+   - Added logging to show when forcing fill regardless of autofill system state
+
+2. **Fixed configuration override in jittering scenario** (lines 1364-1376):
+   - Applied the same fix for when the system detects return to login screen after jittering
+   - Ensures form refill works properly in both scenarios
+
+3. **Enhanced logging**:
+   - Added `🔧 Forcing automation_fill (ignoring autofill system state)` message
+   - Better visibility into when the system is bypassing normal autofill restrictions
+
+**Expected Behavior After Fix:**
+- When CAPTCHA is detected and page is reloaded, the system will now properly refill the form
+- The logs should show `🔧 Forcing automation_fill (ignoring autofill system state)` instead of `⏭️ Skipping automation_fill (Autofill system active)`
+- Form fields should be populated after reload, allowing the automation to continue properly
