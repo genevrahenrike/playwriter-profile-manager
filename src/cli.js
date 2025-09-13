@@ -506,6 +506,7 @@ program
     .option('--no-max-stealth', 'Disable maximum stealth mode (enabled by default)')
     .option('--automation-tasks <tasks...>', 'Specify custom automation tasks')
     .option('--headless-automation', 'Enable headless automation mode (autofill + submit + monitor success)')
+    .option('--automation-autofill-only', 'Disable AutofillHookSystem; automation fills email/password')
     .option('--auto-close-on-success', 'Automatically close browser when success is detected (headed or headless)')
     .option('--auto-close-on-failure', 'Automatically close browser on timeout/failure (headed or headless)')
     .option('--auto-close-timeout <ms>', 'Timeout before treating as failure (ms)', '120000')
@@ -600,6 +601,7 @@ program
                 proxyCountry: options.proxyCountry,
                 disableImages: options.disableImages,
                 disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                automationAutofillOnly: !!options.automationAutofillOnly,
                 // IP check controls (affects round-robin rotation path)
                 skipIpCheck: !!options.skipIpCheck,
                 ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,
@@ -721,6 +723,7 @@ program
     .option('--no-auto-extensions', 'Disable automatic extension loading')
     .option('--automation', 'Enable automation features (default: off)')
     .option('--headless-automation', 'Enable headless automation mode (autofill + submit + monitor success)')
+    .option('--automation-autofill-only', 'Disable AutofillHookSystem; automation fills email/password')
     .option('--auto-close-on-success', 'Automatically close browser when success is detected (headed or headless)')
     .option('--auto-close-on-failure', 'Automatically close browser on timeout/failure (headed or headless)')
     .option('--auto-close-timeout <ms>', 'Timeout before treating as failure (ms)', '120000')
@@ -806,6 +809,7 @@ program
                 proxyCountry: options.proxyCountry,
                 disableImages: options.disableImages,
                 disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                automationAutofillOnly: !!options.automationAutofillOnly,
                 // IP check controls (affects round-robin rotation path)
                 skipIpCheck: !!options.skipIpCheck,
                 ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,

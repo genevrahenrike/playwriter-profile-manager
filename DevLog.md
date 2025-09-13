@@ -1848,3 +1848,78 @@ Primary files:
 - [capture-hooks/vidiq-app.js](capture-hooks/vidiq-app.js)
 - [capture-hooks/vidiq.js](capture-hooks/vidiq.js)
 - [src/RequestCaptureSystem.js](src/RequestCaptureSystem.js)
+
+---
+
+Implemented robust CAPTCHA detection and mitigation, plus an “automation-owned” autofill path to avoid coordination races.
+
+What changed
+- [src/AutomationHookSystem.js](src/AutomationHookSystem.js)
+  - Added automation-only filling step: automation_fill (deterministic email/password fill owned by automation).
+  - Added detect_captcha step with DOM-based detection and mitigation (jitter re-submit, then reload+refill).
+  - Added lightweight human jitter and resubmit helper.
+  - Added session flag captchaDetected and support for automationAutofillOnly mode.
+  - Integrated RandomDataGenerator locally for automation_fill.
+- [src/ProfileLauncher.js](src/ProfileLauncher.js)
+  - New launch option: automationAutofillOnly (use automation-owned fill; disables AutofillHookSystem during automation).
+  - Auto-close loop now honors automation captchaDetected flag to apply CAPTCHA grace logic reliably.
+- [automation-hooks/vidiq.js](automation-hooks/vidiq.js)
+  - Made wait_for_autofill optional.
+  - Inserted automation_fill for when AutofillHookSystem is disabled.
+  - Added detect_captcha step before monitor_success using your provided selectors (authentication-error, recaptcha-tos, recaptcha/hcaptcha iframes).
+- [src/ProfileEventBus.js](src/ProfileEventBus.js)
+  - Added EVENTS.CAPTCHA_DETECTED constant for unified signaling.
+- [src/cli.js](src/cli.js)
+  - Launch and launch-template add --automation-autofill-only flag and pass it through.
+  - When set, the automation flow takes over email/password filling and AutofillHookSystem remains idle for the session.
+
+Behavior details
+- CAPTCHA detection
+  - Looks for:
+    - [p[data-testid="authentication-error"], [data-testid="authentication-error"], p/[data-testid="recaptcha-tos"]](automation-hooks/vidiq.js)
+    - [iframe[src*="recaptcha"] / div.g-recaptcha, iframe[src*="hcaptcha"] / div.h-captcha](automation-hooks/vidiq.js)
+  - On detection:
+    - Marks session state as CAPTCHA (emits [EVENTS.CAPTCHA_DETECTED](src/ProfileEventBus.js) and sets automation.captchaDetected).
+    - Performs up to 2 “human jitter” retries (focus/blur, tab, re-click submit).
+    - If still blocked and reloadOnFail=true:
+      - Reloads page
+      - Re-fills via automation_fill when automationAutofillOnly is active
+      - Re-submits.
+  - Auto-close monitor now treats sessions as “captcha likely” if either DOM heuristics or the automation flag indicates CAPTCHA, applying the configured grace period.
+- Automation-owned autofill (no coordination races)
+  - When automationAutofillOnly is true:
+    - AutofillHookSystem is not started for the session (keeps manual mode fully separate).
+    - The automation step automation_fill fills email/password with stability checks and validation:
+      - Email must contain @
+      - Password must satisfy min length (default 8)
+    - Then click_submit runs with pre-submit verification and pauses autofill monitoring (not applicable when AutofillHookSystem is disabled) to eliminate last-moment interference.
+- Manual vs automated mode
+  - Manual: AutofillHookSystem remains as-is (simple, safe helpers; scrolling not required).
+  - Automated: Prefer automation-owned fill with --automation-autofill-only to avoid interactions between two systems.
+
+CLI usage
+- Launch with automation taking over autofill:
+  - Headed:
+    - npx ppm launch my-profile --automation --automation-autofill-only
+  - Headless automation (add auto-close on success):
+    - npx ppm launch my-profile --automation --headless-automation --automation-autofill-only --auto-close-on-success
+- Launch from template (recommended for signup automation):
+  - Headed:
+    - npx ppm launch-template vidiq-clean instance1 --automation --automation-autofill-only
+  - Headless automation:
+    - npx ppm launch-template vidiq-clean instance2 --automation --headless-automation --automation-autofill-only --auto-close-on-success
+- Batch and refresh remain compatible; CAPTCHA grace already applied by those commands. You can adopt the new flag in your per-run launch settings where desired.
+
+Notes and defaults
+- The new flag --automation-autofill-only is opt-in. If you want it to be default when --headless-automation is used, say so and I’ll wire the default to true for headless automation unless overridden.
+- Detection selectors and retry counts are configurable per-hook in [automation-hooks/vidiq.js](automation-hooks/vidiq.js).
+- Request-capture success detection paths are unchanged and continue to auto-close when success is observed.
+
+Files touched (clickable)
+- [src/AutomationHookSystem.js](src/AutomationHookSystem.js)
+- [src/ProfileLauncher.js](src/ProfileLauncher.js)
+- [automation-hooks/vidiq.js](automation-hooks/vidiq.js)
+- [src/ProfileEventBus.js](src/ProfileEventBus.js)
+- [src/cli.js](src/cli.js)
+
+This delivers reliable CAPTCHA detection, mitigation, and a clean automation-owned autofill path that avoids fragile coordination between systems while keeping the simple autofill available for manual sessions.

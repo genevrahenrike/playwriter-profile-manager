@@ -153,6 +153,9 @@ export const EVENTS = {
     AUTOMATION_COMPLETED: 'automation:completed',
     AUTOMATION_FAILED: 'automation:failed',
     
+    // CAPTCHA events
+    CAPTCHA_DETECTED: 'captcha:detected',
+    
     // Request capture events
     CAPTURE_REQUEST: 'capture:request',
     CAPTURE_RESPONSE: 'capture:response',

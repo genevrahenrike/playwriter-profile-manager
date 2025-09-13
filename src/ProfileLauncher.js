@@ -543,6 +543,7 @@ export class ProfileLauncher {
             disableCompression = undefined, // Optional override per launch
             disableImages = false, // Disable image loading for faster proxy connections
             disableProxyWaitIncrease = false, // Disable proxy mode wait time increases
+            automationAutofillOnly = false, // Use automation-owned fill and disable AutofillHookSystem during automation
             proxy = null, // Legacy proxy configuration (deprecated, use proxyStrategy)
             proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin'
             proxyStart = null, // Proxy label to start rotation from
@@ -868,6 +869,9 @@ export class ProfileLauncher {
                 }
             } catch (_) {}
 
+            // Configure automation fill mode
+            try { this.automationSystem.options.automationAutofillOnly = !!automationAutofillOnly; } catch (_) {}
+
             // Start request capture monitoring if enabled (start early to avoid missing initial responses)
             if (enableRequestCapture) {
                 await this.requestCaptureSystem.startMonitoring(sessionId, context, {
@@ -880,8 +884,10 @@ export class ProfileLauncher {
                 await this.setupAutomation(sessionId, { browser, context, profile, page }, automationTasks);
             }
             
-            // Start autofill monitoring (can be disabled for refresh flows)
-            if (enableAutofillMonitoring !== false) {
+            // Start autofill monitoring (disabled when automation-autofill-only is active)
+            if (enableAutomation && automationAutofillOnly) {
+                console.log('⏸️  Autofill monitoring disabled (automation-autofill-only)');
+            } else if (enableAutofillMonitoring !== false) {
                 await this.autofillSystem.startMonitoring(sessionId, context);
             } else {
                 console.log('⏸️  Autofill monitoring disabled for this session');
@@ -1260,6 +1266,11 @@ export class ProfileLauncher {
                                     const hasHCaptcha = await p.locator('iframe[src*="hcaptcha"], div.h-captcha').count().catch(() => 0);
                                     if (hasRecaptcha > 0 || hasHCaptcha > 0) { captchaLikely = true; break; }
                                 }
+                            } catch (_) {}
+                            // Also honor automation flag set by detect_captcha
+                            try {
+                                const a = this.automationSystem?.activeAutomations?.get(sessionId);
+                                if (a && a.captchaDetected === true) captchaLikely = true;
                             } catch (_) {}
 
                             // If timeout exceeded (with optional extra grace for captchas), auto-close when enabled

@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { EVENTS } from './ProfileEventBus.js';
+import { RandomDataGenerator } from './RandomDataGenerator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,12 @@ export class AutomationHookSystem {
         this.processedHookRuns = new Set();
 
         console.log(`🤖 AutomationHookSystem initialized`);
+        // Ensure per-session behavior flags and a local data generator for automation-owned fill
+        this.options.automationAutofillOnly = !!this.options.automationAutofillOnly;
+        this.dataGenerator = new RandomDataGenerator({
+            enableTracking: false,
+            trackingDbPath: './profiles/data/generated_names.db'
+        });
     }
 
     /**
@@ -127,7 +134,9 @@ export class AutomationHookSystem {
             requestCaptureSystem,
             autofillSystem,
             startTime: Date.now(),
-            status: 'active'
+            status: 'active',
+            captchaDetected: false,
+            automationAutofillOnly: !!this.options.automationAutofillOnly
         };
         this.activeAutomations.set(sessionId, automationEntry);
 
@@ -305,6 +314,14 @@ export class AutomationHookSystem {
 
             case 'custom_script':
                 await this.executeCustomScript(stepConfig, page, sessionId, hook);
+                break;
+
+            case 'automation_fill':
+                await this.automationFill(stepConfig, page, sessionId, hook);
+                break;
+
+            case 'detect_captcha':
+                await this.detectCaptcha(stepConfig, page, sessionId, hook);
                 break;
 
             default:
@@ -982,6 +999,285 @@ export class AutomationHookSystem {
             await customScript(page, sessionId, hook, this);
         } else {
             throw new Error('No script or scriptPath provided for custom_script step');
+        }
+    }
+
+    /**
+     * Deterministic email/password fill owned by automation (used when AutofillHookSystem is disabled)
+     */
+    async automationFill(stepConfig, page, sessionId, hook) {
+        const onlyWhenAutofillDisabled = stepConfig.onlyWhenAutofillDisabled !== false;
+        const automation = this.activeAutomations.get(sessionId);
+        if (!automation) return;
+
+        if (onlyWhenAutofillDisabled && !(automation.automationAutofillOnly || this.options.automationAutofillOnly)) {
+            console.log(`⏭️  Skipping automation_fill (Autofill system active)`);
+            return;
+        }
+
+        const selectors = stepConfig.selectors || {};
+        const emailSelectors = selectors.email || [
+            'input[data-testid="form-input-email"]',
+            'input[name="email"]',
+            'input[type="email"]'
+        ];
+        const passwordSelectors = selectors.password || [
+            'input[data-testid="form-input-password"]',
+            'input[name="password"]',
+            'input[type="password"]'
+        ];
+        const minPasswordLength = stepConfig.minPasswordLength || 8;
+        const stabilityDelayMs = stepConfig.stabilityDelayMs || 250;
+
+        // Decide values
+        let email = stepConfig.values?.email;
+        let password = stepConfig.values?.password;
+
+        if (!email || !password) {
+            try {
+                const userData = this.dataGenerator.generateUserData({
+                    sessionId,
+                    siteUrl: page.url(),
+                    hookName: hook?.name || 'automation'
+                });
+                email = email || userData.email;
+                password = password || userData.password;
+                console.log(`🎲 automation_fill generated credentials`);
+            } catch (e) {
+                // fallback deterministic values if generator not available
+                const ts = Date.now();
+                email = email || `user${ts}@example.com`;
+                password = password || `Aa${ts}!xyz`;
+                console.log(`⚠️  Fallback credentials generated`);
+            }
+        }
+
+        const fillInput = async (sels, value) => {
+            for (const sel of sels) {
+                try {
+                    const loc = page.locator(sel).first();
+                    if (await loc.count() === 0) continue;
+                    await loc.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+                    const enabled = await loc.isEnabled().catch(() => false);
+                    const editable = await loc.isEditable().catch(() => false);
+                    if (!enabled || !editable) continue;
+
+                    try { await loc.focus(); } catch (_) {}
+                    await page.waitForTimeout(60 + Math.floor(Math.random() * 120));
+
+                    // Clear if needed and type
+                    const existing = await loc.inputValue().catch(() => '');
+                    if (existing) {
+                        try { await loc.clear(); } catch (_) {}
+                        await page.waitForTimeout(50);
+                    }
+
+                    const perCharDelay = /password/i.test(sel) ? (40 + Math.floor(Math.random() * 50)) : (20 + Math.floor(Math.random() * 40));
+                    await loc.pressSequentially(value, { delay: perCharDelay });
+
+                    // Verify
+                    const actual = await loc.inputValue().catch(() => '');
+                    if (actual && actual.trim() === value.trim()) {
+                        await page.waitForTimeout(stabilityDelayMs);
+                        return true;
+                    }
+                } catch (e) {
+                    // try next selector
+                }
+            }
+            return false;
+        };
+
+        let emailOk = await fillInput(emailSelectors, email);
+        let passwordOk = await fillInput(passwordSelectors, password);
+
+        // Quick validation
+        if (emailOk) {
+            try {
+                const eLoc = page.locator(emailSelectors[0]).first();
+                const val = await eLoc.inputValue().catch(() => '');
+                if (!/@/.test(val)) emailOk = false;
+            } catch (_) {}
+        }
+        if (passwordOk) {
+            try {
+                const pLoc = page.locator(passwordSelectors[0]).first();
+                const val = await pLoc.inputValue().catch(() => '');
+                if (!val || val.length < minPasswordLength) passwordOk = false;
+            } catch (_) {}
+        }
+
+        console.log(`🧩 automation_fill: emailOk=${emailOk} passwordOk=${passwordOk}`);
+        if (!emailOk || !passwordOk) {
+            if (stepConfig.required !== false) {
+                throw new Error(`automation_fill could not satisfy required fields (emailOk=${emailOk}, passwordOk=${passwordOk})`);
+            }
+        }
+    }
+
+    /**
+     * Try light human-like jitter and resubmit to bypass soft CAPTCHA gating
+     */
+    async tryHumanJitterResubmit(page, submitSelectors = []) {
+        try {
+            // Focus/blur jiggle on inputs
+            const jiggleTargets = [
+                'input[data-testid="form-input-email"]',
+                'input[name="email"]',
+                'input[type="email"]',
+                'input[data-testid="form-input-password"]',
+                'input[name="password"]',
+                'input[type="password"]'
+            ];
+            for (const sel of jiggleTargets) {
+                try {
+                    const loc = page.locator(sel).first();
+                    if (await loc.count() === 0) continue;
+                    await loc.focus().catch(() => {});
+                    await page.waitForTimeout(120 + Math.floor(Math.random() * 180));
+                    await page.keyboard.press('Tab').catch(() => {});
+                    await page.waitForTimeout(100 + Math.floor(Math.random() * 160));
+                } catch (_) {}
+            }
+
+            // Re-click submit
+            const candidates = submitSelectors.length ? submitSelectors : [
+                'button[type="submit"]',
+                'input[type="submit"]',
+                'button[data-testid="signup-button"]',
+                '.submit-btn',
+                '#submit'
+            ];
+            for (const sel of candidates) {
+                try {
+                    const loc = page.locator(sel).first();
+                    if (await loc.count() === 0) continue;
+                    await loc.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+                    const vis = await loc.isVisible().catch(() => false);
+                    const en = await loc.isEnabled().catch(() => false);
+                    if (!vis || !en) continue;
+                    await loc.click({ delay: 15 + Math.floor(Math.random() * 35) });
+                    await page.waitForTimeout(400 + Math.floor(Math.random() * 600));
+                    return true;
+                } catch (_) {}
+            }
+        } catch (_) {}
+        return false;
+    }
+
+    /**
+     * Detect common CAPTCHA states (VidIQ) and attempt mitigations:
+     *  - light jitter + resubmit (1-2 tries)
+     *  - if still blocked, page reload + (optional) automation_fill + resubmit
+     */
+    async detectCaptcha(stepConfig, page, sessionId, hook) {
+        const detectSelectors = stepConfig.detectSelectors || [
+            'p[data-testid="authentication-error"]',
+            '[data-testid="authentication-error"]',
+            'p[data-testid="recaptcha-tos"]',
+            '[data-testid="recaptcha-tos"]',
+            'iframe[src*="recaptcha"]',
+            'div.g-recaptcha',
+            'iframe[src*="hcaptcha"]',
+            'div.h-captcha'
+        ];
+        const submitSelectors = stepConfig.submitSelectors || [
+            'button[type="submit"]',
+            'input[type="submit"]',
+            'button[data-testid="signup-button"]',
+            '.submit-btn',
+            '#submit'
+        ];
+        const jitterAttempts = Math.max(0, stepConfig.jitterAttempts ?? 2);
+        const reloadOnFail = stepConfig.reloadOnFail !== false;
+
+        const automation = this.activeAutomations.get(sessionId);
+        const markDetected = () => {
+            if (automation) automation.captchaDetected = true;
+            if (this.eventBus) {
+                try {
+                    this.eventBus.emitSessionEvent(sessionId, EVENTS.CAPTCHA_DETECTED || 'CAPTCHA_DETECTED', {
+                        url: page.url(),
+                        hookName: hook?.name || 'unknown'
+                    });
+                } catch (_) {}
+            }
+        };
+
+        const isCaptchaVisible = async () => {
+            // debounce check across selectors
+            for (const sel of detectSelectors) {
+                try {
+                    const loc = page.locator(sel);
+                    const count = await loc.count().catch(() => 0);
+                    if (count > 0) {
+                        // If it's an iframe or known container, accept presence; otherwise verify visibility and text if applicable
+                        const first = loc.first();
+                        const vis = await first.isVisible().catch(() => false);
+                        if (vis) return true;
+                    }
+                } catch (_) {}
+            }
+            return false;
+        };
+
+        // Initial detection
+        if (!(await isCaptchaVisible())) {
+            console.log(`🧪 CAPTCHA not detected`);
+            return;
+        }
+        console.log(`🧪 CAPTCHA detected - attempting mitigation`);
+        markDetected();
+
+        // Light jitter + resubmit attempts
+        for (let i = 0; i < jitterAttempts; i++) {
+            const clicked = await this.tryHumanJitterResubmit(page, submitSelectors);
+            await page.waitForLoadState('domcontentloaded').catch(() => {});
+            await page.waitForTimeout(800 + Math.floor(Math.random() * 700));
+            if (!(await isCaptchaVisible())) {
+                console.log(`✅ CAPTCHA cleared after jitter attempt ${i + 1}`);
+                return;
+            }
+            console.log(`⚠️  CAPTCHA persists after jitter attempt ${i + 1}`);
+        }
+
+        // Reload + refill path
+        if (reloadOnFail) {
+            console.log(`🔄 Reloading page to reset state...`);
+            try {
+                await page.reload({ waitUntil: 'domcontentloaded' });
+            } catch (_) {}
+            await page.waitForTimeout(800 + Math.floor(Math.random() * 900));
+
+            // If automation-owned fill is enabled, perform deterministic fill
+            if (automation?.automationAutofillOnly || this.options.automationAutofillOnly) {
+                const fillCfg = hook?.workflow?.automation_fill || {
+                    type: 'automation_fill',
+                    onlyWhenAutofillDisabled: true
+                };
+                try {
+                    await this.automationFill(fillCfg, page, sessionId, hook);
+                } catch (e) {
+                    console.log(`⚠️  automation_fill after reload failed: ${e.message}`);
+                }
+            }
+
+            // Re-submit
+            await this.tryHumanJitterResubmit(page, submitSelectors);
+            await page.waitForTimeout(1000 + Math.floor(Math.random() * 700));
+
+            if (!(await isCaptchaVisible())) {
+                console.log(`✅ CAPTCHA cleared after reload/refill`);
+                return;
+            }
+            console.log(`❌ CAPTCHA still present after reload/refill`);
+        } else {
+            console.log(`⏭️  Reload mitigation disabled by configuration`);
+        }
+
+        // If required, throw to abort; otherwise continue
+        if (stepConfig.required === true) {
+            throw new Error('CAPTCHA persisted after mitigation attempts');
         }
     }
 

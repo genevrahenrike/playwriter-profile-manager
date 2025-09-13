@@ -65,7 +65,28 @@ export default {
             ],
             // Ensure autofill system has actually completed its work
             waitForAutofillSystemCompletion: true,
-            required: true
+            required: false
+        },
+
+        // Step 2: Automation-owned fill (active only when Autofill system is disabled)
+        automation_fill: {
+            type: 'automation_fill',
+            onlyWhenAutofillDisabled: true,
+            selectors: {
+                email: [
+                    'input[data-testid="form-input-email"]',
+                    'input[name="email"]',
+                    'input[type="email"]'
+                ],
+                password: [
+                    'input[data-testid="form-input-password"]',
+                    'input[name="password"]',
+                    'input[type="password"]'
+                ]
+            },
+            minPasswordLength: 8,
+            stabilityDelayMs: 300,
+            required: false
         },
         
         // Step 2: Perform human-like interactions
@@ -152,10 +173,36 @@ export default {
             required: false
         },
         
-        // Step 4: Monitor for success response
+        // Step 4.5: Detect and mitigate CAPTCHA
+        detect_captcha: {
+            type: 'detect_captcha',
+            // The red error container and recaptcha area
+            detectSelectors: [
+                'p[data-testid="authentication-error"]',
+                '[data-testid="authentication-error"]',
+                'p[data-testid="recaptcha-tos"]',
+                '[data-testid="recaptcha-tos"]',
+                'iframe[src*="recaptcha"]',
+                'div.g-recaptcha',
+                'iframe[src*="hcaptcha"]',
+                'div.h-captcha'
+            ],
+            submitSelectors: [
+                'button[type="submit"]',
+                'input[type="submit"]',
+                'button[data-testid="signup-button"]',
+                '.submit-btn',
+                '#submit'
+            ],
+            jitterAttempts: 2,
+            reloadOnFail: true,
+            required: false
+        },
+
+        // Step 5: Monitor for success response
         monitor_success: {
             type: 'monitor_success',
-            timeout: 45000, // allow a bit more time for backend to respond
+            timeout: 45000,
             successUrls: [
                 'api.vidiq.com/subscriptions/active',
                 'api.vidiq.com/subscriptions/stripe/next-subscription',
