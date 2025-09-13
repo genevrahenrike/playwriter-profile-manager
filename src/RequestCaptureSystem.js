@@ -578,9 +578,9 @@ export class RequestCaptureSystem {
             // Check if this request matches any hooks
             const matchingHooks = this.findMatchingHooks(url);
             
-            if (matchingHooks.length > 0) {
-                console.log(`📡 Found ${matchingHooks.length} matching hooks for: ${url}`);
-            }
+            // if (matchingHooks.length > 0) {
+            //     console.log(`📡 Found ${matchingHooks.length} matching hooks for: ${url}`);
+            // }
             
             for (const hook of matchingHooks) {
                 if (!hook.enabled) continue;

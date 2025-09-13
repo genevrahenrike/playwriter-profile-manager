@@ -162,6 +162,8 @@ export default {
             verifyStabilityDelayMs: 300, // Longer delay between checks
             // Pause autofill monitoring right before clicking to avoid races
             pauseAutofill: true,
+            // Disable pre-click jitter/hover to avoid noise around submission
+            noPreJitter: true,
             // Additional pre-submit validation
             preSubmitValidation: {
                 checkEmailField: true,
@@ -176,12 +178,10 @@ export default {
         // Step 4.5: Detect and mitigate CAPTCHA
         detect_captcha: {
             type: 'detect_captcha',
-            // The red error container and recaptcha area
+            // The red error container and recaptcha area (excluding recaptcha-tos which is just legal notice)
             detectSelectors: [
                 'p[data-testid="authentication-error"]',
                 '[data-testid="authentication-error"]',
-                'p[data-testid="recaptcha-tos"]',
-                '[data-testid="recaptcha-tos"]',
                 'iframe[src*="recaptcha"]',
                 'div.g-recaptcha',
                 'iframe[src*="hcaptcha"]',
@@ -196,6 +196,7 @@ export default {
             ],
             jitterAttempts: 2,
             reloadOnFail: true,
+            maxRetryAttempts: 2, // Maximum number of overall retry attempts before giving up
             required: false
         },
 

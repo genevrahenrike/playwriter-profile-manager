@@ -38,7 +38,25 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('multipleResolves', (type, promise, reason) => {
-    console.error(chalk.yellow('[MultipleResolves]'), type, reason && (reason.stack || reason.message || String(reason)));
+    // Only log meaningful errors, not benign promise resolution races
+    if (reason && typeof reason === 'object' && reason.message) {
+        // Filter out benign CDP/Playwright internal promise races during context closure
+        const message = reason.message || '';
+        const stack = reason.stack || '';
+        
+        // Skip logging for known benign cases
+        if (message.includes('Target page, context or browser has been closed') ||
+            message.includes('FrameSession.dispose') ||
+            message.includes('crPage.js') ||
+            stack.includes('chromium/crPage.js')) {
+            return; // Skip logging these benign cases
+        }
+        
+        // Only log actual errors that might need attention
+        if (message.includes('Error') || message.includes('Failed') || message.includes('Timeout')) {
+            console.error(chalk.yellow('[MultipleResolves]'), type, reason.message);
+        }
+    }
 });
 
 // Helper function to get ProfileLauncher instance

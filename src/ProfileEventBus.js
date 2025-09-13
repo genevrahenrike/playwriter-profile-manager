@@ -144,6 +144,7 @@ export const EVENTS = {
     AUTOFILL_COMPLETED: 'autofill:completed',
     AUTOFILL_FAILED: 'autofill:failed',
     AUTOFILL_STOPPED: 'autofill:stopped',
+    AUTOFILL_REQUESTED: 'autofill:requested',
     
     // Automation events
     AUTOMATION_STARTED: 'automation:started',

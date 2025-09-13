@@ -150,8 +150,33 @@ export class AutofillHookSystem {
 
         context.on('page', pageHandler);
         
-        // Store the handler for cleanup
-        this.activeMonitors.set(sessionId, { context, pageHandler });
+        // Set up event listener for autofill requests (e.g., from automation system)
+        let autofillRequestListener = null;
+        if (this.eventBus) {
+            autofillRequestListener = this.eventBus.onSessionEvent(sessionId, EVENTS.AUTOFILL_REQUESTED, async (event) => {
+                console.log(`📡 Received autofill request: ${event.reason || 'unknown reason'}`);
+                
+                // Force re-enable autofill for this session
+                this.forceReEnable(sessionId);
+                
+                // Re-process current pages to trigger autofill
+                const currentPages = context.pages();
+                for (const page of currentPages) {
+                    try {
+                        const url = page.url();
+                        if (url && url !== 'about:blank') {
+                            console.log(`🔄 Re-processing page for autofill: ${url}`);
+                            await this.handleNewPage(page, sessionId);
+                        }
+                    } catch (error) {
+                        console.log(`⚠️  Error re-processing page: ${error.message}`);
+                    }
+                }
+            });
+        }
+        
+        // Store the handlers for cleanup
+        this.activeMonitors.set(sessionId, { context, pageHandler, autofillRequestListener });
 
         // Check existing pages
         const existingPages = context.pages();
@@ -1083,8 +1108,18 @@ export class AutofillHookSystem {
     stopMonitoring(sessionId) {
         const monitor = this.activeMonitors.get(sessionId);
         if (monitor) {
-            // Remove event listener
+            // Remove page event listener
             monitor.context.off('page', monitor.pageHandler);
+            
+            // Remove autofill request event listener
+            if (monitor.autofillRequestListener) {
+                try {
+                    monitor.autofillRequestListener(); // Call unsubscribe function
+                } catch (error) {
+                    console.log(`⚠️  Error unsubscribing from autofill request events: ${error.message}`);
+                }
+            }
+            
             this.activeMonitors.delete(sessionId);
         }
         

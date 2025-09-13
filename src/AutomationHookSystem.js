@@ -725,6 +725,7 @@ export class AutomationHookSystem {
         const verifyStabilityDelayMs = stepConfig.verifyStabilityDelayMs || 150;
         const preSubmitValidation = stepConfig.preSubmitValidation || null;
         const pauseAutofill = stepConfig.pauseAutofill === true;
+        const noPreJitter = stepConfig.noPreJitter === true;
  
         const readInputValue = async (sel) => {
             try {
@@ -863,14 +864,16 @@ export class AutomationHookSystem {
             }
         }
  
-        // Small randomized humanization before clicking
-        const preJitterScrolls = Math.floor(Math.random() * 2); // 0-1
-        for (let i = 0; i < preJitterScrolls; i++) {
-            try {
-                const dy = 100 + Math.floor(Math.random() * 200);
-                await page.mouse.wheel(0, dy);
-                await page.waitForTimeout(150 + Math.floor(Math.random() * 250));
-            } catch (_) {}
+        // Optional small randomized humanization before clicking (disabled when noPreJitter)
+        if (!noPreJitter) {
+            const preJitterScrolls = Math.floor(Math.random() * 2); // 0-1
+            for (let i = 0; i < preJitterScrolls; i++) {
+                try {
+                    const dy = 100 + Math.floor(Math.random() * 200);
+                    await page.mouse.wheel(0, dy);
+                    await page.waitForTimeout(150 + Math.floor(Math.random() * 250));
+                } catch (_) {}
+            }
         }
  
         for (const selector of selectors) {
@@ -885,7 +888,7 @@ export class AutomationHookSystem {
                 if (!isVisible || !isEnabled) continue;
  
                 const box = await element.boundingBox().catch(() => null);
-                if (box) {
+                if (box && !noPreJitter) {
                     const jitterX = (Math.random() - 0.5) * Math.min(10, box.width / 5);
                     const jitterY = (Math.random() - 0.5) * Math.min(6, box.height / 5);
                     const tgtX = box.x + box.width / 2 + jitterX;
@@ -1169,13 +1172,87 @@ export class AutomationHookSystem {
      * Detect common CAPTCHA states (VidIQ) and attempt mitigations:
      *  - light jitter + resubmit (1-2 tries)
      *  - if still blocked, page reload + (optional) automation_fill + resubmit
+     *  - track retry attempts and implement proper strategy after failures
      */
     async detectCaptcha(stepConfig, page, sessionId, hook) {
+        const automation = this.activeAutomations.get(sessionId);
+
+        // Initialize retry tracking for this session if not exists
+        if (!automation.captchaRetryCount) {
+            automation.captchaRetryCount = 0;
+        }
+
+        // Heuristics: do not attempt CAPTCHA mitigation if we already see clear success signals in capture buffer
+        const hasRecentSuccessSignals = () => {
+            try {
+                const cap = automation?.requestCaptureSystem?.getCapturedRequests(sessionId) || [];
+                if (cap.length === 0) return false;
+                // Look back over the last ~6 seconds of captured traffic
+                const cutoff = Date.now() - 6000;
+                for (let i = cap.length - 1; i >= 0; i--) {
+                    const r = cap[i];
+                    // Accept success on common VidIQ post-signup/auth endpoints
+                    if (r.type === 'response' &&
+                        [200, 201].includes(r.status) &&
+                        typeof r.url === 'string' &&
+                        (
+                            r.url.includes('/auth/login') ||
+                            r.url.includes('/auth/user') ||
+                            r.url.includes('/user/channels') ||
+                            r.url.includes('/subscriptions/active') ||
+                            r.url.includes('/subscriptions/stripe/next-subscription')
+                        )) {
+                        // crude timestamp check if present
+                        if (!r.timestamp) return true;
+                        const t = Date.parse(r.timestamp);
+                        if (isFinite(t) && t >= cutoff) return true;
+                    }
+                    // stop scanning if we went too far back without timestamps
+                    if (i < cap.length - 100) break;
+                }
+            } catch (_) {}
+            return false;
+        };
+
+        // Check if we're back to login screen after jittering
+        const isBackToLoginScreen = async () => {
+            try {
+                // Look for login form elements that indicate we're back to the login screen
+                const loginIndicators = [
+                    'input[data-testid="form-input-email"]',
+                    'input[name="email"]',
+                    'input[type="email"]',
+                    'input[data-testid="form-input-password"]',
+                    'input[name="password"]',
+                    'input[type="password"]',
+                    'button[type="submit"]',
+                    'button:has-text("Sign Up")',
+                    'button:has-text("Create Account")'
+                ];
+
+                let loginFieldsFound = 0;
+                for (const selector of loginIndicators) {
+                    try {
+                        const count = await page.locator(selector).count();
+                        if (count > 0) {
+                            const isVisible = await page.locator(selector).first().isVisible().catch(() => false);
+                            if (isVisible) loginFieldsFound++;
+                        }
+                    } catch (_) {}
+                }
+
+                // If we find multiple login form elements, we're likely back to login screen
+                return loginFieldsFound >= 2;
+            } catch (_) {
+                return false;
+            }
+        };
+
+        // Default detection inputs (refined)
+        // NOTE: recaptcha-tos is a legal notice and appears even on success; do NOT treat it as CAPTCHA
         const detectSelectors = stepConfig.detectSelectors || [
             'p[data-testid="authentication-error"]',
             '[data-testid="authentication-error"]',
-            'p[data-testid="recaptcha-tos"]',
-            '[data-testid="recaptcha-tos"]',
             'iframe[src*="recaptcha"]',
             'div.g-recaptcha',
             'iframe[src*="hcaptcha"]',
@@ -1190,52 +1267,125 @@ export class AutomationHookSystem {
         ];
         const jitterAttempts = Math.max(0, stepConfig.jitterAttempts ?? 2);
         const reloadOnFail = stepConfig.reloadOnFail !== false;
+        const maxRetryAttempts = stepConfig.maxRetryAttempts || 2;
 
-        const automation = this.activeAutomations.get(sessionId);
         const markDetected = () => {
             if (automation) automation.captchaDetected = true;
             if (this.eventBus) {
                 try {
-                    this.eventBus.emitSessionEvent(sessionId, EVENTS.CAPTCHA_DETECTED || 'CAPTCHA_DETECTED', {
+                    this.eventBus.emitSessionEvent(sessionId, EVENTS.CAPTCHA_DETECTED, {
                         url: page.url(),
-                        hookName: hook?.name || 'unknown'
+                        hookName: hook?.name || 'unknown',
+                        retryCount: automation.captchaRetryCount
                     });
                 } catch (_) {}
             }
         };
 
-        const isCaptchaVisible = async () => {
-            // debounce check across selectors
-            for (const sel of detectSelectors) {
+        const errorTextLooksCaptcha = (txt) => {
+            if (typeof txt !== 'string') return false;
+            return /(captcha|robot|vpn|blocked|failed)/i.test(txt);
+        };
+
+        const iframeVisibleAndSized = async (loc) => {
+            try {
+                const vis = await loc.isVisible().catch(() => false);
+                if (!vis) return false;
+                const box = await loc.boundingBox().catch(() => null);
+                if (!box) return true; // visible but no box info → consider true
+                return (box.width >= 20 && box.height >= 20);
+            } catch (_) { return false; }
+        };
+
+        const isCaptchaLikely = async () => {
+            // 1) Strong signal: visible authentication-error with meaningful text
+            for (const sel of ['p[data-testid="authentication-error"]','[data-testid="authentication-error"]']) {
                 try {
-                    const loc = page.locator(sel);
-                    const count = await loc.count().catch(() => 0);
-                    if (count > 0) {
-                        // If it's an iframe or known container, accept presence; otherwise verify visibility and text if applicable
-                        const first = loc.first();
-                        const vis = await first.isVisible().catch(() => false);
-                        if (vis) return true;
+                    const loc = page.locator(sel).first();
+                    if (await loc.count() > 0 && await loc.isVisible().catch(() => false)) {
+                        const txt = (await loc.textContent().catch(() => '') || '').trim();
+                        if (txt.length > 0 && errorTextLooksCaptcha(txt)) return true;
                     }
+                } catch (_) {}
+            }
+            // 2) Strong signal: visible recaptcha/hcaptcha widgets (not hidden)
+            for (const sel of ['iframe[src*="recaptcha"]','div.g-recaptcha','iframe[src*="hcaptcha"]','div.h-captcha']) {
+                try {
+                    const loc = page.locator(sel).first();
+                    if (await loc.count() > 0 && await iframeVisibleAndSized(loc)) return true;
                 } catch (_) {}
             }
             return false;
         };
 
-        // Initial detection
-        if (!(await isCaptchaVisible())) {
-            console.log(`🧪 CAPTCHA not detected`);
+        // Skip if we already have success signals shortly after submit
+        if (hasRecentSuccessSignals()) {
+            console.log('🧪 CAPTCHA check skipped: success signals already present');
             return;
         }
-        console.log(`🧪 CAPTCHA detected - attempting mitigation`);
+
+        const captchaNow = await isCaptchaLikely();
+        if (!captchaNow) {
+            console.log('🧪 CAPTCHA not detected');
+            return;
+        }
+
+        console.log(`🧪 CAPTCHA detected - attempting mitigation (attempt ${automation.captchaRetryCount + 1}/${maxRetryAttempts + 1})`);
         markDetected();
+        automation.captchaRetryCount++;
+
+        // Check if we've exceeded max retry attempts
+        if (automation.captchaRetryCount > maxRetryAttempts) {
+            console.log(`❌ Maximum CAPTCHA retry attempts (${maxRetryAttempts}) exceeded. Manual intervention may be required.`);
+            if (stepConfig.required === true) {
+                throw new Error(`CAPTCHA persisted after ${maxRetryAttempts} retry attempts`);
+            }
+            return;
+        }
 
         // Light jitter + resubmit attempts
         for (let i = 0; i < jitterAttempts; i++) {
-            const clicked = await this.tryHumanJitterResubmit(page, submitSelectors);
-            await page.waitForLoadState('domcontentloaded').catch(() => {});
-            await page.waitForTimeout(800 + Math.floor(Math.random() * 700));
-            if (!(await isCaptchaVisible())) {
+            await this.tryHumanJitterResubmit(page, submitSelectors);
+            await page.waitForTimeout(700 + Math.floor(Math.random() * 500));
+            
+            // Check if we're back to login screen after jittering
+            if (await isBackToLoginScreen()) {
+                console.log('🔄 Detected return to login screen after jittering - need to refill form');
+                
+                // If we have automation autofill, trigger it
+                if (automation?.automationAutofillOnly || this.options.automationAutofillOnly) {
+                    const fillCfg = hook?.workflow?.automation_fill || { type: 'automation_fill', onlyWhenAutofillDisabled: true };
+                    try {
+                        await this.automationFill(fillCfg, page, sessionId, hook);
+                        console.log('✅ Form refilled after returning to login screen');
+                    } catch (e) {
+                        console.log(`⚠️  automation_fill after login screen return failed: ${e.message}`);
+                    }
+                } else {
+                    // Emit event to trigger autofill system
+                    if (this.eventBus) {
+                        try {
+                            this.eventBus.emitSessionEvent(sessionId, EVENTS.AUTOFILL_REQUESTED, {
+                                reason: 'login_screen_return',
+                                url: page.url()
+                            });
+                            console.log('📡 Requested autofill system to refill form');
+                        } catch (_) {}
+                    }
+                }
+                
+                // Wait a bit for form filling to complete
+                await page.waitForTimeout(2000 + Math.floor(Math.random() * 1000));
+            }
+            
+            if (hasRecentSuccessSignals()) {
+                console.log(`✅ CAPTCHA bypassed implicitly (success responses observed)`);
+                automation.captchaRetryCount = 0; // Reset on success
+                return;
+            }
+            if (!(await isCaptchaLikely())) {
                 console.log(`✅ CAPTCHA cleared after jitter attempt ${i + 1}`);
+                automation.captchaRetryCount = 0; // Reset on success
                 return;
             }
             console.log(`⚠️  CAPTCHA persists after jitter attempt ${i + 1}`);
@@ -1243,39 +1393,33 @@ export class AutomationHookSystem {
 
         // Reload + refill path
         if (reloadOnFail) {
-            console.log(`🔄 Reloading page to reset state...`);
-            try {
-                await page.reload({ waitUntil: 'domcontentloaded' });
-            } catch (_) {}
+            console.log('🔄 Reloading page to reset state...');
+            try { await page.reload({ waitUntil: 'domcontentloaded' }); } catch (_) {}
             await page.waitForTimeout(800 + Math.floor(Math.random() * 900));
 
-            // If automation-owned fill is enabled, perform deterministic fill
             if (automation?.automationAutofillOnly || this.options.automationAutofillOnly) {
-                const fillCfg = hook?.workflow?.automation_fill || {
-                    type: 'automation_fill',
-                    onlyWhenAutofillDisabled: true
-                };
-                try {
-                    await this.automationFill(fillCfg, page, sessionId, hook);
-                } catch (e) {
-                    console.log(`⚠️  automation_fill after reload failed: ${e.message}`);
-                }
+                const fillCfg = hook?.workflow?.automation_fill || { type: 'automation_fill', onlyWhenAutofillDisabled: true };
+                try { await this.automationFill(fillCfg, page, sessionId, hook); } catch (e) { console.log(`⚠️  automation_fill after reload failed: ${e.message}`); }
             }
 
-            // Re-submit
             await this.tryHumanJitterResubmit(page, submitSelectors);
-            await page.waitForTimeout(1000 + Math.floor(Math.random() * 700));
+            await page.waitForTimeout(900 + Math.floor(Math.random() * 600));
 
-            if (!(await isCaptchaVisible())) {
-                console.log(`✅ CAPTCHA cleared after reload/refill`);
+            if (hasRecentSuccessSignals()) {
+                console.log('✅ CAPTCHA bypassed implicitly after reload (success responses observed)');
+                automation.captchaRetryCount = 0; // Reset on success
                 return;
             }
-            console.log(`❌ CAPTCHA still present after reload/refill`);
+            if (!(await isCaptchaLikely())) {
+                console.log('✅ CAPTCHA cleared after reload/refill');
+                automation.captchaRetryCount = 0; // Reset on success
+                return;
+            }
+            console.log('❌ CAPTCHA still present after reload/refill');
         } else {
-            console.log(`⏭️  Reload mitigation disabled by configuration`);
+            console.log('⏭️  Reload mitigation disabled by configuration');
         }
 
-        // If required, throw to abort; otherwise continue
         if (stepConfig.required === true) {
             throw new Error('CAPTCHA persisted after mitigation attempts');
         }
