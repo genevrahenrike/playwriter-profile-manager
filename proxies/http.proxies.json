@@ -160,6 +160,22 @@
     }
   },
   {
+    "label": "US11",
+    "host": "geo.floppydata.com",
+    "port": 10080,
+    "login": "hKriCYT7f7qlg02q",
+    "password": "pLQNQBEhOSusq2Ew",
+    "url": "http://hKriCYT7f7qlg02q:pLQNQBEhOSusq2Ew@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:17.511Z",
+    "avgLatencyMs": 915,
+    "latenciesByEndpoint": {
+      "google204": 22,
+      "ipify": 1126,
+      "httpbin": 1596
+    }
+  },
+  {
     "label": "UK1",
     "host": "geo.floppydata.com",
     "port": 10080,
@@ -208,6 +224,22 @@
     }
   },
   {
+    "label": "UK4",
+    "host": "geo.floppydata.com",
+    "port": 10080,
+    "login": "szagaEzRXRJmEzd6",
+    "password": "evmb53M5gXSwlsol",
+    "url": "http://szagaEzRXRJmEzd6:evmb53M5gXSwlsol@geo.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:21.557Z",
+    "avgLatencyMs": 847,
+    "latenciesByEndpoint": {
+      "google204": 24,
+      "ipify": 1024,
+      "httpbin": 1493
+    }
+  },
+  {
     "label": "Germany1",
     "host": "geo.floppydata.com",
     "port": 10080,
@@ -246,6 +278,22 @@
     "login": "AQfkpkud0qHAE12a",
     "password": "RHphl4ASve3qbIX0",
     "url": "http://AQfkpkud0qHAE12a:RHphl4ASve3qbIX0@geo.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:26.094Z",
+    "avgLatencyMs": 1011,
+    "latenciesByEndpoint": {
+      "google204": 18,
+      "ipify": 1129,
+      "httpbin": 1885
+    }
+  },
+  {
+    "label": "Germany4",
+    "host": "geo.floppydata.com",
+    "port": 10080,
+    "login": "Can1kdoAhn30CFkp",
+    "password": "clUBuy8y52QX097w",
+    "url": "http://Can1kdoAhn30CFkp:clUBuy8y52QX097w@geo.floppydata.com:10080",
     "status": "OK",
     "lastChecked": "2025-09-11T23:48:26.094Z",
     "avgLatencyMs": 1011,
@@ -400,6 +448,22 @@
     }
   },
   {
+    "label": "France10",
+    "host": "geo.floppydata.com",
+    "port": 10080,
+    "login": "TvCjn0UwRjTE5MTj",
+    "password": "od274awag4gexHWE",
+    "url": "http://TvCjn0UwRjTE5MTj:od274awag4gexHWE@geo-dc.floppydata.com:10080",
+    "status": "OK",
+    "lastChecked": "2025-09-11T23:48:50.127Z",
+    "avgLatencyMs": 1007,
+    "latenciesByEndpoint": {
+      "google204": 25,
+      "ipify": 835,
+      "httpbin": 2161
+    }
+  },
+  {
     "label": "Australia1",
     "host": "geo.floppydata.com",
     "port": 10080,
@@ -438,6 +502,22 @@
       "login": "J5VO3psivtcUp632",
       "password": "xmrSaqNycmDQv940",
       "url": "http://J5VO3psivtcUp632:xmrSaqNycmDQv940@geo.floppydata.com:10080",
+      "status": "OK",
+      "lastChecked": "2025-09-11T23:48:58.728Z",
+      "avgLatencyMs": 2366,
+      "latenciesByEndpoint": {
+        "google204": 26,
+        "ipify": 2653,
+        "httpbin": 4419
+      }
+  },
+  {
+      "label": "Australia4",
+      "host": "geo.floppydata.com",
+      "port": 10080,
+      "login": "WQ9NDBqkjm0JJzdU",
+      "password": "NGAnl2ACvB3ZRo6Z",
+      "url": "http://WQ9NDBqkjm0JJzdU:NGAnl2ACvB3ZRo6Z@geo.floppydata.com:10080",
       "status": "OK",
       "lastChecked": "2025-09-11T23:48:58.728Z",
       "avgLatencyMs": 2366,
