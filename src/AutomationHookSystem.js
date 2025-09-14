@@ -725,7 +725,21 @@ export class AutomationHookSystem {
         const verifyStabilityDelayMs = stepConfig.verifyStabilityDelayMs || 150;
         const preSubmitValidation = stepConfig.preSubmitValidation || null;
         const pauseAutofill = stepConfig.pauseAutofill === true;
-        const noPreJitter = stepConfig.noPreJitter === true;
+    const noPreJitter = stepConfig.noPreJitter === true;
+        const preClickInputJitter = stepConfig.preClickInputJitter !== false; // default on
+        const preClickJitterCyclesMin = Math.max(1, stepConfig.preClickJitterCyclesMin ?? 1);
+        const preClickJitterCyclesMax = Math.max(preClickJitterCyclesMin, stepConfig.preClickJitterCyclesMax ?? 2);
+        const preClickJitterCycles = Math.max(
+            1,
+            stepConfig.preClickJitterCycles ?? (preClickJitterCyclesMin + Math.floor(Math.random() * (preClickJitterCyclesMax - preClickJitterCyclesMin + 1)))
+        );
+    // Slower, human-like jitter timings with configurability
+    const focusDelayMin = stepConfig.preClickJitterFocusDelayMin ?? 260;
+    const focusDelayMax = stepConfig.preClickJitterFocusDelayMax ?? 420;
+    const tabDelayMin = stepConfig.preClickJitterTabDelayMin ?? 220;
+    const tabDelayMax = stepConfig.preClickJitterTabDelayMax ?? 380;
+    const cyclePauseMin = stepConfig.preClickJitterCyclePauseMin ?? 300;
+    const cyclePauseMax = stepConfig.preClickJitterCyclePauseMax ?? 700;
  
         const readInputValue = async (sel) => {
             try {
@@ -864,6 +878,46 @@ export class AutomationHookSystem {
             }
         }
  
+        // Optional pre-click input jitter (focus/blur/tab) to emulate human adjustments
+        if (preClickInputJitter && !noPreJitter) {
+            try {
+                console.log(`🤏 Performing pre-click input jitter (${preClickJitterCycles} cycle${preClickJitterCycles > 1 ? 's' : ''})...`);
+                const jiggleTargets = [
+                    'input[data-testid="form-input-email"]',
+                    'input[name="email"]',
+                    'input[type="email"]',
+                    'input[data-testid="form-input-password"]',
+                    'input[name="password"]',
+                    'input[type="password"]'
+                ];
+                for (let c = 0; c < preClickJitterCycles; c++) {
+                    for (const sel of jiggleTargets) {
+                        try {
+                            const loc = page.locator(sel).first();
+                            if (await loc.count() === 0) continue;
+                            await loc.focus().catch(() => {});
+                            // Slower focus settle
+                            {
+                                const delay = focusDelayMin + Math.floor(Math.random() * Math.max(1, (focusDelayMax - focusDelayMin)));
+                                await page.waitForTimeout(delay);
+                            }
+                            await page.keyboard.press('Tab').catch(() => {});
+                            // Slower post-tab settle
+                            {
+                                const delay = tabDelayMin + Math.floor(Math.random() * Math.max(1, (tabDelayMax - tabDelayMin)));
+                                await page.waitForTimeout(delay);
+                            }
+                        } catch (_) {}
+                    }
+                    // Small pause between cycles
+                    const cyclePause = cyclePauseMin + Math.floor(Math.random() * Math.max(1, (cyclePauseMax - cyclePauseMin)));
+                    await page.waitForTimeout(cyclePause);
+                }
+            } catch (_) {
+                // ignore pre-click jitter errors
+            }
+        }
+
         // Optional small randomized humanization before clicking (disabled when noPreJitter)
         if (!noPreJitter) {
             const preJitterScrolls = Math.floor(Math.random() * 2); // 0-1
@@ -1137,7 +1191,7 @@ export class AutomationHookSystem {
     /**
      * Try light human-like jitter and resubmit to bypass soft CAPTCHA gating
      */
-    async tryHumanJitterResubmit(page, submitSelectors = []) {
+    async tryHumanJitterResubmit(page, submitSelectors = [], options = {}) {
         try {
             // Focus/blur jiggle on inputs
             const jiggleTargets = [
@@ -1153,10 +1207,39 @@ export class AutomationHookSystem {
                     const loc = page.locator(sel).first();
                     if (await loc.count() === 0) continue;
                     await loc.focus().catch(() => {});
-                    await page.waitForTimeout(120 + Math.floor(Math.random() * 180));
+                    await page.waitForTimeout(240 + Math.floor(Math.random() * 280));
                     await page.keyboard.press('Tab').catch(() => {});
-                    await page.waitForTimeout(100 + Math.floor(Math.random() * 160));
+                    await page.waitForTimeout(200 + Math.floor(Math.random() * 260));
                 } catch (_) {}
+            }
+
+            // Pre-resubmit grace delay with optional gentle scrolls
+            const preDelayMin = Math.max(0, options.preResubmitDelayMin ?? 10000);
+            const preDelayMax = Math.max(preDelayMin, options.preResubmitDelayMax ?? 15000);
+            const preDelay = preDelayMin + Math.floor(Math.random() * Math.max(1, (preDelayMax - preDelayMin)));
+
+            const scrollsMin = Math.max(0, options.preResubmitScrollsMin ?? 1);
+            const scrollsMax = Math.max(scrollsMin, options.preResubmitScrollsMax ?? 2);
+            const scrolls = scrollsMin + Math.floor(Math.random() * Math.max(1, (scrollsMax - scrollsMin + 1)));
+            const scrollDistMin = Math.max(20, options.scrollDistanceMin ?? 80);
+            const scrollDistMax = Math.max(scrollDistMin, options.scrollDistanceMax ?? 200);
+            const scrollPauseMin = Math.max(120, options.scrollPauseMin ?? 300);
+            const scrollPauseMax = Math.max(scrollPauseMin, options.scrollPauseMax ?? 900);
+
+            // Interleave gentle scrolls during the grace window
+            const start = Date.now();
+            let performed = 0;
+            while (Date.now() - start < preDelay) {
+                if (performed < scrolls) {
+                    const dy = scrollDistMin + Math.floor(Math.random() * Math.max(1, (scrollDistMax - scrollDistMin)));
+                    await page.mouse.wheel(0, dy);
+                    performed++;
+                    const pause = scrollPauseMin + Math.floor(Math.random() * Math.max(1, (scrollPauseMax - scrollPauseMin)));
+                    await page.waitForTimeout(pause);
+                } else {
+                    // Idle wait remainder of the grace window
+                    await page.waitForTimeout(300);
+                }
             }
 
             // Re-click submit
@@ -1175,8 +1258,10 @@ export class AutomationHookSystem {
                     const vis = await loc.isVisible().catch(() => false);
                     const en = await loc.isEnabled().catch(() => false);
                     if (!vis || !en) continue;
-                    await loc.click({ delay: 15 + Math.floor(Math.random() * 35) });
-                    await page.waitForTimeout(400 + Math.floor(Math.random() * 600));
+                    await loc.click({ delay: 25 + Math.floor(Math.random() * 55) });
+                    const postClickMin = Math.max(300, options.postClickWaitMin ?? 700);
+                    const postClickMax = Math.max(postClickMin, options.postClickWaitMax ?? 1600);
+                    await page.waitForTimeout(postClickMin + Math.floor(Math.random() * Math.max(1, (postClickMax - postClickMin))));
                     return true;
                 } catch (_) {}
             }
@@ -1281,7 +1366,13 @@ export class AutomationHookSystem {
             '.submit-btn',
             '#submit'
         ];
-        const jitterAttempts = Math.max(0, stepConfig.jitterAttempts ?? 2);
+    const jitterAttempts = Math.max(0, stepConfig.jitterAttempts ?? 2);
+    const preResubmitDelayMin = Math.max(0, stepConfig.preResubmitDelayMin ?? 10000);
+    const preResubmitDelayMax = Math.max(preResubmitDelayMin, stepConfig.preResubmitDelayMax ?? 15000);
+    const preResubmitScrollsMin = Math.max(0, stepConfig.preResubmitScrollsMin ?? 1);
+    const preResubmitScrollsMax = Math.max(preResubmitScrollsMin, stepConfig.preResubmitScrollsMax ?? 2);
+    const postClickWaitMin = Math.max(300, stepConfig.postClickWaitMin ?? 700);
+    const postClickWaitMax = Math.max(postClickWaitMin, stepConfig.postClickWaitMax ?? 1600);
         const reloadOnFail = stepConfig.reloadOnFail !== false;
         const maxRetryAttempts = stepConfig.maxRetryAttempts || 2;
 
@@ -1361,8 +1452,15 @@ export class AutomationHookSystem {
 
         // Light jitter + resubmit attempts
         for (let i = 0; i < jitterAttempts; i++) {
-            await this.tryHumanJitterResubmit(page, submitSelectors);
-            await page.waitForTimeout(700 + Math.floor(Math.random() * 500));
+            await this.tryHumanJitterResubmit(page, submitSelectors, {
+                preResubmitDelayMin,
+                preResubmitDelayMax,
+                preResubmitScrollsMin,
+                preResubmitScrollsMax,
+                postClickWaitMin,
+                postClickWaitMax
+            });
+            await page.waitForTimeout(1200 + Math.floor(Math.random() * 1000));
             
             // Check if we're back to login screen after jittering
             if (await isBackToLoginScreen()) {
@@ -1460,8 +1558,15 @@ export class AutomationHookSystem {
             // Wait a bit more to ensure form is stable before attempting submit
             await page.waitForTimeout(1000 + Math.floor(Math.random() * 500));
 
-            await this.tryHumanJitterResubmit(page, submitSelectors);
-            await page.waitForTimeout(900 + Math.floor(Math.random() * 600));
+            await this.tryHumanJitterResubmit(page, submitSelectors, {
+                preResubmitDelayMin,
+                preResubmitDelayMax,
+                preResubmitScrollsMin,
+                preResubmitScrollsMax,
+                postClickWaitMin,
+                postClickWaitMax
+            });
+            await page.waitForTimeout(1400 + Math.floor(Math.random() * 1200));
 
             if (hasRecentSuccessSignals()) {
                 console.log('✅ CAPTCHA bypassed implicitly after reload (success responses observed)');
