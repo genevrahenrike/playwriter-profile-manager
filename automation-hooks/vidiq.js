@@ -203,7 +203,7 @@ export default {
         // Step 5: Monitor for success response
         monitor_success: {
             type: 'monitor_success',
-            timeout: 45000,
+            timeout: 20000,
             successUrls: [
                 'api.vidiq.com/subscriptions/active',
                 'api.vidiq.com/subscriptions/stripe/next-subscription',
