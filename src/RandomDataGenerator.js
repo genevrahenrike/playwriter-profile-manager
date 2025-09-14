@@ -1043,6 +1043,43 @@ export class RandomDataGenerator {
             return false;
         }
     }
+
+    /**
+     * Check if email has been used (if tracking enabled)
+     */
+    isEmailUsed(email) {
+        if (!this.config.enableTracking || !this.db) {
+            return false; // Can't check without database
+        }
+        
+        try {
+            const stmt = this.db.prepare('SELECT id FROM user_data_exports WHERE email = ?');
+            const result = stmt.get(email);
+            return !!result;
+        } catch (error) {
+            console.error('❌ Error checking email usage:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Check if username (fullName) has been used in any context (if tracking enabled)
+     */
+    isUsernameUsed(username) {
+        if (!this.config.enableTracking || !this.db) {
+            return false;
+        }
+        
+        try {
+            // Check in user_data_exports table for complete usernames
+            const stmt = this.db.prepare('SELECT id FROM user_data_exports WHERE full_name = ?');
+            const result = stmt.get(username);
+            return !!result;
+        } catch (error) {
+            console.error('❌ Error checking username usage:', error.message);
+            return false;
+        }
+    }
     
     /**
      * Record name usage (if tracking enabled)
@@ -1317,8 +1354,9 @@ export class RandomDataGenerator {
         const firstNames = this.getFirstNames();
         const lastNames = this.getLastNames();
         
-    let attempts = 0;
-    let firstName, lastName, fullName, usernameStyle, usernamePattern, numberFlavor;
+        let attempts = 0;
+        let firstName, lastName, fullName, usernameStyle, usernamePattern, numberFlavor;
+        let maxRetries = this.config.maxAttempts * 3; // Allow more retries for username uniqueness
 
         // Determine username style and pattern with weighted selection
         const forceBusiness = options.businessMode !== undefined ? options.businessMode : this.config.businessMode;
@@ -1377,26 +1415,50 @@ export class RandomDataGenerator {
             }
         }
         
-        // Try to find unused combination
-        while (attempts < this.config.maxAttempts) {
-            firstName = this.randomChoice(firstNames);
-            lastName = this.randomChoice(lastNames);
+        // Try to find unused combination with enhanced retry logic
+        while (attempts < maxRetries) {
+            // For handle/pattern_c, we don't need firstName/lastName
+            if (usernameStyle === 'handle' || usernamePattern === 'pattern_c') {
+                firstName = 'handle';
+                lastName = 'generated';
+                fullName = this.generatePatternCHandle(options);
+            } else {
+                firstName = this.randomChoice(firstNames);
+                lastName = this.randomChoice(lastNames);
+                
+                // Generate username based on selected pattern
+                if (usernameStyle === 'business') {
+                    fullName = this.generateBusinessUsername(firstName, lastName, options);
+                } else if (usernamePattern === 'pattern_a' || usernameStyle === 'concatenated') {
+                    fullName = this.generatePatternA(firstName, lastName, { ...options, numberFlavor });
+                } else {
+                    fullName = this.generatePatternB(firstName, lastName, { ...options, numberFlavor });
+                }
+            }
             
-            if (!this.isNameUsed(firstName, lastName)) {
+            // Check both name combination and complete username for uniqueness
+            const nameUsed = this.isNameUsed(firstName, lastName);
+            const usernameUsed = this.isUsernameUsed(fullName);
+            
+            if (!nameUsed && !usernameUsed) {
                 break;
             }
+            
             attempts++;
+            
+            // If we've tried many times, escalate to higher number ranges
+            if (attempts > this.config.maxAttempts && (usernameStyle !== 'business' && usernameStyle !== 'handle')) {
+                // Force higher digit ranges to ensure uniqueness
+                if (numberFlavor === 'none') {
+                    numberFlavor = 'd2';
+                } else if (numberFlavor === 'd2') {
+                    numberFlavor = 'd4';
+                }
+            }
         }
         
-        // Generate username based on selected pattern
-        if (usernameStyle === 'business') {
-            fullName = this.generateBusinessUsername(firstName, lastName, options);
-        } else if (usernameStyle === 'handle' || usernamePattern === 'pattern_c') {
-            fullName = this.generatePatternCHandle(options);
-        } else if (usernamePattern === 'pattern_a' || usernameStyle === 'concatenated') {
-            fullName = this.generatePatternA(firstName, lastName, { ...options, numberFlavor });
-        } else {
-            fullName = this.generatePatternB(firstName, lastName, { ...options, numberFlavor });
+        if (attempts >= maxRetries) {
+            console.warn(`⚠️  Reached maximum attempts (${maxRetries}) for unique name generation. Using generated name anyway.`);
         }
         
         return {
@@ -1527,7 +1589,7 @@ export class RandomDataGenerator {
     }
 
     /**
-     * Generate complete random user data
+     * Generate complete random user data with email uniqueness guarantee
      */
     generateUserData(options = {}) {
         // Merge hook-provided weights with defaults
@@ -1540,11 +1602,46 @@ export class RandomDataGenerator {
             businessEmailProviders: options.businessEmailProviders || this.config.businessEmailProviders
         };
         
-        const nameData = this.generateUniqueName(mergedOptions);
-        const businessModeUsed = (options.businessMode !== undefined ? options.businessMode : this.config.businessMode) || (nameData.usernameStyle === 'business');
-        const emailProvider = this.getRandomEmailProvider(businessModeUsed, mergedOptions.emailProviders, mergedOptions.businessEmailProviders);
-        const email = `${nameData.fullName}@${emailProvider.domain}`;
-        const password = this.generatePassword(options.password);
+        let nameData, businessModeUsed, emailProvider, email, password, userData;
+        let emailAttempts = 0;
+        const maxEmailAttempts = this.config.maxAttempts * 2; // Allow more attempts for email uniqueness
+        
+        // Generate the base name/username data
+        nameData = this.generateUniqueName(mergedOptions);
+        businessModeUsed = (options.businessMode !== undefined ? options.businessMode : this.config.businessMode) || (nameData.usernameStyle === 'business');
+        password = this.generatePassword(options.password);
+        
+        // Try to generate a unique email
+        do {
+            emailProvider = this.getRandomEmailProvider(businessModeUsed, mergedOptions.emailProviders, mergedOptions.businessEmailProviders);
+            email = `${nameData.fullName}@${emailProvider.domain}`;
+            
+            // If email is unique, we're done
+            if (!this.isEmailUsed(email)) {
+                break;
+            }
+            
+            // If email is not unique, regenerate the name with emphasis on higher digit ranges
+            emailAttempts++;
+            
+            if (emailAttempts > this.config.maxAttempts / 2) {
+                // Force higher number variants to ensure uniqueness
+                const enhancedOptions = {
+                    ...mergedOptions,
+                    numberFlavor: 'd4', // Force 4-digit postfix
+                };
+                nameData = this.generateUniqueName(enhancedOptions);
+            } else {
+                // Try again with regular options
+                nameData = this.generateUniqueName(mergedOptions);
+            }
+            
+            if (emailAttempts >= maxEmailAttempts) {
+                console.warn(`⚠️  Reached maximum email uniqueness attempts (${maxEmailAttempts}). Using generated email anyway.`);
+                break;
+            }
+            
+        } while (emailAttempts < maxEmailAttempts);
         
         // Record usage if tracking enabled
         this.recordNameUsage(nameData.firstName, nameData.lastName, nameData.fullName, email);
@@ -1552,7 +1649,7 @@ export class RandomDataGenerator {
             this.recordHandleUsage(nameData.fullName, email);
         }
         
-        const userData = {
+        userData = {
             firstName: nameData.firstName,
             lastName: nameData.lastName,
             fullName: nameData.fullName,
@@ -1564,13 +1661,14 @@ export class RandomDataGenerator {
             numberFlavor: nameData.numberFlavor,
             businessMode: businessModeUsed,
             generationAttempts: nameData.attempts,
+            emailAttempts: emailAttempts,
             timestamp: new Date().toISOString()
         };
         
         // Record for export if tracking enabled
         this.recordUserDataForExport(userData, options.sessionId, options.siteUrl, options.hookName);
         
-        console.log(`🎲 Generated user data: ${userData.fullName} (${userData.email}) [${userData.usernameStyle}/${userData.usernamePattern}]`);
+        console.log(`🎲 Generated user data: ${userData.fullName} (${userData.email}) [${userData.usernameStyle}/${userData.usernamePattern}] (${nameData.attempts} name attempts, ${emailAttempts} email attempts)`);
         
         return userData;
     }
