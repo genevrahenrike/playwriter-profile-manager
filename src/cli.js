@@ -48,7 +48,9 @@ process.on('multipleResolves', (type, promise, reason) => {
         if (message.includes('Target page, context or browser has been closed') ||
             message.includes('FrameSession.dispose') ||
             message.includes('crPage.js') ||
-            stack.includes('chromium/crPage.js')) {
+            stack.includes('chromium/crPage.js') ||
+            // Skip noisy generic timeouts commonly emitted by navigation races
+            message.includes('Timeout 30000ms exceeded')) {
             return; // Skip logging these benign cases
         }
         

@@ -31,6 +31,7 @@ export class AutomationHookSystem {
         // EventBus for coordinating with other systems
         this.eventBus = options.eventBus || null;
         this.autofillCompletionListeners = new Map(); // Track autofill completion listeners per session
+        this.redirectWatchdogs = new Map(); // Map<Page, { sessionId, interval, attempts }>
 
         // Track processed hook runs to prevent infinite re-execution loops on the same URL
         this.processedHookRuns = new Set();
@@ -42,6 +43,30 @@ export class AutomationHookSystem {
             enableTracking: false,
             trackingDbPath: './profiles/data/generated_names.db'
         });
+    }
+
+    hasBackendSuccess(sessionId, windowMs = 15000) {
+        try {
+            const automation = this.activeAutomations.get(sessionId);
+            const cap = automation?.requestCaptureSystem?.getCapturedRequests(sessionId) || [];
+            if (cap.length === 0) return false;
+            const cutoff = Date.now() - windowMs;
+            for (let i = cap.length - 1; i >= 0; i--) {
+                const r = cap[i];
+                if (r && r.type === 'response' && [200,201].includes(r.status) && typeof r.url === 'string') {
+                    if (r.url.includes('/subscriptions/active') ||
+                        r.url.includes('/subscriptions/stripe/next-subscription') ||
+                        r.url.includes('/auth/user') ||
+                        r.url.includes('/user/channels')) {
+                        if (!r.timestamp) return true;
+                        const t = Date.parse(r.timestamp);
+                        if (!Number.isNaN(t) && t >= cutoff) return true;
+                    }
+                }
+                if (i < cap.length - 200) break;
+            }
+        } catch (_) {}
+        return false;
     }
 
     /**
@@ -142,12 +167,28 @@ export class AutomationHookSystem {
 
         // Global timeout to prevent indefinite runs (does not auto-close browser)
         if (this.options.globalTimeout && this.options.globalTimeout > 0) {
-            automationEntry.timeoutHandle = setTimeout(() => {
+            automationEntry.timeoutHandle = setTimeout(async () => {
                 const a = this.activeAutomations.get(sessionId);
                 if (a && a.status === 'active') {
                     console.warn(`⏰ Automation global timeout reached for session: ${sessionId}`);
-                    this.markAutomationCompleted(sessionId, '__global__', 'failed', `Global timeout ${this.options.globalTimeout}ms`);
-                    this.stopAutomation(sessionId);
+                    try {
+                        const context = a.context;
+                        let onExtensionSuccessUrl = false;
+                        try {
+                            const pages = typeof context?.pages === 'function' ? context.pages() : [];
+                            onExtensionSuccessUrl = pages.some(p => /extension_login_success/.test(p.url() || ''));
+                        } catch (_) {}
+
+                        if (this.hasBackendSuccess(sessionId) || onExtensionSuccessUrl) {
+                            console.log('✅ Backend success detected at timeout; marking automation as success.');
+                            this.markAutomationCompleted(sessionId, '__global__', 'success');
+                        } else {
+                            try { await this.finalNudgeAfterTimeout(sessionId); } catch (_) {}
+                            this.markAutomationCompleted(sessionId, '__global__', 'failed', `Global timeout ${this.options.globalTimeout}ms`);
+                        }
+                    } finally {
+                        this.stopAutomation(sessionId);
+                    }
                 }
             }, this.options.globalTimeout);
         }
@@ -171,10 +212,14 @@ export class AutomationHookSystem {
      */
     async handleNewPage(page, sessionId) {
         try {
-            await page.waitForLoadState('domcontentloaded');
+            // Avoid default 30s timeout which can hang under proxies
+            await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
 
             const url = page.url();
             console.log(`🔍 Checking automation for URL: ${url}`);
+
+            // Install redirect watchdog for known VidIQ post-install pages that sometimes stall
+            await this.installRedirectWatchdogIfNeeded(page, sessionId).catch(() => {});
 
             const matchingHooks = this.findMatchingHooks(url);
 
@@ -198,6 +243,100 @@ export class AutomationHookSystem {
         } catch (error) {
             console.error(`❌ Error handling new page for automation:`, error.message);
         }
+    }
+
+    /**
+     * Install a lightweight watchdog on VidIQ extension flows to nudge stuck redirects.
+     * Some runs get stuck on extension_login_success trying to redirect to YouTube; we proactively
+     * navigate to a stable app page when success signals are already present.
+     */
+    async installRedirectWatchdogIfNeeded(page, sessionId) {
+        try {
+            const url = page.url() || '';
+            const isExtFlow = /extension_install|extension_login_success/.test(url);
+            if (!isExtFlow) return;
+
+            // Prevent duplicate watchdogs per page
+            if (this.redirectWatchdogs.has(page)) return;
+
+            const automation = this.activeAutomations.get(sessionId);
+            if (!automation || !automation.requestCaptureSystem) return;
+
+            const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+            const periodMs = Math.round(7000 * proxyMultiplier); // tick ~7s
+            let attempts = 0;
+            const maxAttempts = 6; // ~40s total in proxy mode
+
+            const tick = async () => {
+                try {
+                    const curUrl = page.url() || '';
+                    if (!/extension_install|extension_login_success/.test(curUrl)) {
+                        const rec = this.redirectWatchdogs.get(page);
+                        if (rec) { clearInterval(rec.interval); this.redirectWatchdogs.delete(page); }
+                        return;
+                    }
+
+                    const cap = automation.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                    const cutoff = Date.now() - 15000;
+                    const hasSuccess = cap.some(r => (
+                        r && r.type === 'response' && [200,201].includes(r.status) && typeof r.url === 'string' && (
+                            r.url.includes('/subscriptions/active') ||
+                            r.url.includes('/subscriptions/stripe/next-subscription') ||
+                            r.url.includes('/auth/user') ||
+                            r.url.includes('/user/channels')
+                        ) && (
+                            !r.timestamp || (isFinite(Date.parse(r.timestamp)) && Date.parse(r.timestamp) >= cutoff)
+                        )
+                    ));
+
+                    if (!hasSuccess) return;
+
+                    attempts++;
+                    console.log('🧭 Redirect watchdog: nudging stuck VidIQ post-install page to dashboard');
+                    await page.evaluate(() => {
+                        try { window.stop && window.stop(); } catch (_) {}
+                        try { location.replace('https://app.vidiq.com/dashboard'); } catch (_) {}
+                    }).catch(() => {});
+                    await page.waitForTimeout(400).catch(() => {});
+                    try {
+                        await page.goto('https://app.vidiq.com/dashboard', { waitUntil: 'domcontentloaded', timeout: 12000 });
+                    } catch (_) {}
+
+                    if (attempts >= maxAttempts) {
+                        const rec = this.redirectWatchdogs.get(page);
+                        if (rec) { clearInterval(rec.interval); this.redirectWatchdogs.delete(page); }
+                    }
+                } catch (_) { /* ignore */ }
+            };
+
+            const interval = setInterval(tick, periodMs);
+            this.redirectWatchdogs.set(page, { sessionId, interval, attempts: 0 });
+            page.once('close', () => {
+                const rec = this.redirectWatchdogs.get(page);
+                if (rec) { try { clearInterval(rec.interval); } catch (_) {} this.redirectWatchdogs.delete(page); }
+            });
+        } catch (_) { /* ignore */ }
+    }
+
+    async finalNudgeAfterTimeout(sessionId) {
+        try {
+            const automation = this.activeAutomations.get(sessionId);
+            const context = automation?.context;
+            if (!automation || !automation.requestCaptureSystem || !context) return;
+            const pages = typeof context.pages === 'function' ? context.pages() : [];
+            for (const p of pages) {
+                const curUrl = p.url() || '';
+                if (!/extension_install|extension_login_success/.test(curUrl)) continue;
+                const cap = automation.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                const hasSuccess = cap.some(r => r && r.type === 'response' && [200,201].includes(r.status) && typeof r.url === 'string' && (
+                    r.url.includes('/subscriptions/active') || r.url.includes('/subscriptions/stripe/next-subscription') || r.url.includes('/auth/user') || r.url.includes('/user/channels')
+                ));
+                if (!hasSuccess) continue;
+                console.log('🧭 Final nudge after timeout: navigating stuck page to dashboard');
+                try { await p.evaluate(() => { try { window.stop && window.stop(); } catch (_) {} }); } catch (_) {}
+                try { await p.goto('https://app.vidiq.com/dashboard', { waitUntil: 'domcontentloaded', timeout: 12000 }); } catch (_) {}
+            }
+        } catch (_) { /* ignore */ }
     }
 
     /**
@@ -263,7 +402,51 @@ export class AutomationHookSystem {
             let currentStep = 0;
             const totalSteps = Object.keys(workflow).length;
 
+            const earlySuccessUrls = (workflow?.monitor_success?.successUrls) || [
+                'api.vidiq.com/subscriptions/active',
+                'api.vidiq.com/subscriptions/stripe/next-subscription',
+                'api.vidiq.com/auth/user',
+                'api.vidiq.com/user/channels'
+            ];
+
+            const checkEarlySuccess = () => {
+                try {
+                    // If we're sitting on the extension login success page, treat as success
+                    try {
+                        const curUrl = page.url() || '';
+                        if (/extension_login_success/.test(curUrl)) {
+                            console.log(`✅ Early success via URL: ${curUrl}`);
+                            this.markAutomationCompleted(sessionId, hook.name, 'success');
+                            return true;
+                        }
+                    } catch (_) {}
+                    const cap = automation.requestCaptureSystem?.getCapturedRequests(sessionId) || [];
+                    for (let i = cap.length - 1; i >= 0; i--) {
+                        const r = cap[i];
+                        if (r && r.type === 'response' && [200,201].includes(r.status) && typeof r.url === 'string') {
+                            if (earlySuccessUrls.some(u => r.url.includes(u))) {
+                                console.log(`✅ Early success detected via capture: ${r.url}`);
+                                this.markAutomationCompleted(sessionId, hook.name, 'success');
+                                return true;
+                            }
+                        }
+                        if (i < cap.length - 100) break; // scan recent tail only
+                    }
+                } catch (_) {}
+                return false;
+            };
+
             for (const [stepName, stepConfig] of Object.entries(workflow)) {
+                // If global timeout stopped automation, abort remaining steps
+                const a = this.activeAutomations.get(sessionId);
+                if (!a || a.status !== 'active') {
+                    console.log('⏹️  Automation no longer active; aborting remaining steps');
+                    break;
+                }
+
+                // Before executing the next step, check if we've already succeeded
+                if (checkEarlySuccess()) break;
+
                 currentStep++;
                 console.log(`📋 Step ${currentStep}/${totalSteps}: ${stepName}`);
 
@@ -278,6 +461,9 @@ export class AutomationHookSystem {
                         console.log(`⚠️  Optional step ${stepName} failed, continuing...`);
                     }
                 }
+
+                // After each step, re-check for success to short-circuit quickly
+                if (checkEarlySuccess()) break;
             }
 
             console.log(`✅ Automation workflow completed: ${hook.name}`);
@@ -1224,7 +1410,6 @@ export class AutomationHookSystem {
                         if (isFinite(t) && t >= cutoff) return true;
                     }
                     // stop scanning if we went too far back without timestamps
-                    if (i < cap.length - 100) break;
                 }
             } catch (_) {}
             return false;
@@ -1291,7 +1476,6 @@ export class AutomationHookSystem {
                 try {
                     this.eventBus.emitSessionEvent(sessionId, EVENTS.CAPTCHA_DETECTED, {
                         url: page.url(),
-                        hookName: hook?.name || 'unknown',
                         retryCount: automation.captchaRetryCount
                     });
                 } catch (_) {}
@@ -1514,6 +1698,16 @@ export class AutomationHookSystem {
             console.log(`🛑 Stopped automation for session: ${sessionId}`);
         }
 
+        // Clear any active redirect watchdogs belonging to this session
+        try {
+            for (const [pg, rec] of this.redirectWatchdogs.entries()) {
+                if (rec?.sessionId === sessionId) {
+                    try { clearInterval(rec.interval); } catch (_) {}
+                    this.redirectWatchdogs.delete(pg);
+                }
+            }
+        } catch (_) {}
+
         // Cleanup autofill listener if any
         const unsubscribe = this.autofillCompletionListeners.get(sessionId);
         if (unsubscribe) {
@@ -1547,6 +1741,16 @@ export class AutomationHookSystem {
         }
         this.activeAutomations.delete(sessionId);
 
+        // Clear redirect watchdogs for this session
+        try {
+            for (const [pg, rec] of this.redirectWatchdogs.entries()) {
+                if (rec?.sessionId === sessionId) {
+                    try { clearInterval(rec.interval); } catch (_) {}
+                    this.redirectWatchdogs.delete(pg);
+                }
+            }
+        } catch (_) {}
+
         for (const [key, completion] of this.completedAutomations.entries()) {
             if (completion.sessionId === sessionId) {
                 this.completedAutomations.delete(key);
@@ -1577,6 +1781,10 @@ export class AutomationHookSystem {
     async cleanupAll() {
         this.activeAutomations.clear();
         this.completedAutomations.clear();
+        for (const [pg, rec] of this.redirectWatchdogs.entries()) {
+            try { clearInterval(rec.interval); } catch (_) {}
+            this.redirectWatchdogs.delete(pg);
+        }
         for (const [sessionId, unsubscribe] of this.autofillCompletionListeners.entries()) {
             try { unsubscribe(); } catch (_) {}
             this.autofillCompletionListeners.delete(sessionId);

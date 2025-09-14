@@ -175,6 +175,26 @@ export default {
             required: false
         },
         
+        // Step 4: Guard against stuck extension success redirects
+        custom_script: {
+            type: 'custom_script',
+            script: async (page, sessionId, hook, system) => {
+                try {
+                    const url = page.url() || '';
+                    const isExtFlow = /extension_install|extension_login_success/.test(url);
+                    if (!isExtFlow) return;
+                    // Small wait allows backend to complete; system-level watchdog will also run
+                    await page.waitForTimeout(3000);
+                    const cur = page.url() || '';
+                    if (/extension_login_success/.test(cur)) {
+                        // If still on success page, nudge to dashboard proactively
+                        try { await page.goto('https://app.vidiq.com/dashboard', { waitUntil: 'domcontentloaded', timeout: 15000 }); } catch (_) {}
+                    }
+                } catch (_) {}
+            },
+            required: false
+        },
+
         // Step 4.5: Detect and mitigate CAPTCHA
         detect_captcha: {
             type: 'detect_captcha',
@@ -208,7 +228,9 @@ export default {
                 'api.vidiq.com/subscriptions/active',
                 'api.vidiq.com/subscriptions/stripe/next-subscription',
                 'api.vidiq.com/user/profile',
-                'api.vidiq.com/auth/verify'
+                'api.vidiq.com/auth/verify',
+                // also consider app redirect completion endpoint seen in logs
+                'app.vidiq.com/extension_login_success'
             ],
             successStatuses: [200, 201],
             required: true
