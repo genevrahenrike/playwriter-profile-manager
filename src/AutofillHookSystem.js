@@ -854,14 +854,34 @@ export class AutofillHookSystem {
                 return 4;
             };
             const orderedSelectors = selectorsOriginal.sort((a, b) => priorityOrder(a) - priorityOrder(b));
+
+            // Helper to classify selector categories for deduping
+            const classifySelector = (sel) => {
+                if (/type=["']?email|name=["']?email|\[type="email"]|\[name="email"]|form-input-email|placeholder.*email/i.test(sel)) return 'email';
+                if (/type=["']?password|name=["']?password|form-input-password|placeholder.*password/i.test(sel)) return 'password';
+                if (/first|last|full.*name|placeholder.*name/i.test(sel)) return 'name';
+                return 'other';
+            };
             
             let filledCount = 0;
+            // Track first-success per single-instance categories to avoid duplicate attempts
+            let emailHandled = false;
+            let passwordHandled = false;
             
             if (settings.fillSequentially) {
                 console.log(`📝 Filling fields sequentially to prevent race conditions...`);
                 
                 // Sequential filling - wait for each field to complete before moving to next
                 for (const selector of orderedSelectors) {
+                    const category = classifySelector(selector);
+                    if (category === 'email' && emailHandled) {
+                        // Skip alternative email selectors once one has succeeded
+                        continue;
+                    }
+                    if (category === 'password' && passwordHandled) {
+                        // Skip alternative password selectors once one has succeeded
+                        continue;
+                    }
                     const fieldConfig = hook.fields[selector];
                     try {
                         console.log(`🎯 Filling field: ${selector.substring(0, 50)}...`);
@@ -872,6 +892,10 @@ export class AutofillHookSystem {
                         if (success) {
                             filledCount++;
                             console.log(`✅ Field filled successfully (${filledCount} total)`);
+
+                            // Mark category as handled to prevent duplicate attempts
+                            if (category === 'email') emailHandled = true;
+                            if (category === 'password') passwordHandled = true;
                             
                             // Stability check after each field
                             if (settings.stabilityChecks > 0) {
@@ -902,6 +926,13 @@ export class AutofillHookSystem {
                 
                 // Original parallel approach with enhanced timing
                 for (const selector of orderedSelectors) {
+                    const category = classifySelector(selector);
+                    if (category === 'email' && emailHandled) {
+                        continue;
+                    }
+                    if (category === 'password' && passwordHandled) {
+                        continue;
+                    }
                     const fieldConfig = hook.fields[selector];
                     try {
                         // Inter-field delay; avoid extra scroll/mouse when minimalInterference is on
@@ -925,6 +956,9 @@ export class AutofillHookSystem {
                             filledCount++;
                             // Small randomized pause after successful fill
                             await page.waitForTimeout(120 + Math.floor(Math.random() * 240));
+
+                            if (category === 'email') emailHandled = true;
+                            if (category === 'password') passwordHandled = true;
                         }
                     } catch (error) {
                         console.log(`⚠️  Could not fill field ${selector}: ${error.message}`);

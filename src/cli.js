@@ -923,7 +923,7 @@ program
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
-    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
+    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident (default), datacenter, mobile')
     .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
@@ -1070,7 +1070,7 @@ program
                 strategy: options.proxyStrategy || 'round-robin',
                 startProxyLabel: options.proxyStart,
                 proxyType: options.proxyType,
-                connectionType: options.proxyConnectionType,
+                connectionType: options.proxyConnectionType || 'resident', // Default to residential proxies
                 country: options.proxyCountry,
                 skipIPCheck: !!options.skipIpCheck,
                 ipCheckTimeoutMs: parseInt(options.ipCheckTimeout) || 10000,
@@ -1083,7 +1083,8 @@ program
                 const strategyInfo = options.proxyStrategy || 'round-robin';
                 const startInfo = options.proxyStart ? ` starting from ${options.proxyStart}` : '';
                 const ipCheckInfo = options.skipIpCheck ? ' (IP check: SKIPPED)' : '';
-                console.log(chalk.green(`🌐 Proxy rotation enabled: ${strategyInfo} strategy${startInfo}${ipCheckInfo}, max ${maxProfilesPerIP} profiles per IP`));
+                const connectionTypeInfo = options.proxyConnectionType || 'resident';
+                console.log(chalk.green(`🌐 Proxy rotation enabled: ${strategyInfo} strategy${startInfo}${ipCheckInfo}, ${connectionTypeInfo} proxies, max ${maxProfilesPerIP} profiles per IP`));
             } else {
                 console.log(chalk.yellow('⚠️  No proxies available, running without proxy rotation'));
             }
