@@ -176,7 +176,15 @@ export class AutomationHookSystem {
                         let onExtensionSuccessUrl = false;
                         try {
                             const pages = typeof context?.pages === 'function' ? context.pages() : [];
-                            onExtensionSuccessUrl = pages.some(p => /extension_login_success/.test(p.url() || ''));
+                            onExtensionSuccessUrl = pages.some(p => {
+                                try {
+                                    const u = new URL(p.url() || '');
+                                    return (u.pathname || '').includes('/extension_login_success');
+                                } catch (_) {
+                                    const raw = (p.url() || '').split('?')[0] || '';
+                                    return /\/extension_login_success(\b|$)/.test(raw);
+                                }
+                            });
                         } catch (_) {}
 
                         if (this.hasBackendSuccess(sessionId) || onExtensionSuccessUrl) {
@@ -414,7 +422,14 @@ export class AutomationHookSystem {
                     // If we're sitting on the extension login success page, treat as success
                     try {
                         const curUrl = page.url() || '';
-                        if (/extension_login_success/.test(curUrl)) {
+                        let onLoginSuccessPath = false;
+                        try {
+                            const u = new URL(curUrl);
+                            onLoginSuccessPath = (u.pathname || '').includes('/extension_login_success');
+                        } catch (_) {
+                            onLoginSuccessPath = /\/extension_login_success(\b|$)/.test(curUrl.split('?')[0] || '');
+                        }
+                        if (onLoginSuccessPath) {
                             console.log(`✅ Early success via URL: ${curUrl}`);
                             this.markAutomationCompleted(sessionId, hook.name, 'success');
                             return true;
