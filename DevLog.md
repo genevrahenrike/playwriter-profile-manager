@@ -539,7 +539,7 @@ The system now generates realistic user profiles like:
 - **Email**: `erik.bergstrom2847@protonmail.com`
 - **Password**: `Kx9#mP2vQ8@nR5zL` (secure, randomized)
 
-----
+---
 
 I've successfully extended your current system to support **sniffing and request capturing** with a powerful, hook-based architecture similar to your autofill system. Here's what's been implemented:
 
@@ -2311,5 +2311,29 @@ When CAPTCHA was detected and the page was reloaded, the system tried to force a
 
 NOTE: looking at the 'restored sessions' after running the refresh, we got no bearer tokens, most traffic are 400. It does show more session activities but those are not the requests of value.
 
----
+
+----
+
+## Post-Refresh Refill Safeguard (Sep 2025)
+
+### Problem
+On some CAPTCHA/refresh flows, the page reloads and both the email and password fields are cleared. In those cases, the autofill/automation pipeline occasionally considered the page "already processed" and would not reattempt, leaving the run stuck.
+
+### Fix
+- Added a lightweight, bounded watcher to `AutofillHookSystem` that activates after a successful autofill attempt when both auth fields are present.
+- Within a short window (`postRefreshWatchWindowMs`, default 20s) it periodically checks if BOTH email and password fields have become empty again (a signature of a refresh or soft re-render).
+- If detected, it clears internal dedupe marks for the current session/hook and re-executes autofill. Retries are bounded by `maxPostRefreshRetries` (default 2) to avoid loops and unproductive waiting.
+- The watcher yields immediately if another autofill operation is active (prevents overlap) and auto-stops when the window expires or page closes.
+- Also, when `EVENTS.AUTOFILL_REQUESTED` is received via EventBus, we now clear processed page marks so explicit requests can truly force a reattempt.
+
+### Impact
+- Normal cases are unchanged. This only engages after an autofill when email+password fields exist and later become empty.
+- Prevents the stuck state observed after CAPTCHA-induced refreshes by safely reattempting fill+submit without long delays.
+
+### Tunables (AutofillHookSystem options)
+- `postRefreshWatchWindowMs` (default 20000)
+- `postRefreshCheckIntervalMs` (default 1200)
+- `maxPostRefreshRetries` (default 2)
+
+No changes are required to hooks. The behavior is internal and protective.
 

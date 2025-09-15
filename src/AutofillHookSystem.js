@@ -16,6 +16,7 @@ export class AutofillHookSystem {
         this.completedSessions = new Map(); // Track sessions that have successfully completed autofill
         this.sessionFieldCounts = new Map(); // Track successful field fills per session
         this.activeFillOperations = new Map(); // Track active fill operations per session
+        this.postRefreshRetryCounts = new Map(); // Bounded retries for post-refresh refills per session+hook
         
         // EventBus for coordinating with other systems
         this.eventBus = options.eventBus || null;
@@ -27,6 +28,9 @@ export class AutofillHookSystem {
             minFieldsForSuccess: options.minFieldsForSuccess || 2, // Minimum fields filled to consider success
             successCooldown: options.successCooldown || 30000, // Cooldown period before re-enabling (30s)
             maxRetriesPerSession: options.maxRetriesPerSession || 3, // Max retries per session before giving up
+            postRefreshWatchWindowMs: options.postRefreshWatchWindowMs || 20000, // Watch window after fills for refresh-clears
+            postRefreshCheckIntervalMs: options.postRefreshCheckIntervalMs || 1200, // Poll cadence while in watch window
+            maxPostRefreshRetries: options.maxPostRefreshRetries || 2, // Max re-attempts triggered by cleared fields
             ...options
         };
         
@@ -158,6 +162,10 @@ export class AutofillHookSystem {
                 
                 // Force re-enable autofill for this session
                 this.forceReEnable(sessionId);
+                // Clear processed page marks so we don't skip due to dedupe
+                try {
+                    this.clearProcessedPageMarks(sessionId, event?.hookName || null);
+                } catch (_) {}
                 
                 // Re-process current pages to trigger autofill
                 const currentPages = context.pages();
@@ -1086,6 +1094,16 @@ export class AutofillHookSystem {
             } else if (finalFilledCount > 0) {
                 console.log(`⚠️  Partial success (${finalFilledCount}/${this.options.minFieldsForSuccess} fields, criticalFilled: ${criticalFieldsFilled}, pwdPresent: ${passwordFieldPresent}) — will retry if page changes`);
             }
+
+            // Post-fill watcher: if a refresh clears both email and password, re-attempt within a bounded window
+            try {
+                const watchNeeded = (emailFieldPresent && passwordFieldPresent);
+                if (watchNeeded) {
+                    this.#setupPostRefreshWatcher({ page, sessionId, hook, windowMs: this.options.postRefreshWatchWindowMs });
+                }
+            } catch (e) {
+                console.log(`⚠️  Could not setup post-refresh watcher: ${e.message}`);
+            }
             
             // Detect submit buttons (but don't click unless autoSubmit is enabled)
             const submitSelectors = [
@@ -1187,6 +1205,115 @@ export class AutofillHookSystem {
         
         // Clean up field counts
         this.sessionFieldCounts.delete(sessionId);
+    }
+
+    /**
+     * Clear processed page marks for a session, optionally limited to a hook name.
+     * This allows re-processing of the same URL after a soft refresh.
+     */
+    clearProcessedPageMarks(sessionId, hookName = null) {
+        const toDelete = [];
+        for (const [key] of this.processedPages) {
+            if (!key.startsWith(`${sessionId}-`)) continue;
+            if (hookName) {
+                if (key.endsWith(`-${hookName}`)) toDelete.push(key);
+            } else {
+                toDelete.push(key);
+            }
+        }
+        toDelete.forEach(k => this.processedPages.delete(k));
+        if (toDelete.length > 0) {
+            console.log(`🧹 Cleared ${toDelete.length} processed page mark(s) for session ${sessionId}${hookName ? ` hook ${hookName}` : ''}`);
+        }
+    }
+
+    /**
+     * Internal: watch for a brief period after fills to detect refresh that clears both email and password fields,
+     * then re-attempt autofill. Bounded by maxPostRefreshRetries and window duration.
+     */
+    #setupPostRefreshWatcher({ page, sessionId, hook, windowMs }) {
+        const retryKey = `${sessionId}-${hook.name}`;
+        const maxRetries = this.options.maxPostRefreshRetries;
+        if (maxRetries <= 0) return;
+
+        const start = Date.now();
+        let triggered = false;
+        let intervalId = null;
+
+        const stop = () => {
+            if (intervalId) { clearInterval(intervalId); intervalId = null; }
+            try { page.off('framenavigated', onNav); } catch (_) {}
+            try { page.off('load', onLoad); } catch (_) {}
+        };
+
+        const checkCleared = async () => {
+            if (triggered) return false;
+            // Skip if we are already actively filling
+            if (this.isAutofillActive(sessionId)) return false;
+            // Only within window
+            if (Date.now() - start > windowMs) { stop(); return false; }
+            try {
+                const emailSel = await this.#firstPresent(page, [
+                    'input[data-testid="form-input-email"]',
+                    'input[name="email"]',
+                    'input[type="email"]',
+                    'input[id*="email" i]'
+                ]);
+                const passSel = await this.#firstPresent(page, [
+                    'input[data-testid="form-input-password"]',
+                    'input[name="password"]',
+                    'input[type="password"]',
+                    'input[id*="password" i]'
+                ]);
+                if (!emailSel || !passSel) return false;
+                const emailVal = await page.locator(emailSel).first().inputValue().catch(() => '');
+                const passVal = await page.locator(passSel).first().inputValue().catch(() => '');
+                const bothEmpty = (!emailVal || emailVal.trim() === '') && (!passVal || passVal.trim() === '');
+                if (!bothEmpty) return false;
+
+                const used = this.postRefreshRetryCounts.get(retryKey) || 0;
+                if (used >= maxRetries) { stop(); return false; }
+
+                triggered = true; // ensure single fire per window
+                this.postRefreshRetryCounts.set(retryKey, used + 1);
+                console.log(`🔁 Detected cleared auth fields post-refresh (attempt ${used + 1}/${maxRetries}). Re-attempting autofill for ${hook.name}...`);
+
+                // Allow re-processing by clearing processed marks
+                this.clearProcessedPageMarks(sessionId, hook.name);
+
+                // Re-run autofill directly to avoid dedupe
+                await this.executeAutofill(hook, page, sessionId);
+
+                stop();
+                return true;
+            } catch (e) {
+                // Non-fatal
+                return false;
+            }
+        };
+
+        const onNav = async () => { setTimeout(() => { checkCleared(); }, 300); };
+        const onLoad = async () => { setTimeout(() => { checkCleared(); }, 300); };
+
+        // Hook events and polling
+        try { page.on('framenavigated', onNav); } catch (_) {}
+        try { page.on('load', onLoad); } catch (_) {}
+        intervalId = setInterval(checkCleared, Math.max(500, this.options.postRefreshCheckIntervalMs));
+
+        // Auto-clean on page close
+        page.once('close', () => stop());
+    }
+
+    // Lightweight helper: first present selector from list
+    async #firstPresent(page, selectors) {
+        for (const sel of selectors) {
+            try {
+                const loc = page.locator(sel).first();
+                const cnt = await loc.count();
+                if (cnt > 0) return sel;
+            } catch (_) {}
+        }
+        return null;
     }
 
     /**
