@@ -2310,3 +2310,6 @@ When CAPTCHA was detected and the page was reloaded, the system tried to force a
 - Form fields should be populated after reload, allowing the automation to continue properly
 
 NOTE: looking at the 'restored sessions' after running the refresh, we got no bearer tokens, most traffic are 400. It does show more session activities but those are not the requests of value.
+
+---
+

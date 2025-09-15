@@ -9,6 +9,8 @@ import { ChromiumImporter } from './ChromiumImporter.js';
 import { ProfileLauncher } from './ProfileLauncher.js';
 import fs from 'fs-extra';
 import path from 'path';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 import LoginAnalyzer from './LoginAnalyzer.js';
 import LoginAutomation from './LoginAutomation.js';
 import CredentialsResolver from './CredentialsResolver.js';
@@ -131,6 +133,139 @@ program
     .name('ppm')
     .description('Playwright Profile Manager - Manage browser profiles for automation')
     .version('1.0.0');
+
+// Internal single-run command used by batch orchestrator (do not document publicly)
+program
+    .command('internal-batch-run')
+    .description('(internal) Execute a single batch run in an isolated process')
+    .requiredOption('-t, --template <name>', 'Template profile name')
+    .requiredOption('-n, --name <instance>', 'Instance/profile name to create')
+    .option('--run-id <id>', 'Run identifier for logging')
+    .option('--headless', 'Run headless')
+    .option('--timeout <ms>', 'Per-run success timeout', '120000')
+    .option('--captcha-grace <ms>', 'Extra grace when CAPTCHA detected', '45000')
+    .option('--disable-images', 'Disable image loading')
+    .option('--disable-proxy-wait-increase', 'Disable proxy wait time increases')
+    .option('--proxy-label <label>', 'Specific proxy label to use')
+    .option('--proxy-type <type>', 'Proxy type (http)')
+    .action(async (opts) => {
+        // Minimal logging; emit final result as a tagged JSON line for the orchestrator
+        const out = (obj) => {
+            try { console.log(`::RUN_RESULT::${JSON.stringify(obj)}`); } catch (_) {}
+        };
+        const template = opts.template;
+        const instance = opts.name;
+        const runId = opts.runId || instance;
+        const perRunTimeout = parseInt(opts.timeout, 10) || 120000;
+        const captchaGrace = parseInt(opts.captchaGrace, 10) || 45000;
+
+        const pm = new ProfileManager();
+        const launcher = new ProfileLauncher(pm, {});
+
+        const waitForOutcome = async (sessionId, context) => {
+            const start = Date.now();
+            const poll = 1000;
+            while (true) {
+                try {
+                    const comps = Array.from(launcher.automationSystem?.completedAutomations?.values?.() || [])
+                        .filter(c => c.sessionId === sessionId && c.status === 'success');
+                    if (comps.length > 0) return { success: true, reason: 'automation_success' };
+                } catch (_) {}
+
+                try {
+                    const captured = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
+                    const ok = captured.some(r => r.type === 'response' && [200,201].includes(r.status) && (
+                        (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/active')) ||
+                        (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/stripe/next-subscription'))
+                    ));
+                    if (ok) return { success: true, reason: 'capture_success' };
+                } catch (_) {}
+
+                // CAPTCHA heuristic extends timeout
+                let captchaLikely = false;
+                try {
+                    const pages = context?.pages?.() || [];
+                    for (const p of pages) {
+                        const a = await p.locator('iframe[src*="recaptcha"], div.g-recaptcha').count().catch(() => 0);
+                        const b = await p.locator('iframe[src*="hcaptcha"], div.h-captcha').count().catch(() => 0);
+                        if (a > 0 || b > 0) { captchaLikely = true; break; }
+                    }
+                } catch (_) {}
+
+                const elapsed = Date.now() - start;
+                const effective = captchaLikely ? (perRunTimeout + captchaGrace) : perRunTimeout;
+                if (perRunTimeout > 0 && elapsed >= effective) {
+                    // Best-effort screenshot
+                    try {
+                        const pages = context?.pages?.() || [];
+                        const p = pages.find(pg => {
+                            const u = pg.url();
+                            return u && u !== 'about:blank' && !u.startsWith('chrome://');
+                        }) || pages[0];
+                        if (p) {
+                            const resultsDir = path.resolve('./automation-results');
+                            await fs.ensureDir(resultsDir);
+                            const outBase = `${sessionId}-timeout-${new Date().toISOString().replace(/[:.]/g,'-')}`;
+                            const png = path.join(resultsDir, `${outBase}.png`);
+                            await p.screenshot({ path: png, fullPage: true }).catch(() => {});
+                        }
+                    } catch (_) {}
+                    return { success: false, reason: captchaLikely ? 'timeout_with_captcha' : 'timeout' };
+                }
+                await new Promise(r => setTimeout(r, poll));
+            }
+        };
+
+        try {
+            const launchOptions = {
+                browserType: 'chromium',
+                headless: !!opts.headless,
+                enableAutomation: true,
+                headlessAutomation: true,
+                enableRequestCapture: true,
+                autoCloseOnSuccess: false,
+                autoCloseOnFailure: false,
+                autoCloseTimeout: 0,
+                isTemporary: false,
+                stealth: true,
+                stealthPreset: 'balanced',
+                disableCompression: false,
+                disableImages: !!opts.disableImages,
+                disableProxyWaitIncrease: !!opts.disableProxyWaitIncrease
+            };
+            if (opts.proxyLabel && opts.proxyType) {
+                launchOptions.proxy = opts.proxyLabel;
+                launchOptions.proxyType = opts.proxyType;
+            }
+
+            const res = await launcher.launchFromTemplate(template, instance, launchOptions);
+            const profile = res.profile;
+            const outcome = await waitForOutcome(res.sessionId, res.context);
+
+            // Try to close within a bounded time; if it hangs, we exit anyway
+            const closePromise = launcher.closeBrowser(res.sessionId, { clearCache: false }).catch(() => {});
+            await Promise.race([
+                closePromise,
+                new Promise(r => setTimeout(r, 10000))
+            ]);
+
+            const result = {
+                runId,
+                success: !!outcome.success,
+                reason: outcome.reason || null,
+                profileId: profile?.id || null,
+                profileName: profile?.name || instance,
+                proxy: opts.proxyLabel ? { label: opts.proxyLabel, type: opts.proxyType || null } : null
+            };
+            out(result);
+            process.exit(outcome.success ? 0 : 1);
+        } catch (err) {
+            out({ runId, success: false, reason: 'error', error: err?.message || String(err) });
+            process.exit(1);
+        } finally {
+            try { await profileLauncher?.closeAllBrowsers({}); } catch (_) {}
+        }
+    });
 
 // Create profile command
 program
@@ -905,7 +1040,7 @@ program
         }
     });
 
-// Batch automation command
+// Batch automation command (process-isolated orchestrator)
 program
     .command('batch')
     .description('Run continuous automated signups with retry and profile management')
@@ -935,6 +1070,8 @@ program
         const pathMod = (await import('path')).default;
         const fsx = (await import('fs-extra')).default;
         const { v4: uuidv4 } = await import('uuid');
+        const nodePath = process.execPath;
+        const __filename = fileURLToPath(import.meta.url);
 
         const template = options.template;
         const total = parseInt(options.count, 10) || 1;
@@ -977,61 +1114,71 @@ program
             return `${prefix}${idx}`;
         };
 
-        const waitForOutcome = async (launcher, sessionId, context) => {
-            const start = Date.now();
-            const poll = 1500;
-
-            while (true) {
-                try {
-                    const comps = Array.from(launcher.automationSystem.completedAutomations.values())
-                        .filter(c => c.sessionId === sessionId && c.status === 'success');
-                    if (comps.length > 0) {
-                        return { success: true, reason: 'automation_success' };
-                    }
-                } catch (_) {}
-
-                try {
-                    const captured = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
-                    const successDetected = captured.some(r => r.type === 'response' && [200, 201].includes(r.status) && (
-                        (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/active')) ||
-                        (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/stripe/next-subscription'))
-                    ));
-                    if (successDetected) {
-                        return { success: true, reason: 'capture_success' };
-                    }
-                } catch (_) {}
-
-                const elapsed = Date.now() - start;
-                const pages = context?.pages?.() || [];
-                let captchaLikely = false;
-                try {
-                    for (const p of pages) {
-                        const a = await p.locator('iframe[src*="recaptcha"], div.g-recaptcha').count().catch(() => 0);
-                        const b = await p.locator('iframe[src*="hcaptcha"], div.h-captcha').count().catch(() => 0);
-                        if (a > 0 || b > 0) { captchaLikely = true; break; }
-                    }
-                } catch (_) {}
-
-                const effective = captchaLikely ? (perRunTimeout + captchaGrace) : perRunTimeout;
-                if (perRunTimeout > 0 && elapsed >= effective) {
-                    // Best-effort screenshot
-                    try {
-                        const p = pages.find(pg => {
-                            const u = pg.url();
-                            return u && u !== 'about:blank' && !u.startsWith('chrome://');
-                        }) || pages[0];
-                        if (p) {
-                            const outBase = `${sessionId}-timeout-${new Date().toISOString().replace(/[:.]/g,'-')}`;
-                            const png = pathMod.join(resultsDir, `${outBase}.png`);
-                            await p.screenshot({ path: png, fullPage: true }).catch(() => {});
-                        }
-                    } catch (_) {}
-                    return { success: false, reason: captchaLikely ? 'timeout_with_captcha' : 'timeout' };
-                }
-
-                await new Promise(r => setTimeout(r, poll));
+        // Orchestrator helper: spawn a single-run child process with a hard watchdog
+        const runSingleIsolated = ({ instanceName, proxy }) => new Promise((resolve) => {
+            const runId = uuidv4();
+            const args = [__filename, 'internal-batch-run', '--template', template, '--name', instanceName, '--run-id', runId, '--timeout', String(perRunTimeout), '--captcha-grace', String(captchaGrace)];
+            if (runHeadless) args.push('--headless');
+            if (options.disableImages) args.push('--disable-images');
+            if (options.disableProxyWaitIncrease) args.push('--disable-proxy-wait-increase');
+            if (proxy && proxy.label && proxy.type) {
+                args.push('--proxy-label', proxy.label, '--proxy-type', proxy.type);
             }
-        };
+
+            const child = spawn(nodePath, args, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env } });
+            let parsed = null;
+            let sawSuccessSignal = false;
+
+            const onLine = (line) => {
+                // Capture our tagged line
+                if (line.startsWith('::RUN_RESULT::')) {
+                    const json = line.slice('::RUN_RESULT::'.length).trim();
+                    try {
+                        parsed = JSON.parse(json);
+                        if (parsed && parsed.success) sawSuccessSignal = true;
+                    } catch (_) {}
+                }
+                // Observe known success prints in child logs as a heuristic
+                if (/VidIQ API Response:\s+200/i.test(line) || /Captured RESPONSE: 200 .*subscriptions\/(active|stripe\/next-subscription)/i.test(line)) {
+                    sawSuccessSignal = true;
+                }
+            };
+
+            child.stdout.setEncoding('utf8');
+            child.stderr.setEncoding('utf8');
+            child.stdout.on('data', data => data.toString().split(/\r?\n/).forEach(l => l && onLine(l)));
+            child.stderr.on('data', data => data.toString().split(/\r?\n/).forEach(l => l && onLine(l)));
+
+            const hardKill = () => {
+                try { child.kill('SIGKILL'); } catch (_) {}
+            };
+            const softKill = () => {
+                try { child.kill('SIGTERM'); } catch (_) {}
+            };
+
+            // Watchdog: perRunTimeout + captchaGrace + 15s buffer for cleanup
+            const watchdogMs = perRunTimeout + captchaGrace + 15000;
+            const watchdog = setTimeout(() => {
+                // If we saw success signals but the child is hung, treat as success and hard-kill
+                const assumed = sawSuccessSignal ? { success: true, reason: 'assumed_success_post_signin_hang' } : { success: false, reason: 'orchestrator_timeout' };
+                if (!parsed) parsed = { runId, profileId: null, profileName: instanceName, ...assumed };
+                softKill();
+                setTimeout(hardKill, 5000);
+            }, watchdogMs);
+
+            child.on('exit', (code, signal) => {
+                clearTimeout(watchdog);
+                // If no structured result, synthesize one from signals
+                if (!parsed) {
+                    parsed = { runId, profileId: null, profileName: instanceName, success: code === 0 || sawSuccessSignal, reason: code === 0 ? 'ok' : (sawSuccessSignal ? 'assumed_success_post_signin_hang' : (signal ? `killed_${signal}` : 'nonzero_exit')) };
+                } else if (!parsed.success && sawSuccessSignal) {
+                    // Upgrade to success if we observed strong success signals
+                    parsed.success = true;
+                    parsed.reason = parsed.reason || 'assumed_success_post_signin_hang';
+                }
+                resolve(parsed);
+            });
+        });
 
         const pmLocal = new ProfileManager();
         // Ensure the template stays uncompressed to avoid missing data dirs
@@ -1174,50 +1321,31 @@ program
             }
 
             console.log(chalk.blue(`\n▶️  Run ${runNo}/${total}: ${name}`));
-            const launcher = new ProfileLauncher(pmLocal, {});
+            // Process-isolated single run
             try {
-                const launchOptions = {
-                    browserType: 'chromium',
-                    headless: runHeadless,
-                    enableAutomation: true,
-                    headlessAutomation: true,
-                    enableRequestCapture: true,
-                    autoCloseOnSuccess: false,
-                    autoCloseOnFailure: false,
-                    autoCloseTimeout: 0,
-                    isTemporary: false,
-                    stealth: true,
-                    stealthPreset: 'balanced',
-                    // Keep the new instance uncompressed until batch completes decisions
-                    disableCompression: false,
-                    disableImages: options.disableImages,
-                    disableProxyWaitIncrease: options.disableProxyWaitIncrease
-                };
-                
-                // Add proxy configuration if available
-                if (useProxyRotation && currentProxy) {
-                    // Use the specific proxy from rotation
-                    launchOptions.proxy = currentProxy.label;
-                    launchOptions.proxyType = currentProxy.type;
-                }
-                
-                const runRes = await launcher.launchFromTemplate(template, name, launchOptions);
-                created++;
-                profileRecord = runRes.profile;
+                // Kick off child run
+                const childResult = await runSingleIsolated({
+                    instanceName: name,
+                    proxy: useProxyRotation && currentProxy ? { label: currentProxy.label, type: currentProxy.type } : null
+                });
 
-                const outcome = await waitForOutcome(launcher, runRes.sessionId, runRes.context);
-                await launcher.closeBrowser(runRes.sessionId, { clearCache: false }).catch(() => {});
+                // Track created count if we have a profile name (assume created)
+                created++;
+                profileRecord = { id: childResult.profileId || null, name };
+
+                const success = !!childResult.success;
+                const reason = childResult.reason || (success ? 'ok' : 'unknown');
 
                 await writeResult({
                     run: runNo,
                     batchId,
                     runId,
-                    profileId: profileRecord?.id,
-                    profileName: profileRecord?.name,
+                    profileId: childResult.profileId || null,
+                    profileName: childResult.profileName || name,
                     attempt: 1,
                     headless: runHeadless,
-                    success: outcome.success,
-                    reason: outcome.reason,
+                    success,
+                    reason,
                     proxy: currentProxy ? {
                         label: currentProxy.label,
                         type: currentProxy.type,
@@ -1226,32 +1354,31 @@ program
                     } : null
                 });
 
-                if (outcome.success) {
+                if (success) {
                     successes++;
-                    console.log(chalk.green(`✅ Success: ${name}`));
-                    
-                    // Clear cache for successful profiles to save disk space
-                    if (clearCacheOnSuccess && profileRecord?.id) {
+                    console.log(chalk.green(`✅ Success: ${name} (${reason})`));
+                    // IMPORTANT: Do not delete profile; optionally clear cache
+                    if (clearCacheOnSuccess && childResult.profileId) {
                         try {
-                            const cacheClearResult = await pmLocal.clearProfileCache(profileRecord.id);
+                            await pmLocal.clearProfileCache(childResult.profileId);
                             console.log(chalk.dim(`🧹 Cache cleared for successful profile: ${name}`));
-                        } catch (cacheError) {
-                            console.log(chalk.yellow(`⚠️  Cache clear failed for ${name}: ${cacheError.message}`));
+                        } catch (e) {
+                            console.log(chalk.yellow(`⚠️  Cache clear failed for ${name}: ${e.message}`));
                         }
                     }
                 } else {
-                    console.log(chalk.red(`❌ Failed: ${name} (${outcome.reason})`));
-                    if (deleteOnFailure && profileRecord?.id) {
-                        try { await pmLocal.deleteProfile(profileRecord.id); } catch (_) {}
-                        console.log(chalk.dim(`🧹 Deleted failed profile: ${name}`));
+                    console.log(chalk.red(`❌ Failed: ${name} (${reason})`));
+                    // SAFETY: Do not delete if reason indicates a post-sign-in hang
+                    const safeToDelete = deleteOnFailure && childResult.profileId && !(reason && /assumed_success_post_signin_hang/i.test(reason));
+                    if (safeToDelete) {
+                        try { await pmLocal.deleteProfile(childResult.profileId); console.log(chalk.dim(`🧹 Deleted failed profile: ${name}`)); } catch (_) {}
                     }
                 }
+
                 scheduled++;
-                
-                // Apply cooldown delay between runs (skip delay after the last run)
                 if (scheduled < total) {
-                    const delayToUse = outcome.success ? delayBetweenRuns : failureDelay;
-                    const delayReason = outcome.success ? 'cooldown' : 'failure recovery';
+                    const delayToUse = success ? delayBetweenRuns : failureDelay;
+                    const delayReason = success ? 'cooldown' : 'failure recovery';
                     console.log(chalk.dim(`⏳ Waiting ${delayToUse}s (${delayReason}) before next run...`));
                     await new Promise(resolve => setTimeout(resolve, delayToUse * 1000));
                 }
@@ -1262,14 +1389,10 @@ program
                 }
                 await writeResult({ run: runNo, batchId, runId, error: err.message });
                 scheduled++;
-                
-                // Apply failure delay after errors (skip delay after the last run)
                 if (scheduled < total) {
                     console.log(chalk.dim(`⏳ Waiting ${failureDelay}s (error recovery) before next run...`));
                     await new Promise(resolve => setTimeout(resolve, failureDelay * 1000));
                 }
-            } finally {
-                try { await launcher.closeAllBrowsers({}); } catch (_) {}
             }
         }
 
