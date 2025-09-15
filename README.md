@@ -175,6 +175,29 @@ npx ppm launch-template vpn-fresh user3 --headless-automation --auto-close-on-su
 
 Run repeated automated signups with a single attempt per profile. Defaults to headed mode (recommended for higher success rates). Success is detected via automation completion and request capture; results are logged as JSONL for easy parsing.
 
+**📋 Enhanced Logging & Troubleshooting:**
+The orchestrator mode now preserves comprehensive detailed logs for troubleshooting:
+- **Per-run detailed logs**: Each run gets separate log files in `automation-results/detailed-logs/{batchId}/`
+- **Log types**: `start`, `stdout`, `stderr`, `result`, `error`, `network`, `automation`, `exit`, `final`
+- **Batch summary**: `batch-summary.log` with overall batch information
+- **Performance metrics**: Timing data and duration analysis
+- **Error categorization**: Automatic detection of common failure patterns
+
+**🔍 Troubleshooting Commands:**
+```bash
+# View latest batch logs
+ls automation-results/detailed-logs/
+
+# Analyze a specific batch
+node analyze-batch-logs.js 2025-09-15T20-37-58-759Z
+
+# View all errors from a batch
+cat automation-results/detailed-logs/{batchId}/*-error.log
+
+# Search for specific issues
+grep -i "timeout\|captcha\|proxy" automation-results/detailed-logs/{batchId}/*.log
+```
+
 ```bash
 # Headed (default), delete failed profiles automatically
 npx ppm batch --template vidiq-clean \

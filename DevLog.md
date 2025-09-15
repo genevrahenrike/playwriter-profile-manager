@@ -1055,7 +1055,6 @@ Optional “worst case” path:
 
 Want me to implement that “automation-autofill-only” option as a toggle?
 
-Made changes.
 
 ---
 
@@ -1192,7 +1191,6 @@ Optional enhancements
 
 Want me to add any of the enhancements (e.g., JSON to stdout or parallelism)?
 
-Made changes.
 
 ---
 
@@ -2336,4 +2334,96 @@ On some CAPTCHA/refresh flows, the page reloads and both the email and password 
 - `maxPostRefreshRetries` (default 2)
 
 No changes are required to hooks. The behavior is internal and protective.
+
+---
+
+I've successfully implemented comprehensive disk logging for the orchestrator mode to preserve detailed troubleshooting information. Here's what was added:
+
+### 🔧 **Enhanced Logging Implementation**
+
+#### **1. Detailed Log Directory Structure**
+- **Location**: `automation-results/detailed-logs/{batchId}/`
+- **Per-run logs**: Each run gets separate files with pattern `{runId}-{logType}.log`
+- **Batch summary**: `batch-summary.log` with overall batch information
+
+#### **2. Comprehensive Log Types**
+- **`start`**: Process initialization, command line, proxy configuration
+- **`stdout`**: All standard output from child processes
+- **`stderr`**: All error output from child processes  
+- **`result`**: Structured JSON results and parsing
+- **`error`**: Error detection and categorization
+- **`network`**: Proxy, IP, and connection details
+- **`automation`**: Autofill, form filling, and interaction steps
+- **`exit`**: Process exit codes, signals, and duration
+- **`final`**: Final result determination and cleanup
+
+#### **3. Enhanced Child Process Logging**
+- **Real-time capture**: All stdout/stderr from internal batch runs
+- **Pattern detection**: Automatic categorization of success signals, errors, timeouts
+- **Performance tracking**: Duration calculation and timing analysis
+- **Error context**: Detailed stack traces and error messages preserved
+
+#### **4. Orchestrator-Level Enhancements**
+- **Batch summary logging**: High-level progress and configuration tracking
+- **Per-run detailed tracking**: Start time, proxy info, duration, results
+- **Failure analysis**: Categorization and preservation of failure reasons
+- **Troubleshooting guides**: Built-in instructions for analyzing logs
+
+### 🛠️ **Analysis and Troubleshooting Tools**
+
+#### **1. Log Analysis Script** (analyze-batch-logs.js)
+- **Batch overview**: Summary of runs, success rates, and performance
+- **Failure analysis**: Automatic detection of common issues
+- **Performance metrics**: Average, min/max run times
+- **Issue categorization**: Timeouts, CAPTCHA, proxy, automation, browser errors
+- **Troubleshooting commands**: Ready-to-use commands for deeper analysis
+
+#### **2. Test Suite** (test-enhanced-logging.js)
+- **Validation**: Ensures log structure is created correctly
+- **Integration testing**: Verifies analysis tool functionality
+- **Demo data**: Creates sample logs for testing
+
+### 📊 **Key Benefits**
+
+#### **For Troubleshooting:**
+- **Complete visibility**: Every console output is preserved to disk
+- **Error context**: Full stack traces and error details available
+- **Timeline analysis**: Understand exactly what happened when
+- **Pattern recognition**: Identify recurring issues across runs
+
+#### **For Performance Analysis:**
+- **Duration tracking**: Measure run times and identify bottlenecks
+- **Success rate analysis**: Understand failure patterns
+- **Resource usage**: Monitor proxy rotation and IP usage
+- **Trend analysis**: Compare performance across batches
+
+#### **For Operational Monitoring:**
+- **Persistent logs**: No data lost when console output scrolls away
+- **Structured data**: Easy to parse and analyze programmatically
+- **Batch history**: Complete audit trail of all operations
+- **Automated troubleshooting**: Built-in analysis and recommendations
+
+### 🚀 **Usage Examples**
+
+```bash
+# Run batch with enhanced logging (automatically enabled)
+npx ppm batch --template vidiq-clean --count 5 --prefix test
+
+# View available batch logs
+node analyze-batch-logs.js
+
+# Analyze a specific batch
+node analyze-batch-logs.js 2025-09-15T20-37-58-759Z
+
+# Manual troubleshooting
+cat automation-results/detailed-logs/{batchId}/*-error.log
+grep -i "timeout" automation-results/detailed-logs/{batchId}/*.log
+
+# Test the logging system
+node test-enhanced-logging.js
+```
+
+The enhanced logging system now provides **complete visibility** into batch operations while maintaining the minimal console output of orchestrator mode. All detailed troubleshooting information is preserved to disk, making it easy to diagnose issues, analyze performance, and improve automation reliability.
+
+---
 

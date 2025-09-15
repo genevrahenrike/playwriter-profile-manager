@@ -149,28 +149,65 @@ program
     .option('--proxy-label <label>', 'Specific proxy label to use')
     .option('--proxy-type <type>', 'Proxy type (http)')
     .action(async (opts) => {
+        // Enhanced logging for troubleshooting
+        const logPrefix = `[${opts.name}]`;
+        const log = (level, message) => {
+            const timestamp = new Date().toISOString();
+            const logMessage = `${timestamp} ${logPrefix} [${level.toUpperCase()}] ${message}`;
+            if (level === 'error') {
+                console.error(logMessage);
+            } else {
+                console.log(logMessage);
+            }
+        };
+        
+        log('info', `Starting batch run with options: ${JSON.stringify(opts, null, 2)}`);
+        
         // Minimal logging; emit final result as a tagged JSON line for the orchestrator
         const out = (obj) => {
-            try { console.log(`::RUN_RESULT::${JSON.stringify(obj)}`); } catch (_) {}
+            try { 
+                console.log(`::RUN_RESULT::${JSON.stringify(obj)}`);
+                log('info', `Emitted result: ${JSON.stringify(obj, null, 2)}`);
+            } catch (err) {
+                log('error', `Failed to emit result: ${err.message}`);
+            }
         };
         const template = opts.template;
         const instance = opts.name;
         const runId = opts.runId || instance;
         const perRunTimeout = parseInt(opts.timeout, 10) || 120000;
         const captchaGrace = parseInt(opts.captchaGrace, 10) || 45000;
-
+        
+        log('info', `Initializing: template=${template}, instance=${instance}, runId=${runId}`);
+        log('info', `Timeouts: perRun=${perRunTimeout}ms, captchaGrace=${captchaGrace}ms`);
+        
         const pm = new ProfileManager();
         const launcher = new ProfileLauncher(pm, {});
-
+        
+        log('info', 'ProfileManager and ProfileLauncher initialized');
+        
         const waitForOutcome = async (sessionId, context) => {
+            log('info', `Starting outcome monitoring for session ${sessionId}`);
             const start = Date.now();
             const poll = 1000;
+            let pollCount = 0;
+            
             while (true) {
+                pollCount++;
+                if (pollCount % 10 === 0) {
+                    log('info', `Outcome polling cycle ${pollCount}, elapsed: ${Date.now() - start}ms`);
+                }
+                
                 try {
                     const comps = Array.from(launcher.automationSystem?.completedAutomations?.values?.() || [])
                         .filter(c => c.sessionId === sessionId && c.status === 'success');
-                    if (comps.length > 0) return { success: true, reason: 'automation_success' };
-                } catch (_) {}
+                    if (comps.length > 0) {
+                        log('info', `Automation success detected: ${comps.length} completions`);
+                        return { success: true, reason: 'automation_success' };
+                    }
+                } catch (err) {
+                    log('error', `Error checking automation completions: ${err.message}`);
+                }
 
                 try {
                     const captured = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
@@ -178,8 +215,18 @@ program
                         (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/active')) ||
                         (typeof r.url === 'string' && r.url.includes('api.vidiq.com/subscriptions/stripe/next-subscription'))
                     ));
-                    if (ok) return { success: true, reason: 'capture_success' };
-                } catch (_) {}
+                    if (ok) {
+                        log('info', `Capture success detected from ${captured.length} captured requests`);
+                        return { success: true, reason: 'capture_success' };
+                    }
+                    
+                    // Log capture progress periodically
+                    if (pollCount % 30 === 0 && captured.length > 0) {
+                        log('info', `Captured ${captured.length} requests so far`);
+                    }
+                } catch (err) {
+                    log('error', `Error checking captured requests: ${err.message}`);
+                }
 
                 // CAPTCHA heuristic extends timeout
                 let captchaLikely = false;
@@ -188,13 +235,24 @@ program
                     for (const p of pages) {
                         const a = await p.locator('iframe[src*="recaptcha"], div.g-recaptcha').count().catch(() => 0);
                         const b = await p.locator('iframe[src*="hcaptcha"], div.h-captcha').count().catch(() => 0);
-                        if (a > 0 || b > 0) { captchaLikely = true; break; }
+                        if (a > 0 || b > 0) { 
+                            captchaLikely = true;
+                            log('info', `CAPTCHA detected: reCAPTCHA=${a}, hCAPTCHA=${b}`);
+                            break;
+                        }
                     }
-                } catch (_) {}
+                    if (pollCount % 15 === 0) {
+                        log('info', `CAPTCHA check: ${captchaLikely ? 'detected' : 'none'}, ${pages.length} pages`);
+                    }
+                } catch (err) {
+                    log('error', `Error during CAPTCHA detection: ${err.message}`);
+                }
 
                 const elapsed = Date.now() - start;
                 const effective = captchaLikely ? (perRunTimeout + captchaGrace) : perRunTimeout;
                 if (perRunTimeout > 0 && elapsed >= effective) {
+                    log('info', `Timeout reached: elapsed=${elapsed}ms, effective=${effective}ms, captcha=${captchaLikely}`);
+                    
                     // Best-effort screenshot
                     try {
                         const pages = context?.pages?.() || [];
@@ -207,9 +265,16 @@ program
                             await fs.ensureDir(resultsDir);
                             const outBase = `${sessionId}-timeout-${new Date().toISOString().replace(/[:.]/g,'-')}`;
                             const png = path.join(resultsDir, `${outBase}.png`);
-                            await p.screenshot({ path: png, fullPage: true }).catch(() => {});
+                            await p.screenshot({ path: png, fullPage: true }).catch((screenshotErr) => {
+                                log('error', `Screenshot failed: ${screenshotErr.message}`);
+                            });
+                            log('info', `Screenshot saved: ${png}`);
+                        } else {
+                            log('warning', 'No suitable page found for screenshot');
                         }
-                    } catch (_) {}
+                    } catch (err) {
+                        log('error', `Screenshot capture error: ${err.message}`);
+                    }
                     return { success: false, reason: captchaLikely ? 'timeout_with_captcha' : 'timeout' };
                 }
                 await new Promise(r => setTimeout(r, poll));
@@ -236,18 +301,34 @@ program
             if (opts.proxyLabel && opts.proxyType) {
                 launchOptions.proxy = opts.proxyLabel;
                 launchOptions.proxyType = opts.proxyType;
+                log('info', `Using proxy: ${opts.proxyLabel} (${opts.proxyType})`);
             }
+            
+            log('info', `Launch options: ${JSON.stringify(launchOptions, null, 2)}`);
+            log('info', 'Launching profile from template...');
 
             const res = await launcher.launchFromTemplate(template, instance, launchOptions);
             const profile = res.profile;
+            
+            log('info', `Profile launched successfully: ${profile?.name} (${profile?.id})`);
+            log('info', `Session ID: ${res.sessionId}`);
+            log('info', 'Starting outcome monitoring...');
+            
             const outcome = await waitForOutcome(res.sessionId, res.context);
+            
+            log('info', `Outcome received: ${JSON.stringify(outcome, null, 2)}`);
+            log('info', 'Attempting to close browser...');
 
             // Try to close within a bounded time; if it hangs, we exit anyway
-            const closePromise = launcher.closeBrowser(res.sessionId, { clearCache: false }).catch(() => {});
+            const closePromise = launcher.closeBrowser(res.sessionId, { clearCache: false }).catch((err) => {
+                log('error', `Browser close error: ${err.message}`);
+            });
             await Promise.race([
                 closePromise,
                 new Promise(r => setTimeout(r, 10000))
             ]);
+            
+            log('info', 'Browser cleanup completed');
 
             const result = {
                 runId,
@@ -257,13 +338,28 @@ program
                 profileName: profile?.name || instance,
                 proxy: opts.proxyLabel ? { label: opts.proxyLabel, type: opts.proxyType || null } : null
             };
+            
+            log('info', `Final result prepared: ${JSON.stringify(result, null, 2)}`);
             out(result);
+            
+            log('info', `Process exiting with code: ${outcome.success ? 0 : 1}`);
             process.exit(outcome.success ? 0 : 1);
         } catch (err) {
-            out({ runId, success: false, reason: 'error', error: err?.message || String(err) });
+            log('error', `Unhandled error in batch run: ${err.message}`);
+            log('error', `Stack trace: ${err.stack}`);
+            
+            const errorResult = { runId, success: false, reason: 'error', error: err?.message || String(err) };
+            out(errorResult);
+            
+            log('info', 'Process exiting with code: 1 (error)');
             process.exit(1);
         } finally {
-            try { await profileLauncher?.closeAllBrowsers({}); } catch (_) {}
+            try { 
+                log('info', 'Final cleanup: closing all browsers');
+                await profileLauncher?.closeAllBrowsers({});
+            } catch (cleanupErr) {
+                log('error', `Cleanup error: ${cleanupErr.message}`);
+            }
         }
     });
 
@@ -1115,6 +1211,23 @@ program
         };
 
         // Orchestrator helper: spawn a single-run child process with a hard watchdog
+        // Setup detailed logging directory
+        const detailedLogsDir = pathMod.join(resultsDir, 'detailed-logs', batchId);
+        await fsx.ensureDir(detailedLogsDir);
+        
+        // Helper function to write detailed logs to disk
+        const writeDetailedLog = async (runId, logType, data) => {
+            try {
+                const logFile = pathMod.join(detailedLogsDir, `${runId}-${logType}.log`);
+                const timestamp = new Date().toISOString();
+                const logEntry = `[${timestamp}] ${data}\n`;
+                await fsx.appendFile(logFile, logEntry);
+            } catch (err) {
+                // Don't fail the batch if logging fails, but try to report it
+                console.error(`Failed to write ${logType} log for ${runId}:`, err.message);
+            }
+        };
+
         const runSingleIsolated = ({ instanceName, proxy }) => new Promise((resolve) => {
             const runId = uuidv4();
             const args = [__filename, 'internal-batch-run', '--template', template, '--name', instanceName, '--run-id', runId, '--timeout', String(perRunTimeout), '--captcha-grace', String(captchaGrace)];
@@ -1128,26 +1241,51 @@ program
             const child = spawn(nodePath, args, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env } });
             let parsed = null;
             let sawSuccessSignal = false;
+            
+            // Log process start details
+            writeDetailedLog(runId, 'start', `Starting process: ${instanceName} with proxy: ${proxy?.label || 'none'}\nCommand: ${nodePath} ${args.join(' ')}`);
 
-            const onLine = (line) => {
+            const onLine = (line, source) => {
+                // Log all output to detailed logs
+                writeDetailedLog(runId, source, line);
+                
                 // Capture our tagged line
                 if (line.startsWith('::RUN_RESULT::')) {
                     const json = line.slice('::RUN_RESULT::'.length).trim();
                     try {
                         parsed = JSON.parse(json);
                         if (parsed && parsed.success) sawSuccessSignal = true;
-                    } catch (_) {}
+                        writeDetailedLog(runId, 'result', `Parsed result: ${JSON.stringify(parsed, null, 2)}`);
+                    } catch (err) {
+                        writeDetailedLog(runId, 'error', `Failed to parse result JSON: ${err.message}\nRaw: ${json}`);
+                    }
                 }
                 // Observe known success prints in child logs as a heuristic
                 if (/VidIQ API Response:\s+200/i.test(line) || /Captured RESPONSE: 200 .*subscriptions\/(active|stripe\/next-subscription)/i.test(line)) {
                     sawSuccessSignal = true;
+                    writeDetailedLog(runId, 'success-signal', `Detected success signal: ${line}`);
+                }
+                
+                // Log important error patterns
+                if (/error|failed|timeout|exception/i.test(line)) {
+                    writeDetailedLog(runId, 'error', `Error detected: ${line}`);
+                }
+                
+                // Log proxy-related information
+                if (/proxy|ip|connection/i.test(line)) {
+                    writeDetailedLog(runId, 'network', `Network info: ${line}`);
+                }
+                
+                // Log automation steps
+                if (/autofill|submit|form|click|navigation/i.test(line)) {
+                    writeDetailedLog(runId, 'automation', `Automation step: ${line}`);
                 }
             };
 
             child.stdout.setEncoding('utf8');
             child.stderr.setEncoding('utf8');
-            child.stdout.on('data', data => data.toString().split(/\r?\n/).forEach(l => l && onLine(l)));
-            child.stderr.on('data', data => data.toString().split(/\r?\n/).forEach(l => l && onLine(l)));
+            child.stdout.on('data', data => data.toString().split(/\r?\n/).forEach(l => l && onLine(l, 'stdout')));
+            child.stderr.on('data', data => data.toString().split(/\r?\n/).forEach(l => l && onLine(l, 'stderr')));
 
             const hardKill = () => {
                 try { child.kill('SIGKILL'); } catch (_) {}
@@ -1168,16 +1306,36 @@ program
 
             child.on('exit', (code, signal) => {
                 clearTimeout(watchdog);
+                
+                // Log process exit details
+                const exitInfo = {
+                    code,
+                    signal,
+                    sawSuccessSignal,
+                    parsed: parsed ? 'yes' : 'no',
+                    duration: Date.now() - child.startTime || 'unknown'
+                };
+                writeDetailedLog(runId, 'exit', `Process exited: ${JSON.stringify(exitInfo, null, 2)}`);
+                
                 // If no structured result, synthesize one from signals
                 if (!parsed) {
-                    parsed = { runId, profileId: null, profileName: instanceName, success: code === 0 || sawSuccessSignal, reason: code === 0 ? 'ok' : (sawSuccessSignal ? 'assumed_success_post_signin_hang' : (signal ? `killed_${signal}` : 'nonzero_exit')) };
+                    const reason = code === 0 ? 'ok' : (sawSuccessSignal ? 'assumed_success_post_signin_hang' : (signal ? `killed_${signal}` : 'nonzero_exit'));
+                    parsed = { runId, profileId: null, profileName: instanceName, success: code === 0 || sawSuccessSignal, reason };
+                    writeDetailedLog(runId, 'synthesized', `No structured result received, synthesized: ${JSON.stringify(parsed, null, 2)}`);
                 } else if (!parsed.success && sawSuccessSignal) {
                     // Upgrade to success if we observed strong success signals
+                    const oldReason = parsed.reason;
                     parsed.success = true;
                     parsed.reason = parsed.reason || 'assumed_success_post_signin_hang';
+                    writeDetailedLog(runId, 'upgrade', `Upgraded to success due to signals. Old reason: ${oldReason}, New reason: ${parsed.reason}`);
                 }
+                
+                writeDetailedLog(runId, 'final', `Final result: ${JSON.stringify(parsed, null, 2)}`);
                 resolve(parsed);
             });
+            
+            // Track start time for duration calculation
+            child.startTime = Date.now();
         });
 
         const pmLocal = new ProfileManager();
@@ -1262,6 +1420,7 @@ program
 
         console.log(chalk.cyan(`🚀 Starting batch: template=${template}, count=${total}, prefix=${prefix}`));
         console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
+        console.log(chalk.dim(`Detailed logs: ${detailedLogsDir}`));
         console.log(chalk.dim(`⏱️  Delays: ${delayBetweenRuns}s between runs, ${failureDelay}s after failures`));
         if (useProxyRotation) {
             console.log(chalk.dim(`🌐 Proxy rotation: max ${maxProfilesPerIP} profiles per IP, then rotate`));
@@ -1269,7 +1428,20 @@ program
         if (clearCacheOnSuccess) {
             console.log(chalk.dim(`🧹 Cache cleanup enabled for successful profiles (saves disk space)`));
         }
-
+        
+        // Create batch summary log
+        const batchSummaryFile = pathMod.join(detailedLogsDir, 'batch-summary.log');
+        const writeBatchLog = async (message) => {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            await fsx.appendFile(batchSummaryFile, logEntry);
+        };
+        
+        await writeBatchLog(`Batch started: template=${template}, count=${total}, prefix=${prefix}`);
+        await writeBatchLog(`Configuration: timeout=${perRunTimeout}ms, captcha=${captchaGrace}ms, headless=${runHeadless}`);
+        await writeBatchLog(`Proxy rotation: ${useProxyRotation ? 'enabled' : 'disabled'}`);
+        await writeBatchLog(`Results will be written to: ${resultsFile}`);
+        
     let created = 0;
     let successes = 0;
 
@@ -1321,13 +1493,19 @@ program
             }
 
             console.log(chalk.blue(`\n▶️  Run ${runNo}/${total}: ${name}`));
+            await writeBatchLog(`Starting run ${runNo}/${total}: ${name} with proxy: ${currentProxy?.label || 'none'}`);
+            
             // Process-isolated single run
             try {
+                const runStartTime = Date.now();
+                
                 // Kick off child run
                 const childResult = await runSingleIsolated({
                     instanceName: name,
                     proxy: useProxyRotation && currentProxy ? { label: currentProxy.label, type: currentProxy.type } : null
                 });
+                
+                const runDuration = Date.now() - runStartTime;
 
                 // Track created count if we have a profile name (assume created)
                 created++;
@@ -1335,6 +1513,8 @@ program
 
                 const success = !!childResult.success;
                 const reason = childResult.reason || (success ? 'ok' : 'unknown');
+                
+                await writeBatchLog(`Run ${runNo} completed: success=${success}, reason=${reason}, duration=${runDuration}ms, profileId=${childResult.profileId || 'null'}`);
 
                 await writeResult({
                     run: runNo,
@@ -1398,6 +1578,25 @@ program
 
         const summary = { batchId, template, totalRequested: total, created, successes, resultsFile };
         console.log(chalk.cyan(`\n📊 Batch summary: ${JSON.stringify(summary)}`));
+        
+        // Write detailed batch completion summary
+        await writeBatchLog(`Batch completed: ${successes}/${created} successful runs out of ${total} requested`);
+        await writeBatchLog(`Success rate: ${created > 0 ? ((successes/created)*100).toFixed(1) : 0}%`);
+        await writeBatchLog(`Final summary: ${JSON.stringify(summary, null, 2)}`);
+        
+        // Provide troubleshooting information
+        console.log(chalk.cyan('\n🔍 Troubleshooting Information:'));
+        console.log(chalk.dim(`  - Detailed logs: ${detailedLogsDir}`));
+        console.log(chalk.dim(`  - Each run has separate log files: {runId}-{type}.log`));
+        console.log(chalk.dim(`  - Log types: start, stdout, stderr, result, error, network, automation, exit, final`));
+        console.log(chalk.dim(`  - Batch summary: ${batchSummaryFile}`));
+        console.log(chalk.dim(`  - Screenshots saved in: ./automation-results/`));
+        
+        if (successes < created) {
+            console.log(chalk.yellow('\n⚠️  Some runs failed. Check detailed logs for troubleshooting:'));
+            console.log(chalk.yellow(`     cat ${detailedLogsDir}/*-error.log`));
+            console.log(chalk.yellow(`     cat ${detailedLogsDir}/*-stderr.log`));
+        }
         
         // Show proxy rotation statistics if proxy rotation was used
         if (useProxyRotation && proxyRotator) {
