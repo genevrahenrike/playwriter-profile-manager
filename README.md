@@ -517,7 +517,7 @@ npx ppm rm profile-name --force  # skip confirmation
 npx ppm sessions
 ```
 
-### Proxy management
+### Profile management
 ```bash
 # List all available proxies
 npx ppm proxy --list
@@ -532,6 +532,31 @@ npx ppm proxy --test fastest --type socks5
 
 # List proxies during launch
 npx ppm launch my-profile --list-proxies
+```
+
+### Geographic analysis and profile distribution
+```bash
+# Show complete geographic summary of all profiles
+node query-profile-geography.js --summary
+
+# View profiles from specific countries
+node query-profile-geography.js --country "United States" 10
+node query-profile-geography.js --country "France" 5
+
+# Filter by connection type (resident vs datacenter proxies)
+node query-profile-geography.js --connection resident 20
+node query-profile-geography.js --connection datacenter 10
+
+# Interactive mode with guided queries
+node query-profile-geography.js
+
+# Run comprehensive geographic analysis from batch logs
+node analyze-profile-geography.js
+
+# Migrate existing profiles to include geographic data
+node migrate-geographic-data.js --dry-run     # Preview changes
+node migrate-geographic-data.js --migrate     # Apply migration
+node migrate-geographic-data.js --verify      # Check results
 ```
 
 ### Clear cache to reduce disk usage
@@ -555,6 +580,116 @@ npx ppm launch my-profile --clear-cache-on-exit
 - **Selective clearing**: Clear cache for all profiles or specific ones
 - **Auto-clear on exit**: Optionally clear cache when browser sessions end
 - **Detailed feedback**: Reports which directories and files were cleared
+
+### Geographic Analysis and Profile Distribution 🌍
+
+The system now includes comprehensive geographic analysis tools to track and analyze profile distribution by region, proxy usage, and connection types. This is particularly useful for understanding your automation workflows and managing multi-regional testing.
+
+#### **Query Profile Geography**
+Interactive and CLI tool for exploring geographic distribution:
+```bash
+# Show complete geographic summary
+node query-profile-geography.js --summary
+
+# View profiles from specific country (with limit)
+node query-profile-geography.js --country "United States" 10
+node query-profile-geography.js --country "France" 5
+
+# Filter by connection type (resident vs datacenter proxies)
+node query-profile-geography.js --connection resident 20
+node query-profile-geography.js --connection datacenter 10
+
+# Interactive mode with guided queries
+node query-profile-geography.js
+```
+
+**Interactive Mode Features:**
+- 📊 **Geographic Summary**: Complete overview of profile distribution by country
+- 🔍 **Country Search**: Filter profiles by specific countries with customizable limits
+- 🏷️ **Country Statistics**: Detailed analytics for specific countries including proxy breakdown
+- 🔗 **Connection Type Filtering**: View profiles by resident vs datacenter proxy types
+- 📈 **Success Rate Analysis**: Find high-performing profiles with filtering options
+
+#### **Comprehensive Geographic Analysis**
+Advanced analysis tool for batch logs and proxy distribution:
+```bash
+# Run complete geographic analysis
+node analyze-profile-geography.js
+
+# Analyze batch performance by region
+node analyze-profile-geography.js --batch-analysis
+
+# Export geographic data for external analysis
+node analyze-profile-geography.js --export-csv
+```
+
+**Analysis Features:**
+- **🌍 Country Distribution**: Detailed breakdown of profiles by 15+ countries
+- **🏷️ Proxy Label Analysis**: Most-used proxy labels with success rates
+- **📈 Batch Analytics**: Performance analysis by geographic region
+- **🔄 Proxy vs Usage Mapping**: Compare proxy configuration to actual usage
+- **📊 Coverage Reports**: Profiles with and without geographic data
+
+#### **Geographic Data Migration**
+Tool for backfilling existing profiles with geographic data:
+```bash
+# Preview what would be migrated (dry run)
+node migrate-geographic-data.js --dry-run
+
+# Migrate all profiles with geographic data
+node migrate-geographic-data.js --migrate
+
+# Migrate with limit (useful for testing)
+node migrate-geographic-data.js --migrate --limit 10
+
+# Verify migration results
+node migrate-geographic-data.js --verify
+```
+
+**Migration Features:**
+- **🔍 Dry Run Mode**: Preview changes before applying them
+- **📊 Batch Log Analysis**: Extracts geographic data from automation logs
+- **🗄️ Database Integration**: Updates profile records with country, proxy, and connection data
+- **✅ Verification**: Confirms successful migration with coverage statistics
+- **🛡️ Safe Operation**: Non-destructive updates with error handling
+
+#### **Current Geographic Coverage**
+After running the migration system, profiles are distributed across:
+- **🇺🇸 United States**: ~30% of profiles (resident + datacenter proxies)
+- **🇫🇷 France**: ~25% of profiles (mostly resident proxies)
+- **🇬🇧 United Kingdom**: ~17% of profiles (all resident proxies)
+- **🇩🇪 Germany**: ~15% of profiles (all resident proxies)
+- **🇦🇺 Australia**: ~12% of profiles (all resident proxies)
+- **🇳🇱 Netherlands**: <1% of profiles (resident proxies)
+- **🇸🇪 Sweden**: <1% of profiles (resident proxies)
+
+#### **Database Schema Enhancement**
+The profiles database now includes these geographic columns:
+- `proxy_country` - Country name (e.g., "United States", "France")
+- `proxy_country_code` - ISO country code (e.g., "US", "FR")  
+- `proxy_connection_type` - Connection type ("resident", "datacenter")
+- `proxy_label` - Proxy identifier (e.g., "US4", "France2")
+- `proxy_host` - Proxy server hostname
+- `proxy_type` - Protocol type ("http", "socks5")
+- `creation_batch_id` - Batch ID for profiles created via automation
+- `creation_proxy_data` - Raw proxy data from creation logs
+- `geographic_updated_at` - Timestamp of last geographic data update
+
+**Query Examples:**
+```sql
+-- Find all US resident proxy profiles
+SELECT name, proxy_country, proxy_connection_type 
+FROM profiles 
+WHERE proxy_country = 'United States' 
+AND proxy_connection_type = 'resident';
+
+-- Get profile distribution by country
+SELECT proxy_country, COUNT(*) as profile_count
+FROM profiles 
+WHERE proxy_country IS NOT NULL
+GROUP BY proxy_country 
+ORDER BY profile_count DESC;
+```
 
 ## Profile Compression
 
@@ -690,11 +825,27 @@ The system can import from these Chromium-based browsers (all release channels):
 
 ```
 profiles/
-├── profiles.db          # SQLite database
+├── profiles.db          # SQLite database with geographic data
 └── data/
     ├── profile-id-1/     # Profile user data
     ├── profile-id-2/
     └── ...
+
+automation-results/
+├── batch-*.jsonl        # Batch automation results with proxy data
+├── refresh-*.jsonl      # Profile refresh results
+└── detailed-logs/       # Comprehensive troubleshooting logs
+
+proxies/
+├── http.proxies.v2.json # HTTP proxy configuration (v2 format)
+├── http.proxies.json    # HTTP proxy configuration (v1 legacy)
+└── socks5.proxies.json  # SOCKS5 proxy configuration
+
+Geographic Analysis Tools:
+├── query-profile-geography.js    # Interactive geographic queries
+├── analyze-profile-geography.js  # Comprehensive analysis tool
+├── migrate-geographic-data.js    # Geographic data migration
+└── enhance-geographic-schema.js  # Database schema migration
 ```
 
 ## Automation Hooks System 🤖
@@ -825,6 +976,22 @@ export default {
 - `clearProfileCache(nameOrId)` - Clear cache for specific profile
 - `clearAllProfilesCache()` - Clear cache for all profiles
 - `formatBytes(bytes)` - Convert bytes to human-readable format
+- **NEW**: `getProfilesByCountry(country)` - Get profiles filtered by country
+- **NEW**: `getProfilesByConnectionType(type)` - Get profiles by connection type
+- **NEW**: `getGeographicSummary()` - Get complete geographic distribution summary
+
+### GeographicDataAnalyzer
+
+- `analyzeBatchLogs()` - Extract geographic data from automation logs
+- `generateReport()` - Create comprehensive geographic analysis report
+- `extractCountryFromProxyLabel(label)` - Parse country from proxy labels
+- `getBatchStatistics()` - Get batch performance by geographic region
+
+### GeographicDataMigrator
+
+- `migrateGeographicData(options)` - Backfill profiles with geographic data
+- `verifyMigrationResults()` - Verify migration coverage and accuracy
+- `extractCountryData(proxyLabel, proxyConfig)` - Extract country data from proxy info
 
 ### ChromiumImporter
 
