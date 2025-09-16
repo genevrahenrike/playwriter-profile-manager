@@ -545,11 +545,12 @@ export class ProfileLauncher {
             disableProxyWaitIncrease = false, // Disable proxy mode wait time increases
             automationAutofillOnly = false, // Use automation-owned fill and disable AutofillHookSystem during automation
             proxy = null, // Legacy proxy configuration (deprecated, use proxyStrategy)
-            proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin'
+            proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin', 'geographic'
             proxyStart = null, // Proxy label to start rotation from
             proxyType = null, // Proxy type filter: null, 'http', 'socks5'
             proxyConnectionType = null, // Proxy connection type filter: 'resident', 'datacenter', 'mobile'
             proxyCountry = null, // Proxy country filter: ISO code or name
+            geographicRatio = null, // Geographic distribution ratio: 'US:45,Other:55' or 'US:40,EU:35,Other:25'
             // IP check controls (for rotator path)
             skipIpCheck = false,
             ipCheckTimeout = 10000,
@@ -584,8 +585,29 @@ export class ProfileLauncher {
         if (proxySelection || proxyStart) {
             await this.ensureProxiesLoaded();
             
+            // If using geographic strategy, use GeographicProxyRotator
+            if (proxySelection === 'geographic' || geographicRatio) {
+                const { GeographicProxyRotator } = await import('./GeographicProxyRotator.js');
+                const rotator = new GeographicProxyRotator(this.proxyManager, {
+                    geographicRatio: geographicRatio || 'US:45,Other:55', // Default to 45% US, 55% Other
+                    // Wire IP-check behavior
+                    skipIPCheck: !!skipIpCheck,
+                    ipCheckTimeoutMs: parseInt(ipCheckTimeout) || 10000,
+                    ipCheckMaxAttempts: parseInt(ipCheckRetries) || 3,
+                    maxProfilesPerIP: 5
+                });
+                
+                await rotator.initialize();
+                const result = await rotator.getNextProxy();
+                if (result) {
+                    proxyConfig = result.proxyConfig;
+                    console.log(`🌍 Using geographic proxy from ${result.region}: ${result.proxy.label}${skipIpCheck ? ' (IP check: SKIPPED)' : ''}`);
+                } else {
+                    console.warn(`⚠️  Geographic proxy selection failed, launching without proxy`);
+                }
+            }
             // If we have a start position, we need to use ProxyRotator for round-robin
-            if (proxyStart && (proxySelection === 'round-robin' || !proxySelection)) {
+            else if (proxyStart && (proxySelection === 'round-robin' || !proxySelection)) {
                 const { ProxyRotator } = await import('./ProxyRotator.js');
                 const rotator = new ProxyRotator(this.proxyManager, {
                     strategy: 'round-robin',

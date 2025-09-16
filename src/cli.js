@@ -768,11 +768,12 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
-    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin, geographic')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
     .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
+    .option('--geographic-ratio <ratio>', 'Geographic distribution ratio (e.g., "US:45,Other:55" or "US:40,EU:35,Other:25")')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--list-proxies', 'List all available proxies and exit')
@@ -983,11 +984,12 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
     .option('--no-compress', 'Disable compress-on-close for this instance')
-    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin, geographic')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
     .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
+    .option('--geographic-ratio <ratio>', 'Geographic distribution ratio (e.g., "US:45,Other:55" or "US:40,EU:35,Other:25")')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
@@ -1151,11 +1153,12 @@ program
     .option('--no-clear-cache', 'Disable cache clearing for successful profiles (cache cleanup enabled by default)')
     .option('--delay <seconds>', 'Delay between successful runs (seconds)', '60')
     .option('--failure-delay <seconds>', 'Delay after failed runs (seconds)', '300')
-    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin, geographic')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
     .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident (default), datacenter, mobile')
     .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
+    .option('--geographic-ratio <ratio>', 'Geographic distribution ratio (e.g., "US:45,Other:55" or "US:40,EU:35,Other:25")')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
@@ -1366,32 +1369,57 @@ program
         let proxyRotator = null;
         let useProxyRotation = false;
         
-        if (options.proxyStrategy || options.proxyStart) {
-            const { ProxyRotator } = await import('./ProxyRotator.js');
+        if (options.proxyStrategy || options.proxyStart || options.geographicRatio) {
             const launcher = new ProfileLauncher(pmLocal, {});
             
-            proxyRotator = new ProxyRotator(launcher.proxyManager, {
-                maxProfilesPerIP: maxProfilesPerIP,
-                strategy: options.proxyStrategy || 'round-robin',
-                startProxyLabel: options.proxyStart,
-                proxyType: options.proxyType,
-                connectionType: options.proxyConnectionType || 'resident', // Default to residential proxies
-                country: options.proxyCountry,
-                skipIPCheck: !!options.skipIpCheck,
-                ipCheckTimeoutMs: parseInt(options.ipCheckTimeout) || 10000,
-                ipCheckMaxAttempts: parseInt(options.ipCheckRetries) || 3
-            });
-            
-            const hasProxies = await proxyRotator.initialize();
-            if (hasProxies) {
-                useProxyRotation = true;
-                const strategyInfo = options.proxyStrategy || 'round-robin';
-                const startInfo = options.proxyStart ? ` starting from ${options.proxyStart}` : '';
-                const ipCheckInfo = options.skipIpCheck ? ' (IP check: SKIPPED)' : '';
-                const connectionTypeInfo = options.proxyConnectionType || 'resident';
-                console.log(chalk.green(`🌐 Proxy rotation enabled: ${strategyInfo} strategy${startInfo}${ipCheckInfo}, ${connectionTypeInfo} proxies, max ${maxProfilesPerIP} profiles per IP`));
+            // Use GeographicProxyRotator if geographic strategy or geographic ratio is specified
+            if (options.proxyStrategy === 'geographic' || options.geographicRatio) {
+                const { GeographicProxyRotator } = await import('./GeographicProxyRotator.js');
+                
+                proxyRotator = new GeographicProxyRotator(launcher.proxyManager, {
+                    geographicRatio: options.geographicRatio || 'US:45,Other:55', // Default to 45% US, 55% Other
+                    maxProfilesPerIP: maxProfilesPerIP,
+                    skipIPCheck: !!options.skipIpCheck,
+                    ipCheckTimeoutMs: parseInt(options.ipCheckTimeout) || 10000,
+                    ipCheckMaxAttempts: parseInt(options.ipCheckRetries) || 3
+                });
+                
+                const hasProxies = await proxyRotator.initialize();
+                if (hasProxies) {
+                    useProxyRotation = true;
+                    const geoRatio = options.geographicRatio || 'US:45,Other:55';
+                    const ipCheckInfo = options.skipIpCheck ? ' (IP check: SKIPPED)' : '';
+                    console.log(chalk.green(`🌍 Geographic proxy rotation enabled: ${geoRatio}${ipCheckInfo}, max ${maxProfilesPerIP} profiles per IP`));
+                } else {
+                    console.log(chalk.yellow('⚠️  No proxies available for geographic rotation, running without proxy rotation'));
+                }
             } else {
-                console.log(chalk.yellow('⚠️  No proxies available, running without proxy rotation'));
+                // Use regular ProxyRotator for other strategies
+                const { ProxyRotator } = await import('./ProxyRotator.js');
+                
+                proxyRotator = new ProxyRotator(launcher.proxyManager, {
+                    maxProfilesPerIP: maxProfilesPerIP,
+                    strategy: options.proxyStrategy || 'round-robin',
+                    startProxyLabel: options.proxyStart,
+                    proxyType: options.proxyType,
+                    connectionType: options.proxyConnectionType || 'resident', // Default to residential proxies
+                    country: options.proxyCountry,
+                    skipIPCheck: !!options.skipIpCheck,
+                    ipCheckTimeoutMs: parseInt(options.ipCheckTimeout) || 10000,
+                    ipCheckMaxAttempts: parseInt(options.ipCheckRetries) || 3
+                });
+                
+                const hasProxies = await proxyRotator.initialize();
+                if (hasProxies) {
+                    useProxyRotation = true;
+                    const strategyInfo = options.proxyStrategy || 'round-robin';
+                    const startInfo = options.proxyStart ? ` starting from ${options.proxyStart}` : '';
+                    const ipCheckInfo = options.skipIpCheck ? ' (IP check: SKIPPED)' : '';
+                    const connectionTypeInfo = options.proxyConnectionType || 'resident';
+                    console.log(chalk.green(`🌐 Proxy rotation enabled: ${strategyInfo} strategy${startInfo}${ipCheckInfo}, ${connectionTypeInfo} proxies, max ${maxProfilesPerIP} profiles per IP`));
+                } else {
+                    console.log(chalk.yellow('⚠️  No proxies available, running without proxy rotation'));
+                }
             }
         } else {
             console.log(chalk.dim('🌐 Proxy rotation disabled (no proxy options specified)'));
