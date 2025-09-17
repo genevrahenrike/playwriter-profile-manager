@@ -1,0 +1,379 @@
+{
+  "summary": {
+    "totalProfiles": 1666,
+    "profilesWithKnownIPs": 39,
+    "uniqueIPs": 11,
+    "coverage": 2.34093637454982,
+    "unknownProxyLabels": [
+      "Australia1",
+      "Australia10",
+      "Australia11",
+      "Australia12",
+      "Australia13",
+      "Australia14",
+      "Australia15",
+      "Australia16",
+      "Australia17",
+      "Australia18",
+      "Australia19",
+      "Australia2",
+      "Australia20",
+      "Australia21",
+      "Australia22",
+      "Australia23",
+      "Australia24",
+      "Australia25",
+      "Australia26",
+      "Australia27",
+      "Australia28",
+      "Australia29",
+      "Australia3",
+      "Australia30",
+      "Australia31",
+      "Australia32",
+      "Australia33",
+      "Australia34",
+      "Australia35",
+      "Australia36",
+      "Australia38",
+      "Australia39",
+      "Australia4",
+      "Australia40",
+      "Australia42",
+      "Australia43",
+      "Australia44",
+      "Australia46",
+      "Australia47",
+      "Australia5",
+      "Australia6",
+      "Australia7",
+      "Australia8",
+      "Australia9",
+      "France1",
+      "France10",
+      "France11",
+      "France12",
+      "France13",
+      "France14",
+      "France15",
+      "France16",
+      "France17",
+      "France18",
+      "France19",
+      "France2",
+      "France20",
+      "France21",
+      "France22",
+      "France23",
+      "France24",
+      "France25",
+      "France26",
+      "France27",
+      "France28",
+      "France29",
+      "France3",
+      "France30",
+      "France31",
+      "France32",
+      "France33",
+      "France34",
+      "France35",
+      "France36",
+      "France37",
+      "France38",
+      "France39",
+      "France4",
+      "France4-DC",
+      "France40",
+      "France41",
+      "France42",
+      "France43",
+      "France44",
+      "France45",
+      "France46",
+      "France47",
+      "France48",
+      "France49",
+      "France5",
+      "France50",
+      "France6",
+      "France7",
+      "France8",
+      "France9",
+      "Germany1",
+      "Germany10",
+      "Germany11",
+      "Germany12",
+      "Germany13",
+      "Germany14",
+      "Germany15",
+      "Germany16",
+      "Germany17",
+      "Germany18",
+      "Germany19",
+      "Germany2",
+      "Germany20",
+      "Germany21",
+      "Germany22",
+      "Germany23",
+      "Germany24",
+      "Germany25",
+      "Germany26",
+      "Germany27",
+      "Germany28",
+      "Germany29",
+      "Germany3",
+      "Germany30",
+      "Germany31",
+      "Germany32",
+      "Germany33",
+      "Germany34",
+      "Germany35",
+      "Germany36",
+      "Germany37",
+      "Germany38",
+      "Germany39",
+      "Germany4",
+      "Germany40",
+      "Germany41",
+      "Germany42",
+      "Germany43",
+      "Germany44",
+      "Germany45",
+      "Germany46",
+      "Germany47",
+      "Germany48",
+      "Germany49",
+      "Germany5",
+      "Germany50",
+      "Germany6",
+      "Germany7",
+      "Germany8",
+      "Germany9",
+      "UK",
+      "UK1",
+      "UK10",
+      "UK11",
+      "UK12",
+      "UK13",
+      "UK14",
+      "UK15",
+      "UK16",
+      "UK17",
+      "UK18",
+      "UK19",
+      "UK2",
+      "UK20",
+      "UK21",
+      "UK22",
+      "UK23",
+      "UK24",
+      "UK25",
+      "UK26",
+      "UK27",
+      "UK28",
+      "UK29",
+      "UK3",
+      "UK30",
+      "UK31",
+      "UK32",
+      "UK33",
+      "UK34",
+      "UK35",
+      "UK36",
+      "UK37",
+      "UK38",
+      "UK39",
+      "UK4",
+      "UK40",
+      "UK41",
+      "UK42",
+      "UK43",
+      "UK44",
+      "UK45",
+      "UK46",
+      "UK47",
+      "UK48",
+      "UK49",
+      "UK5",
+      "UK50",
+      "UK6",
+      "UK7",
+      "UK8",
+      "UK9",
+      "US",
+      "US1",
+      "US10",
+      "US11",
+      "US12",
+      "US13",
+      "US14",
+      "US15",
+      "US16",
+      "US17",
+      "US18",
+      "US19",
+      "US2",
+      "US2-DC",
+      "US20",
+      "US21",
+      "US22",
+      "US23",
+      "US24",
+      "US25",
+      "US26",
+      "US27",
+      "US28",
+      "US29",
+      "US3",
+      "US30",
+      "US31",
+      "US32",
+      "US33",
+      "US34",
+      "US35",
+      "US36",
+      "US37",
+      "US38",
+      "US39",
+      "US4",
+      "US40",
+      "US41",
+      "US42",
+      "US43",
+      "US44",
+      "US45",
+      "US46",
+      "US47",
+      "US48",
+      "US49",
+      "US5",
+      "US50",
+      "US6",
+      "US6-DC",
+      "US7",
+      "US7-DC",
+      "US8",
+      "US9"
+    ]
+  },
+  "ipUsage": {
+    "geo.floppydata.com": {
+      "count": 28,
+      "proxyLabels": [
+        "Australia",
+        "Germany"
+      ],
+      "profilesSample": [
+        "proxied7",
+        "proxied11",
+        "proxied17",
+        "proxied21",
+        "proxied27"
+      ]
+    },
+    "nl.socks.nordhold.net": {
+      "count": 2,
+      "proxyLabels": [
+        "nl"
+      ],
+      "profilesSample": [
+        "proxied532",
+        "test-socks5-auth1"
+      ]
+    },
+    "se.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "se"
+      ],
+      "profilesSample": [
+        "proxied533"
+      ]
+    },
+    "amsterdam.nl.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "amsterdam"
+      ],
+      "profilesSample": [
+        "proxied534"
+      ]
+    },
+    "atlanta.us.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "atlanta"
+      ],
+      "profilesSample": [
+        "proxied535"
+      ]
+    },
+    "chicago.us.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "chicago"
+      ],
+      "profilesSample": [
+        "proxied536"
+      ]
+    },
+    "dallas.us.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "dallas"
+      ],
+      "profilesSample": [
+        "proxied537"
+      ]
+    },
+    "los-angeles.us.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "los-angeles"
+      ],
+      "profilesSample": [
+        "proxied538"
+      ]
+    },
+    "new-york.us.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "new-york"
+      ],
+      "profilesSample": [
+        "proxied539"
+      ]
+    },
+    "phoenix.us.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "phoenix"
+      ],
+      "profilesSample": [
+        "proxied540"
+      ]
+    },
+    "san-francisco.us.socks.nordhold.net": {
+      "count": 1,
+      "proxyLabels": [
+        "san-francisco"
+      ],
+      "profilesSample": [
+        "proxied541"
+      ]
+    }
+  },
+  "statistics": {
+    "avgUsage": 3.5454545454545454,
+    "maxUsage": 28,
+    "minUsage": 1,
+    "distribution": {
+      "1 profile": 9,
+      "2-5 profiles": 1,
+      "6-10 profiles": 0,
+      "11-20 profiles": 0,
+      "20+ profiles": 1
+    }
+  }
+}
