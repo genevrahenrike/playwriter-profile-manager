@@ -6,4 +6,4 @@ npx ppm batch --template proxy-clean --count 100 --prefix proxied --proxy-strate
 
 npx ppm batch --template proxy-clean --count 250 --prefix proxied --proxy-strategy round-robin --proxy-start "UK3" --max-profiles-per-ip 5 --timeout 60000 --disable-images --resume --failure-delay 60 --delay 60
 
-npx ppm batch --template proxy-clean --count 250 --prefix proxied --proxy-strategy round-robin --proxy-connection-type datacenter --max-profiles-per-ip 5 --timeout 60000 --disable-images --resume --failure-delay 60 --delay 60
+npx ppm batch --template proxy-clean --count 200 --prefix proxied --proxy-strategy round-robin --proxy-connection-type datacenter --max-profiles-per-ip 5 --timeout 60000 --disable-images --resume --failure-delay 30 --delay 30
