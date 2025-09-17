@@ -116,17 +116,27 @@ export class ProxyManager {
     }
 
     /**
-     * Filter out proxies with ERROR status
+     * Filter out proxies with ERROR status or payment requirements
      */
     filterWorkingProxies() {
-        const httpWorking = this.loadedProxies.http.filter(proxy => proxy.status === 'OK');
-        const socks5Working = this.loadedProxies.socks5.filter(proxy => proxy.status === 'OK');
+        const httpWorking = this.loadedProxies.http.filter(proxy => 
+            proxy.status === 'OK' && !proxy.isPaymentRequired
+        );
+        const socks5Working = this.loadedProxies.socks5.filter(proxy => 
+            proxy.status === 'OK' && !proxy.isPaymentRequired
+        );
         
-        if (httpWorking.length < this.loadedProxies.http.length) {
-            console.log(`🔍 Filtered HTTP proxies: ${httpWorking.length}/${this.loadedProxies.http.length} working`);
+        // Log filtering results
+        const httpFiltered = this.loadedProxies.http.length - httpWorking.length;
+        const socks5Filtered = this.loadedProxies.socks5.length - socks5Working.length;
+        
+        if (httpFiltered > 0) {
+            const paymentRequired = this.loadedProxies.http.filter(p => p.isPaymentRequired).length;
+            console.log(`🔍 Filtered HTTP proxies: ${httpWorking.length}/${this.loadedProxies.http.length} working (${httpFiltered} filtered: ${paymentRequired} payment required, ${httpFiltered - paymentRequired} other errors)`);
         }
-        if (socks5Working.length < this.loadedProxies.socks5.length) {
-            console.log(`🔍 Filtered SOCKS5 proxies: ${socks5Working.length}/${this.loadedProxies.socks5.length} working`);
+        if (socks5Filtered > 0) {
+            const paymentRequired = this.loadedProxies.socks5.filter(p => p.isPaymentRequired).length;
+            console.log(`🔍 Filtered SOCKS5 proxies: ${socks5Working.length}/${this.loadedProxies.socks5.length} working (${socks5Filtered} filtered: ${paymentRequired} payment required, ${socks5Filtered - paymentRequired} other errors)`);
         }
 
         this.loadedProxies.http = httpWorking;
@@ -420,5 +430,241 @@ export class ProxyManager {
         }
 
         return true;
+    }
+
+    /**
+     * Test proxy functionality using IP echo services
+     */
+    async testProxy(proxy, timeout = 10000) {
+        const proxyConfig = this.toPlaywrightProxy(proxy);
+        if (!proxyConfig) {
+            return { success: false, error: 'Could not generate proxy config', isPaymentRequired: false };
+        }
+
+        // Use a simple HTTP service for testing
+        const testServices = [
+            'http://icanhazip.com',
+            'https://api.ipify.org?format=text',
+            'http://ipv4.icanhazip.com'
+        ];
+
+        for (const service of testServices) {
+            try {
+                const result = await this.fetchIPThroughProxy(service, proxyConfig, timeout);
+                
+                if (result.isProxyError) {
+                    const isPaymentRequired = result.statusCode === 401 || result.statusCode === 402 || 
+                                            result.statusCode === 407 || 
+                                            result.error.toLowerCase().includes('payment') ||
+                                            result.error.toLowerCase().includes('subscription');
+                    
+                    return {
+                        success: false,
+                        error: result.error,
+                        statusCode: result.statusCode,
+                        isPaymentRequired,
+                        service
+                    };
+                }
+                
+                return {
+                    success: true,
+                    ip: result.ip,
+                    service,
+                    latency: result.latency
+                };
+            } catch (error) {
+                // Try next service
+                continue;
+            }
+        }
+        
+        return {
+            success: false,
+            error: 'All test services failed',
+            isPaymentRequired: false
+        };
+    }
+
+    /**
+     * Fetch IP through proxy for testing purposes
+     */
+    async fetchIPThroughProxy(url, proxyConfig, timeout = 10000) {
+        const https = await import('https');
+        const http = await import('http');
+        
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            const targetUrl = new URL(url);
+            const isHttpsTarget = targetUrl.protocol === 'https:';
+            const httpModule = isHttpsTarget ? https.default : http.default;
+
+            const options = {
+                timeout,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                    'Accept': 'text/plain, */*',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                method: 'GET'
+            };
+
+            // Configure proxy
+            if (proxyConfig.server.startsWith('http://')) {
+                const proxyUrl = new URL(proxyConfig.server);
+                
+                if (isHttpsTarget) {
+                    // HTTPS through HTTP proxy
+                    options.hostname = targetUrl.hostname;
+                    options.port = targetUrl.port || 443;
+                    options.path = targetUrl.pathname + targetUrl.search;
+                } else {
+                    // HTTP through HTTP proxy
+                    options.hostname = proxyUrl.hostname;
+                    options.port = proxyUrl.port || 80;
+                    options.path = url; // absolute URL
+                    
+                    if (proxyConfig.username && proxyConfig.password) {
+                        const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
+                        options.headers['Proxy-Authorization'] = `Basic ${auth}`;
+                    }
+                }
+            } else {
+                // Direct connection (no proxy)
+                options.hostname = targetUrl.hostname;
+                options.port = targetUrl.port || (isHttpsTarget ? 443 : 80);
+                options.path = targetUrl.pathname + targetUrl.search;
+            }
+
+            const req = httpModule.request(options, (res) => {
+                let data = '';
+                res.setEncoding('utf8');
+
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    const latency = Date.now() - startTime;
+                    
+                    // Check for proxy errors
+                    if (res.statusCode === 401 || res.statusCode === 407) {
+                        return resolve({
+                            isProxyError: true,
+                            error: 'Proxy authentication required',
+                            statusCode: res.statusCode
+                        });
+                    }
+                    
+                    if (res.statusCode === 402) {
+                        return resolve({
+                            isProxyError: true,
+                            error: 'Proxy payment required',
+                            statusCode: res.statusCode
+                        });
+                    }
+                    
+                    if (res.statusCode >= 500) {
+                        return resolve({
+                            isProxyError: true,
+                            error: `Proxy server error (${res.statusCode})`,
+                            statusCode: res.statusCode
+                        });
+                    }
+                    
+                    // Check response content for payment messages
+                    if (data.toLowerCase().includes('payment required') ||
+                        data.toLowerCase().includes('upgrade your plan') ||
+                        data.toLowerCase().includes('subscription expired')) {
+                        return resolve({
+                            isProxyError: true,
+                            error: 'Proxy subscription/payment required',
+                            statusCode: res.statusCode
+                        });
+                    }
+                    
+                    if (res.statusCode !== 200) {
+                        return reject(new Error(`HTTP ${res.statusCode}`));
+                    }
+
+                    // Extract IP from response
+                    let ip;
+                    try {
+                        const parsed = JSON.parse(data);
+                        ip = parsed.ip;
+                    } catch {
+                        ip = data.trim();
+                    }
+
+                    if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+                        resolve({ ip, latency, isProxyError: false });
+                    } else {
+                        reject(new Error(`Invalid IP response: ${data.slice(0, 100)}`));
+                    }
+                });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Request timeout'));
+            });
+
+            req.on('error', (error) => {
+                reject(error);
+            });
+
+            req.setTimeout(timeout);
+            req.end();
+        });
+    }
+
+    /**
+     * Mark proxy as bad and update its status
+     */
+    markProxyAsBad(proxyLabel, reason = 'Failed validation', isPaymentRequired = false) {
+        // Find proxy in loaded proxies and mark it
+        for (const type of ['http', 'socks5']) {
+            const proxy = this.loadedProxies[type].find(p => p.label === proxyLabel);
+            if (proxy) {
+                proxy.status = 'ERROR';
+                proxy.errorReason = reason;
+                proxy.isPaymentRequired = isPaymentRequired;
+                proxy.lastChecked = new Date().toISOString();
+                console.log(`🚫 Marked proxy ${proxyLabel} as bad: ${reason}`);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get statistics about proxy validation
+     */
+    getProxyStats() {
+        const stats = {
+            total: 0,
+            working: 0,
+            failed: 0,
+            paymentRequired: 0,
+            byType: { http: { total: 0, working: 0, failed: 0 }, socks5: { total: 0, working: 0, failed: 0 } }
+        };
+
+        for (const type of ['http', 'socks5']) {
+            for (const proxy of this.loadedProxies[type]) {
+                stats.total++;
+                stats.byType[type].total++;
+                
+                if (proxy.status === 'OK') {
+                    stats.working++;
+                    stats.byType[type].working++;
+                } else {
+                    stats.failed++;
+                    stats.byType[type].failed++;
+                    
+                    if (proxy.isPaymentRequired) {
+                        stats.paymentRequired++;
+                    }
+                }
+            }
+        }
+
+        return stats;
     }
 }

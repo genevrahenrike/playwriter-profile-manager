@@ -7,7 +7,9 @@ import fs from 'fs';
 const ENDPOINTS = {
     google204: 'http://www.google.com/generate_204',
     ipify: 'https://api.ipify.org?format=json',
-    httpbin: 'https://httpbin.org/ip'
+    postmanEcho: 'https://postman-echo.com/ip',
+    icanhazip: 'http://icanhazip.com',
+    ipinfo: 'https://ipinfo.io/ip'
 };
 
 async function measureLatency(proxyConfig, endpoint, url) {

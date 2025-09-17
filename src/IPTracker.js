@@ -26,11 +26,22 @@ export class IPTracker {
             return null;
         }
     
-        // Prefer HTTP endpoints for speed with HTTP proxies
+        // Multiple reliable IP echo services with rotation
+        // Prioritize HTTP services to avoid HTTPS through HTTP proxy issues
         const ipServices = [
-            'http://httpbin.org/ip',
+            // Primary: HTTP services (work better with HTTP proxies)
             'http://icanhazip.com',
-            'http://ipinfo.io/ip'
+            'http://ipv4.icanhazip.com', 
+            'http://checkip.amazonaws.com',
+            // Secondary: HTTPS services (may have issues with some HTTP proxies)
+            'https://api.ipify.org?format=text',
+            'https://ipinfo.io/ip',
+            'https://ident.me',
+            // Backup services
+            'https://ipecho.net/plain',
+            'https://postman-echo.com/ip',
+            'https://api.myip.com',
+            'https://wtfismyip.com/text'
         ];
     
         const errors = [];
@@ -44,9 +55,17 @@ export class IPTracker {
     
             try {
                 console.log(`Trying IP service: ${service} with proxy: ${proxyConfig.server}`);
-                const ip = await this.fetchIPFromURL(service, proxyConfig, timeoutMs);
-                console.log(`Got IP: ${ip} from ${service}`);
-                return ip;
+                const result = await this.fetchIPFromURL(service, proxyConfig, timeoutMs);
+                
+                if (result.isProxyError) {
+                    // Mark proxy as problematic and continue to next service
+                    console.log(`⚠️ Proxy issue detected with ${service}: ${result.error}`);
+                    errors.push(`${service}: ${result.error} (proxy issue)`);
+                    continue;
+                }
+                
+                console.log(`Got IP: ${result.ip} from ${service}`);
+                return result.ip;
             } catch (error) {
                 console.log(`Failed to get IP from ${service}:`, error.message);
                 errors.push(`${service}: ${error.message}`);
@@ -58,7 +77,7 @@ export class IPTracker {
     }
 
     /**
-     * Fetch IP from a specific URL using proxy
+     * Fetch IP from a specific URL using proxy with enhanced error detection
      */
     async fetchIPFromURL(url, proxyConfig, timeoutMs = 10000) {
         return new Promise((resolve, reject) => {
@@ -74,8 +93,11 @@ export class IPTracker {
                 const options = {
                     timeout,
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-                        'Host': targetUrl.hostname
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': '*/*',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Cache-Control': 'no-cache'
                     },
                     method: 'GET'
                 };
@@ -94,16 +116,30 @@ export class IPTracker {
                     options.port = targetUrl.port || (isHttpsTarget ? 443 : 80);
                     options.path = targetUrl.pathname + targetUrl.search;
                 } else if (server.startsWith('http://')) {
-                    // HTTP proxy: request absolute URL through proxy
-                    // Note: we only target http:// IP services to avoid CONNECT tunneling
+                    // HTTP proxy: handle both HTTP and HTTPS targets
                     const proxyUrl = new URL(server);
-                    options.hostname = proxyUrl.hostname;
-                    options.port = proxyUrl.port || 80;
-                    options.path = url; // absolute URL for proxy
-                    // Proxy auth
-                    if (proxyConfig.username && proxyConfig.password) {
-                        const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
-                        options.headers['Proxy-Authorization'] = `Basic ${auth}`;
+                    if (isHttpsTarget) {
+                        // For HTTPS targets through HTTP proxy, use CONNECT method
+                        options.agent = new (isHttpsTarget ? https : http).Agent({
+                            host: proxyUrl.hostname,
+                            port: proxyUrl.port || 80,
+                            auth: proxyConfig.username && proxyConfig.password 
+                                ? `${proxyConfig.username}:${proxyConfig.password}` 
+                                : undefined
+                        });
+                        options.hostname = targetUrl.hostname;
+                        options.port = targetUrl.port || 443;
+                        options.path = targetUrl.pathname + targetUrl.search;
+                    } else {
+                        // For HTTP targets, request absolute URL through proxy
+                        options.hostname = proxyUrl.hostname;
+                        options.port = proxyUrl.port || 80;
+                        options.path = url; // absolute URL for proxy
+                        // Proxy auth
+                        if (proxyConfig.username && proxyConfig.password) {
+                            const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
+                            options.headers['Proxy-Authorization'] = `Basic ${auth}`;
+                        }
                     }
                 } else {
                     // Direct request (no proxy)
@@ -112,9 +148,8 @@ export class IPTracker {
                     options.path = targetUrl.pathname + targetUrl.search;
                 }
 
-                const req = (server.startsWith('http://') ? http : httpModule).request(options, (res) => {
+                const req = httpModule.request(options, (res) => {
                     let data = '';
-                    // Ensure we consume or handle stream errors to avoid crashes
                     res.setEncoding('utf8');
 
                     res.on('data', (chunk) => { data += chunk; });
@@ -129,27 +164,76 @@ export class IPTracker {
 
                     res.on('end', () => {
                         try {
+                            // Check for proxy authentication or payment errors
+                            if (res.statusCode === 401) {
+                                const errorMsg = 'Proxy requires authentication (401 Unauthorized)';
+                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 401 });
+                            }
+                            if (res.statusCode === 402) {
+                                const errorMsg = 'Proxy requires payment (402 Payment Required)';
+                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 402 });
+                            }
+                            if (res.statusCode === 403) {
+                                const errorMsg = 'Proxy access forbidden (403 Forbidden)';
+                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 403 });
+                            }
+                            if (res.statusCode === 407) {
+                                const errorMsg = 'Proxy authentication required (407)';
+                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 407 });
+                            }
+                            if (res.statusCode >= 500) {
+                                const errorMsg = `Proxy server error (${res.statusCode})`;
+                                return resolve({ isProxyError: true, error: errorMsg, statusCode: res.statusCode });
+                            }
+                            
+                            // Check for common proxy error pages in response body
+                            if (data.toLowerCase().includes('payment required') || 
+                                data.toLowerCase().includes('upgrade your plan') ||
+                                data.toLowerCase().includes('subscription expired') ||
+                                data.toLowerCase().includes('insufficient funds')) {
+                                const errorMsg = 'Proxy subscription/payment required';
+                                return resolve({ isProxyError: true, error: errorMsg, statusCode: res.statusCode });
+                            }
+                            
+                            if (res.statusCode !== 200) {
+                                reject(new Error(`HTTP ${res.statusCode}: ${data?.slice(0, 200) || 'No response body'}`));
+                                return;
+                            }
+
                             let ip;
-                            // Attempt JSON parse (httpbin/others)
+                            // Handle different response formats from various services
                             try {
+                                // Try JSON first (ipify, postman-echo, etc.)
                                 const parsed = JSON.parse(data);
                                 ip = parsed.ip || parsed.origin?.split(',')[0]?.trim();
                             } catch {
+                                // Fallback to plain text (icanhazip, ident.me, etc.)
                                 ip = (data || '').trim();
+                                
+                                // Handle potential multi-line responses
+                                const lines = ip.split('\n').map(l => l.trim()).filter(l => l);
+                                if (lines.length > 0) {
+                                    ip = lines[0]; // Take first non-empty line
+                                }
                             }
 
-                            // Validate IPv4
+                            // Validate IPv4 format
                             if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
-                                return resolve(ip);
+                                // Additional validation: check if octets are in valid range
+                                const octets = ip.split('.').map(Number);
+                                if (octets.every(octet => octet >= 0 && octet <= 255)) {
+                                    return resolve({ ip, isProxyError: false });
+                                }
                             }
-                            reject(new Error(`Invalid IP response: ${data?.slice(0, 200) || ''}`));
+                            
+                            reject(new Error(`Invalid IP response: ${data?.slice(0, 200) || 'Empty response'}`));
                         } catch (error) {
                             reject(error);
                         }
                     });
                 });
 
-                // Attach low-level error/abort/timeouts defensively
+                // Enhanced error handling
                 req.on('timeout', () => {
                     try { req.destroy(); } catch (_) {}
                     reject(new Error('Request timeout'));
@@ -160,6 +244,14 @@ export class IPTracker {
                 });
 
                 req.on('error', (error) => {
+                    // Check for common proxy connection errors
+                    if (error.code === 'ECONNREFUSED') {
+                        error.message += ' (proxy connection refused)';
+                    } else if (error.code === 'ETIMEDOUT') {
+                        error.message += ' (proxy connection timeout)';
+                    } else if (error.code === 'ENOTFOUND') {
+                        error.message += ' (proxy host not found)';
+                    }
                     reject(error);
                 });
 
