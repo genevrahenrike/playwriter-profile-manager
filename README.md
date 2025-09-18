@@ -269,6 +269,84 @@ Success detection:
 - Automation completion events (from the automation hook system).
 - 200/201 responses for `api.vidiq.com/subscriptions/active` or `/subscriptions/stripe/next-subscription`.
 
+### Timezone-Aware Proxy Rotation 🌍
+
+Advanced proxy rotation system that automatically adjusts proxy selection based on real-world timezone patterns and business hours. **Perfect for 24/7 batch operations** that need to maintain realistic geographic distribution.
+
+#### **How Timezone-Aware Rotation Works**
+
+The system intelligently distributes proxy usage based on:
+- **🕐 Local business hours** (9 AM - 6 PM in each region)
+- **📊 Timezone weights**: Peak hours = 1.0, Evening = 0.3, Night = 0.1
+- **🔄 IP rotation cycles** (every 5 minutes allows proxy reuse)
+- **🌍 Geographic authenticity** (traffic patterns match real-world usage)
+
+```bash
+# Enable timezone-aware proxy rotation (recommended for large batches)
+npx ppm batch --template vidiq-clean \
+    --count 50 \
+    --prefix auto \
+    --timezone-aware \
+    --delete-on-failure
+
+# Long-running 24-hour batch with timezone awareness
+npx ppm batch --template vidiq-clean \
+    --count 200 \
+    --prefix auto \
+    --timezone-aware \
+    --delay 180 \
+    --failure-delay 600
+
+# Combined with other options
+npx ppm batch --template vidiq-clean \
+    --count 100 \
+    --prefix auto \
+    --timezone-aware \
+    --headless \
+    --delete-on-failure \
+    --no-clear-cache
+```
+
+#### **Current Timezone Behavior (at your local midnight)**
+- **🟢 Peak regions** (KR, SG): Weight 1.0 → ~70% of selections
+- **🟡 Moderate regions** (US, CA): Weight 0.3 → ~20% of selections  
+- **🔴 Night regions** (UK, DE, FR): Weight 0.1 → ~10% of selections
+
+#### **24-Hour Distribution Pattern**
+The system automatically adjusts throughout the day:
+- **US Business Hours** (1 PM - 10 PM UTC): US dominates with 200 proxies
+- **European Hours** (8 AM - 5 PM UTC): UK/DE/FR get peak representation
+- **Asia-Pacific Hours** (11 PM - 8 AM UTC): KR/SG dominate selection
+
+#### **Key Advantages**
+✅ **Realistic traffic patterns** - Matches natural internet usage  
+✅ **No IP exhaustion** - 5-minute rotation allows unlimited proxy reuse  
+✅ **Geographic authenticity** - Accounts appear in appropriate timezones  
+✅ **Scalable** - Works with any batch size (10 or 1000+ profiles)  
+✅ **Zero configuration** - Automatically adapts to current time
+
+#### **Proxy Pool Coverage**
+- **🇺🇸 US**: 200 proxies (dominant for realistic web traffic)
+- **🇰🇷 KR**: 100 proxies (Asia-Pacific coverage)
+- **🇸🇬 SG**: 100 proxies (Asia-Pacific coverage)
+- **🇨🇦 CA**: 100 proxies (North America)
+- **🇬🇧 UK**: 100 proxies (Europe)
+- **🇩🇪 DE**: 100 proxies (Europe)
+- **🇫🇷 FR**: 100 proxies (Europe)
+- **Total**: 800 proxies across 7 countries, 24/7 timezone coverage
+
+#### **Timezone-Aware Batch Options**
+- `--timezone-aware`: Enable timezone-aware proxy rotation (recommended for 24/7 operations)
+- All standard batch options work with timezone mode
+- Automatically disables IP tracking in favor of timezone logic
+- Compatible with `--headless`, `--delete-on-failure`, `--delay`, etc.
+
+#### **Usage Recommendations**
+- **Small batches (1-20)**: Either timezone-aware or standard rotation
+- **Medium batches (21-100)**: Timezone-aware recommended
+- **Large batches (100+)**: Timezone-aware essential for realistic distribution
+- **24/7 operations**: Always use timezone-aware for authentic patterns
+
 ### Refresh Existing Sessions (VidIQ)
 
 Refresh already-created profiles by opening the VidIQ web app and capturing token refreshes and subsequent app traffic. This is a batch-like flow designed for session maintenance and verification.

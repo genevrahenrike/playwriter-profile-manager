@@ -146,8 +146,11 @@ program
     .option('--captcha-grace <ms>', 'Extra grace when CAPTCHA detected', '45000')
     .option('--disable-images', 'Disable image loading')
     .option('--disable-proxy-wait-increase', 'Disable proxy wait time increases')
-    .option('--proxy-label <label>', 'Specific proxy label to use')
-    .option('--proxy-type <type>', 'Proxy type (http)')
+    .option('--proxy-host <host>', 'Proxy server host')
+    .option('--proxy-port <port>', 'Proxy server port')
+    .option('--proxy-username <username>', 'Proxy username')
+    .option('--proxy-password <password>', 'Proxy password')
+    .option('--proxy-type <type>', 'Proxy type (http, socks5)', 'http')
     .action(async (opts) => {
         // Enhanced logging for troubleshooting
         const logPrefix = `[${opts.name}]`;
@@ -298,10 +301,13 @@ program
                 disableImages: !!opts.disableImages,
                 disableProxyWaitIncrease: !!opts.disableProxyWaitIncrease
             };
-            if (opts.proxyLabel && opts.proxyType) {
-                launchOptions.proxy = opts.proxyLabel;
-                launchOptions.proxyType = opts.proxyType;
-                log('info', `Using proxy: ${opts.proxyLabel} (${opts.proxyType})`);
+            if (opts.proxyHost && opts.proxyPort && opts.proxyUsername && opts.proxyPassword) {
+                launchOptions.proxyConfig = {
+                    server: `${opts.proxyHost}:${opts.proxyPort}`,
+                    username: opts.proxyUsername,
+                    password: opts.proxyPassword
+                };
+                log('info', `Using direct proxy: ${opts.proxyHost}:${opts.proxyPort} (${opts.proxyType})`);
             }
             
             log('info', `Launch options: ${JSON.stringify(launchOptions, null, 2)}`);
@@ -336,7 +342,12 @@ program
                 reason: outcome.reason || null,
                 profileId: profile?.id || null,
                 profileName: profile?.name || instance,
-                proxy: opts.proxyLabel ? { label: opts.proxyLabel, type: opts.proxyType || null } : null
+                proxy: opts.proxyHost ? { 
+                    host: opts.proxyHost, 
+                    port: parseInt(opts.proxyPort),
+                    username: opts.proxyUsername,
+                    type: opts.proxyType 
+                } : null
             };
             
             log('info', `Final result prepared: ${JSON.stringify(result, null, 2)}`);
@@ -1159,6 +1170,7 @@ program
     .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident (default), datacenter, mobile')
     .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
     .option('--geographic-ratio <ratio>', 'Geographic distribution ratio (e.g., "US:45,Other:55" or "US:40,EU:35,Other:25")')
+    .option('--timezone-aware', 'Use timezone-aware proxy rotation (recommended for 24/7 operations)')
     .option('--disable-images', 'Disable image loading for faster proxy performance')
     .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases (use normal timeouts even with proxies)')
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
@@ -1237,8 +1249,10 @@ program
             if (runHeadless) args.push('--headless');
             if (options.disableImages) args.push('--disable-images');
             if (options.disableProxyWaitIncrease) args.push('--disable-proxy-wait-increase');
-            if (proxy && proxy.label && proxy.type) {
-                args.push('--proxy-label', proxy.label, '--proxy-type', proxy.type);
+            if (proxy && proxy.host && proxy.port && proxy.username && proxy.password) {
+                args.push('--proxy-host', proxy.host, '--proxy-port', String(proxy.port), 
+                         '--proxy-username', proxy.username, '--proxy-password', proxy.password, 
+                         '--proxy-type', proxy.type || 'http');
             }
 
             const child = spawn(nodePath, args, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env } });
@@ -1369,11 +1383,26 @@ program
         let proxyRotator = null;
         let useProxyRotation = false;
         
-        if (options.proxyStrategy || options.proxyStart || options.geographicRatio) {
+        if (options.proxyStrategy || options.proxyStart || options.geographicRatio || options.timezoneAware) {
             const launcher = new ProfileLauncher(pmLocal, {});
             
+            // Use TimezoneAwareProxyRotator if timezone-aware option is enabled
+            if (options.timezoneAware) {
+                const { TimezoneAwareProxyRotator } = await import('./TimezoneAwareProxyRotator.js');
+                
+                proxyRotator = new TimezoneAwareProxyRotator(launcher.proxyManager, {
+                    maxProfilesPerIP: maxProfilesPerIP
+                });
+                
+                useProxyRotation = true;
+                console.log(chalk.green(`🕐 Timezone-aware proxy rotation enabled (optimal for 24/7 operations)`));
+                console.log(chalk.blue(`   - Automatically adjusts for global timezone patterns`));
+                console.log(chalk.blue(`   - Peak hours = higher selection probability`)); 
+                console.log(chalk.blue(`   - Night hours = lower selection probability`));
+                console.log(chalk.blue(`   - IP rotation every 5 minutes allows proxy reuse`));
+                
             // Use GeographicProxyRotator if geographic strategy or geographic ratio is specified
-            if (options.proxyStrategy === 'geographic' || options.geographicRatio) {
+            } else if (options.proxyStrategy === 'geographic' || options.geographicRatio) {
                 const { GeographicProxyRotator } = await import('./GeographicProxyRotator.js');
                 
                 proxyRotator = new GeographicProxyRotator(launcher.proxyManager, {
@@ -1530,7 +1559,14 @@ program
                 // Kick off child run
                 const childResult = await runSingleIsolated({
                     instanceName: name,
-                    proxy: useProxyRotation && currentProxy ? { label: currentProxy.label, type: currentProxy.type } : null
+                    proxy: useProxyRotation && currentProxy ? { 
+                        label: currentProxy.label, 
+                        type: currentProxy.type,
+                        host: currentProxy.host,
+                        port: currentProxy.port,
+                        username: currentProxy.username,
+                        password: currentProxy.password
+                    } : null
                 });
                 
                 const runDuration = Date.now() - runStartTime;

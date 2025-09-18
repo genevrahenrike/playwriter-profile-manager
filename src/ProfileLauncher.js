@@ -639,6 +639,10 @@ export class ProfileLauncher {
                     console.warn(`⚠️  Proxy configuration failed, launching without proxy`);
                 }
             }
+        } else if (options.proxyConfig) {
+            // Handle direct proxy configuration (for batch system with timezone-aware rotation)
+            proxyConfig = options.proxyConfig;
+            console.log(`🌐 Using direct proxy configuration: ${proxyConfig.server}`);
         }
 
         let browser, context;
