@@ -1,0 +1,1 @@
+{"timestamp":"2025-09-18T09:27:27.588Z","run":1,"batchId":"2025-09-18T09-25-42-152Z","runId":"7a77777e-6e4c-4ba5-b807-a70550e2178d","profileId":"e056a922-755e-48ae-8e5e-4ae84eff19d8","profileName":"proxied2105","attempt":1,"headless":false,"success":true,"reason":"timeout","proxy":{"label":"KR1","type":"http","host":"geo.g-w.info","port":10080}}
