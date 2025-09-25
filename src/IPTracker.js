@@ -29,6 +29,10 @@ export class IPTracker {
         // Multiple reliable IP echo services with rotation
         // Prioritize HTTP services to avoid HTTPS through HTTP proxy issues
         const ipServices = [
+            // Primary: HTTP services (work reliably with HTTP proxies)
+            'http://icanhazip.com',
+            'http://ipv4.icanhazip.com', 
+            'http://checkip.amazonaws.com',
             // Secondary: HTTPS services (may have issues with some HTTP proxies)
             'https://api.ipify.org?format=text',
             'https://ipinfo.io/ip',
