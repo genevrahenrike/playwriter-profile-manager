@@ -1,0 +1,48 @@
+{
+  "summary": {
+    "total": 1,
+    "recovered": 0,
+    "stillFailing": 1,
+    "recoveryRate": 0,
+    "totalDuration": 1892
+  },
+  "results": [
+    {
+      "index": 1,
+      "_id": "68cadc2c91d0e8e7f0c1350f",
+      "id": "68cadc2c91d0e8e7f0c1350f",
+      "customName": "United Kingdom",
+      "country": "GB",
+      "host": "geo.floppydata.com",
+      "port": 10080,
+      "username": "IA6g3UejGg98o897",
+      "connectionType": "datacenter",
+      "success": false,
+      "error": "All test services failed",
+      "isPaymentRequired": false,
+      "isAuthRequired": false,
+      "testDuration": 1785,
+      "timestamp": "2025-09-24T07:37:08.749Z",
+      "originalStatus": true,
+      "retryAttempt": true
+    }
+  ],
+  "originalErrors": [
+    {
+      "index": 163,
+      "customName": "United Kingdom",
+      "country": "GB",
+      "host": "geo.floppydata.com",
+      "port": 10080,
+      "username": "65g0fHiyLnZlCGZZ",
+      "connectionType": "resident",
+      "success": false,
+      "error": "All test services failed",
+      "isPaymentRequired": false,
+      "isAuthRequired": false,
+      "testDuration": 18510,
+      "timestamp": "2025-09-24T07:30:09.281Z",
+      "originalStatus": true
+    }
+  ]
+}

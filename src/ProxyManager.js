@@ -9,7 +9,9 @@ export class ProxyManager {
     constructor(options = {}) {
         this.proxiesDir = options.proxiesDir || path.join(__dirname, '../proxies');
         this.httpProxiesFile = path.join(this.proxiesDir, 'http.proxies.json');
-        this.httpProxiesV2File = path.join(this.proxiesDir, 'http.proxies.v2.json');
+    // Accept either the newer v2 filename or the common `http.proxies.v2.json`
+    this.httpProxiesV2File = path.join(this.proxiesDir, 'http.proxies.v2new.json');
+    this.httpProxiesV2AltFile = path.join(this.proxiesDir, 'http.proxies.v2.json');
         this.socks5ProxiesFile = path.join(this.proxiesDir, 'socks5.proxies.json');
         this.loadedProxies = {
             http: [],
@@ -30,12 +32,16 @@ export class ProxyManager {
             if (await fs.pathExists(this.httpProxiesV2File)) {
                 const httpV2Data = await fs.readJson(this.httpProxiesV2File);
                 this.loadedProxies.http = Array.isArray(httpV2Data) ? this.convertV2ToV1Format(httpV2Data) : [];
-                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v2 format)`);
-            } else if (await fs.pathExists(this.httpProxiesFile)) {
+                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v2 format: v2new)`);
+            } else if (await fs.pathExists(this.httpProxiesV2AltFile)) {
+                const httpV2Data = await fs.readJson(this.httpProxiesV2AltFile);
+                this.loadedProxies.http = Array.isArray(httpV2Data) ? this.convertV2ToV1Format(httpV2Data) : [];
+                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v2 format: v2)`);
+            } /* else if (await fs.pathExists(this.httpProxiesFile)) {
                 const httpData = await fs.readJson(this.httpProxiesFile);
                 this.loadedProxies.http = Array.isArray(httpData) ? httpData : [];
                 console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v1 format)`);
-            }
+            } */
 
             // Load SOCKS5 proxies
             if (await fs.pathExists(this.socks5ProxiesFile)) {
@@ -91,7 +97,15 @@ export class ProxyManager {
                 profilesCount: proxy.profilesCount,
                 checkDate: proxy.checkDate,
                 createdAt: proxy.createdAt,
-                timezone: proxy.timezone
+                timezone: proxy.timezone,
+                
+                // Sweep result fields (preserved for filtering)
+                isPaymentRequired: proxy.isPaymentRequired || false,
+                isAuthRequired: proxy.isAuthRequired || false,
+                lastResult: proxy.lastResult,
+                lastChecked: proxy.lastChecked,
+                latency: proxy.latency,
+                checkedService: proxy.checkedService
             };
         });
     }
@@ -116,27 +130,43 @@ export class ProxyManager {
     }
 
     /**
-     * Filter out proxies with ERROR status or payment requirements
+     * Filter out proxies with ERROR status, payment requirements, auth issues, or other failures
      */
     filterWorkingProxies() {
         const httpWorking = this.loadedProxies.http.filter(proxy => 
-            proxy.status === 'OK' && !proxy.isPaymentRequired
+            proxy.status === 'OK' && 
+            !proxy.isPaymentRequired && 
+            !proxy.isAuthRequired &&
+            // Skip proxies that failed the sweep (have lastResult but it's not 'OK')
+            (!proxy.lastResult || proxy.lastResult === 'OK')
         );
         const socks5Working = this.loadedProxies.socks5.filter(proxy => 
-            proxy.status === 'OK' && !proxy.isPaymentRequired
+            proxy.status === 'OK' && 
+            !proxy.isPaymentRequired && 
+            !proxy.isAuthRequired &&
+            // Skip proxies that failed the sweep (have lastResult but it's not 'OK')
+            (!proxy.lastResult || proxy.lastResult === 'OK')
         );
         
-        // Log filtering results
+        // Log detailed filtering results
         const httpFiltered = this.loadedProxies.http.length - httpWorking.length;
         const socks5Filtered = this.loadedProxies.socks5.length - socks5Working.length;
         
         if (httpFiltered > 0) {
             const paymentRequired = this.loadedProxies.http.filter(p => p.isPaymentRequired).length;
-            console.log(`🔍 Filtered HTTP proxies: ${httpWorking.length}/${this.loadedProxies.http.length} working (${httpFiltered} filtered: ${paymentRequired} payment required, ${httpFiltered - paymentRequired} other errors)`);
+            const authRequired = this.loadedProxies.http.filter(p => p.isAuthRequired).length;
+            const sweepFailed = this.loadedProxies.http.filter(p => p.lastResult && p.lastResult !== 'OK').length;
+            const statusError = this.loadedProxies.http.filter(p => p.status !== 'OK').length;
+            console.log(`🔍 Filtered HTTP proxies: ${httpWorking.length}/${this.loadedProxies.http.length} working`);
+            console.log(`   Filtered: ${httpFiltered} total (${paymentRequired} payment required, ${authRequired} auth required, ${sweepFailed} sweep failed, ${statusError} status error)`);
         }
         if (socks5Filtered > 0) {
             const paymentRequired = this.loadedProxies.socks5.filter(p => p.isPaymentRequired).length;
-            console.log(`🔍 Filtered SOCKS5 proxies: ${socks5Working.length}/${this.loadedProxies.socks5.length} working (${socks5Filtered} filtered: ${paymentRequired} payment required, ${socks5Filtered - paymentRequired} other errors)`);
+            const authRequired = this.loadedProxies.socks5.filter(p => p.isAuthRequired).length;
+            const sweepFailed = this.loadedProxies.socks5.filter(p => p.lastResult && p.lastResult !== 'OK').length;
+            const statusError = this.loadedProxies.socks5.filter(p => p.status !== 'OK').length;
+            console.log(`🔍 Filtered SOCKS5 proxies: ${socks5Working.length}/${this.loadedProxies.socks5.length} working`);
+            console.log(`   Filtered: ${socks5Filtered} total (${paymentRequired} payment required, ${authRequired} auth required, ${sweepFailed} sweep failed, ${statusError} status error)`);
         }
 
         this.loadedProxies.http = httpWorking;
@@ -523,6 +553,8 @@ export class ProxyManager {
                     options.hostname = proxyUrl.hostname;
                     options.port = proxyUrl.port || 80;
                     options.path = url; // absolute URL
+                    options.headers['Host'] = targetUrl.host;
+                    options.headers['Proxy-Connection'] = 'keep-alive';
                     
                     if (proxyConfig.username && proxyConfig.password) {
                         const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
@@ -618,7 +650,7 @@ export class ProxyManager {
     /**
      * Mark proxy as bad and update its status
      */
-    markProxyAsBad(proxyLabel, reason = 'Failed validation', isPaymentRequired = false) {
+    markProxyAsBad(proxyLabel, reason = 'Failed validation', isPaymentRequired = false, isAuthRequired = false) {
         // Find proxy in loaded proxies and mark it
         for (const type of ['http', 'socks5']) {
             const proxy = this.loadedProxies[type].find(p => p.label === proxyLabel);
@@ -626,6 +658,8 @@ export class ProxyManager {
                 proxy.status = 'ERROR';
                 proxy.errorReason = reason;
                 proxy.isPaymentRequired = isPaymentRequired;
+                proxy.isAuthRequired = isAuthRequired;
+                proxy.lastResult = reason;
                 proxy.lastChecked = new Date().toISOString();
                 console.log(`🚫 Marked proxy ${proxyLabel} as bad: ${reason}`);
                 return true;

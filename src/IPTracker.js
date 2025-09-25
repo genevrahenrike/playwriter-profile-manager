@@ -29,10 +29,6 @@ export class IPTracker {
         // Multiple reliable IP echo services with rotation
         // Prioritize HTTP services to avoid HTTPS through HTTP proxy issues
         const ipServices = [
-            // Primary: HTTP services (work better with HTTP proxies)
-            'http://icanhazip.com',
-            'http://ipv4.icanhazip.com', 
-            'http://checkip.amazonaws.com',
             // Secondary: HTTPS services (may have issues with some HTTP proxies)
             'https://api.ipify.org?format=text',
             'https://ipinfo.io/ip',
@@ -135,6 +131,8 @@ export class IPTracker {
                         options.hostname = proxyUrl.hostname;
                         options.port = proxyUrl.port || 80;
                         options.path = url; // absolute URL for proxy
+                        options.headers['Host'] = targetUrl.host;
+                        options.headers['Proxy-Connection'] = 'keep-alive';
                         // Proxy auth
                         if (proxyConfig.username && proxyConfig.password) {
                             const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');

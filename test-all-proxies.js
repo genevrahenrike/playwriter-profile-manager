@@ -1,59 +1,299 @@
-#!/usr/bin/env node
+#!/usr/bin/env node#!/usr/bin/env node
 
-import { ProxyManager } from './src/ProxyManager.js';
-import fs from 'fs-extra';
 
-/**
- * Test all proxies and update their status
- */
-async function testAllProxies(options = {}) {
-    const { timeout = 15000, maxConcurrent = 5, saveResults = true } = options;
+
+import { ProxyManager } from './src/ProxyManager.js';import { ProxyManager } from './src/ProxyManager.js';
+
+import fs from 'fs-extra';import fs from 'fs-extra';
+
+
+
+/**/**
+
+ * Test all proxies and update their status * Test all proxies and update their status
+
+ */ */
+
+async function testAllProxies(options = {}) {async function testAllProxies(options = {}) {
+
+    const { timeout = 15000, maxConcurrent = 5, saveResults = true } = options;    const { timeout = 15000, maxConcurrent = 5, saveResults = true } = options;
+
+        
+
+    const proxyManager = new ProxyManager();    const proxyManager = new ProxyManager();
+
+    await proxyManager.loadProxies();    await proxyManager.loadProxies();
+
+        
+
+    // Get all proxies before filtering    // Get all proxies before filtering
+
+    const allProxies = [    const allProxies = [
+
+        ...proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' })),        ...proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' })),
+
+        ...proxyManager.loadedProxies.socks5.map(p => ({ ...p, type: 'socks5' }))        ...proxyManager.loadedProxies.socks5.map(p => ({ ...p, type: 'socks5' }))
+
+    ];    ];
+
+        
+
+    console.log(`🧪 Testing ${allProxies.length} proxies (timeout: ${timeout}ms, concurrent: ${maxConcurrent})`);    console.log(`🧪 Testing ${allProxies.length} proxies (timeout: ${timeout}ms, concurrent: ${maxConcurrent})`);
+
+    console.log('━'.repeat(80));    console.log('━'.repeat(80));
+
+        
+
+    const results = [];    const results = [];
+
+    const queue = [...allProxies];    const queue = [...allProxies];
+
+    const running = [];    const running = [];
+
+        
+
+    async function testProxy(proxy) {    async function testProxy(proxy) {
+
+        try {        try {
+
+            console.log(`📡 Testing ${proxy.label} (${proxy.type}) - ${proxy.host}:${proxy.port}`);            console.log(`📡 Testing ${proxy.label} (${proxy.type}) - ${proxy.host}:${proxy.port}`);
+
+            const result = await proxyManager.testProxy(proxy, timeout);            const result = await proxyManager.testProxy(proxy, timeout);
+
+                        
+
+            const status = {            const status = {
+
+                label: proxy.label,                label: proxy.label,
+
+                type: proxy.type,                type: proxy.type,
+
+                host: proxy.host,                host: proxy.host,
+
+                port: proxy.port,                port: proxy.port,
+
+                success: result.success,                success: result.success,
+
+                error: result.error,                error: result.error,
+
+                ip: result.ip,                ip: result.ip,
+
+                service: result.service,                service: result.service,
+
+                latency: result.latency,                latency: result.latency,
+
+                statusCode: result.statusCode,                statusCode: result.statusCode,
+
+                isPaymentRequired: result.isPaymentRequired || false,                isPaymentRequired: result.isPaymentRequired || false,
+
+                timestamp: new Date().toISOString()                timestamp: new Date().toISOString()
+
+            };            };
+
+                        
+
+            if (result.success) {            if (result.success) {
+
+                console.log(`✅ ${proxy.label}: ${result.ip} (${result.latency}ms via ${result.service})`);                console.log(`✅ ${proxy.label}: ${result.ip} (${result.latency}ms via ${result.service})`);
+
+            } else {            } else {
+
+                const paymentFlag = result.isPaymentRequired ? ' 💳' : '';                const paymentFlag = result.isPaymentRequired ? ' 💳' : '';
+
+                console.log(`❌ ${proxy.label}: ${result.error}${paymentFlag}`);                console.log(`❌ ${proxy.label}: ${result.error}${paymentFlag}`);
+
+                                
+
+                // Mark proxy as bad in the manager                // Mark proxy as bad in the manager
+
+                proxyManager.markProxyAsBad(proxy.label, result.error, result.isPaymentRequired);                proxyManager.markProxyAsBad(proxy.label, result.error, result.isPaymentRequired);
+
+            }            }
+
+                        
+
+            results.push(status);            results.push(status);
+
+            return status;            return status;
+
+                        
+
+        } catch (error) {        } catch (error) {
+
+            const status = {            const status = {
+
+                label: proxy.label,                label: proxy.label,
+
+                type: proxy.type,                type: proxy.type,
+
+                host: proxy.host,                host: proxy.host,
+
+                port: proxy.port,                port: proxy.port,
+
+                success: false,                success: false,
+
+                error: error.message,                error: error.message,
+
+                isPaymentRequired: false,                isPaymentRequired: false,
+
+                timestamp: new Date().toISOString()                timestamp: new Date().toISOString()
+
+            };            };
+
+                        
+
+            console.log(`💥 ${proxy.label}: ${error.message}`);            console.log(`💥 ${proxy.label}: ${error.message}`);
+
+            proxyManager.markProxyAsBad(proxy.label, error.message, false);            proxyManager.markProxyAsBad(proxy.label, error.message, false);
+
+            results.push(status);            results.push(status);
+
+            return status;            return status;
+
+        }        }\n    }\n    \n    // Process queue with concurrency control\n    while (queue.length > 0 || running.length > 0) {\n        // Start new tasks up to the concurrency limit\n        while (running.length < maxConcurrent && queue.length > 0) {\n            const proxy = queue.shift();\n            const task = testProxy(proxy);\n            running.push(task);\n        }\n        \n        // Wait for at least one task to complete\n        if (running.length > 0) {\n            await Promise.race(running);\n            // Remove completed tasks\n            for (let i = running.length - 1; i >= 0; i--) {\n                if (running[i].isFulfilled !== undefined || running[i].isRejected !== undefined) {\n                    running.splice(i, 1);\n                }\n            }\n        }\n        \n        // Small delay to prevent overwhelming\n        await new Promise(resolve => setTimeout(resolve, 100));\n    }\n    \n    // Wait for all remaining tasks\n    if (running.length > 0) {\n        await Promise.allSettled(running);\n    }\n    \n    console.log('\\n' + '━'.repeat(80));\n    console.log('📊 Test Results Summary:');\n    \n    const summary = {\n        total: results.length,\n        successful: results.filter(r => r.success).length,\n        failed: results.filter(r => !r.success).length,\n        paymentRequired: results.filter(r => r.isPaymentRequired).length,\n        byType: {\n            http: {\n                total: results.filter(r => r.type === 'http').length,\n                successful: results.filter(r => r.type === 'http' && r.success).length,\n                failed: results.filter(r => r.type === 'http' && !r.success).length,\n                paymentRequired: results.filter(r => r.type === 'http' && r.isPaymentRequired).length\n            },\n            socks5: {\n                total: results.filter(r => r.type === 'socks5').length,\n                successful: results.filter(r => r.type === 'socks5' && r.success).length,\n                failed: results.filter(r => r.type === 'socks5' && !r.success).length,\n                paymentRequired: results.filter(r => r.type === 'socks5' && r.isPaymentRequired).length\n            }\n        },\n        timestamp: new Date().toISOString()\n    };\n    \n    console.log(`\\n✅ Working: ${summary.successful}/${summary.total} (${(summary.successful/summary.total*100).toFixed(1)}%)`);\n    console.log(`❌ Failed: ${summary.failed}/${summary.total}`);\n    console.log(`💳 Payment Required: ${summary.paymentRequired}/${summary.total}`);\n    \n    console.log(`\\nHTTP Proxies: ${summary.byType.http.successful}/${summary.byType.http.total} working`);\n    console.log(`SOCKS5 Proxies: ${summary.byType.socks5.successful}/${summary.byType.socks5.total} working`);\n    \n    // List payment-required proxies\n    const paymentProxies = results.filter(r => r.isPaymentRequired);\n    if (paymentProxies.length > 0) {\n        console.log('\\n💳 Proxies requiring payment:');\n        paymentProxies.forEach(p => {\n            console.log(`   ${p.label} (${p.type}): ${p.error}`);\n        });\n    }\n    \n    // List other failed proxies\n    const otherFailed = results.filter(r => !r.success && !r.isPaymentRequired);\n    if (otherFailed.length > 0) {\n        console.log('\\n❌ Other failed proxies:');\n        otherFailed.forEach(p => {\n            console.log(`   ${p.label} (${p.type}): ${p.error}`);\n        });\n    }\n    \n    // Save results if requested\n    if (saveResults) {\n        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');\n        const filename = `proxy-test-results-${timestamp}.json`;\n        const outputPath = `./output/${filename}`;\n        \n        await fs.ensureDir('./output');\n        await fs.writeJson(outputPath, {\n            summary,\n            results,\n            testConfig: { timeout, maxConcurrent }\n        }, { spaces: 2 });\n        \n        console.log(`\\n💾 Results saved to: ${outputPath}`);\n    }\n    \n    return { summary, results };\n}\n\n// CLI usage\nif (import.meta.url === `file://${process.argv[1]}`) {\n    const args = process.argv.slice(2);\n    const options = {\n        timeout: 15000,\n        maxConcurrent: 5,\n        saveResults: true\n    };\n    \n    // Parse command line arguments\n    for (let i = 0; i < args.length; i++) {\n        switch (args[i]) {\n            case '--timeout':\n                options.timeout = parseInt(args[++i]) || 15000;\n                break;\n            case '--concurrent':\n                options.maxConcurrent = parseInt(args[++i]) || 5;\n                break;\n            case '--no-save':\n                options.saveResults = false;\n                break;\n            case '--help':\n                console.log(`\nUsage: node test-all-proxies.js [options]\n\nOptions:\n  --timeout <ms>       Request timeout in milliseconds (default: 15000)\n  --concurrent <n>     Max concurrent tests (default: 5)\n  --no-save           Don't save results to file\n  --help              Show this help\n\nExamples:\n  node test-all-proxies.js\n  node test-all-proxies.js --timeout 10000 --concurrent 3\n  node test-all-proxies.js --no-save\n`);\n                process.exit(0);\n                break;\n        }\n    }\n    \n    testAllProxies(options)\n        .then(({ summary }) => {\n            const successRate = (summary.successful / summary.total * 100).toFixed(1);\n            console.log(`\\n🎉 Proxy testing complete! ${summary.successful}/${summary.total} proxies working (${successRate}%)`);\n            \n            if (summary.failed > 0) {\n                console.log(`⚠️  ${summary.failed} proxies failed (${summary.paymentRequired} require payment)`);\n            }\n            \n            process.exit(summary.successful > 0 ? 0 : 1);\n        })\n        .catch(error => {\n            console.error('💥 Error testing proxies:', error.message);\n            process.exit(1);\n        });\n}\n\nexport { testAllProxies };\n
+    }
     
-    const proxyManager = new ProxyManager();
-    await proxyManager.loadProxies();
+    // Process queue with concurrency control - simple approach
+    const chunks = [];
+    for (let i = 0; i < allProxies.length; i += maxConcurrent) {
+        chunks.push(allProxies.slice(i, i + maxConcurrent));
+    }
+
+    for (const chunk of chunks) {
+        const promises = chunk.map(proxy => testProxy(proxy));
+        await Promise.allSettled(promises);
+        
+        // Small delay between batches
+        if (chunk !== chunks[chunks.length - 1]) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
     
-    // Get all proxies before filtering
-    const allProxies = [
-        ...proxyManager.loadedProxies.http.map(p => ({ ...p, type: 'http' })),
-        ...proxyManager.loadedProxies.socks5.map(p => ({ ...p, type: 'socks5' }))
-    ];
+    console.log('\n' + '━'.repeat(80));
+    console.log('📊 Test Results Summary:');
     
-    console.log(`🧪 Testing ${allProxies.length} proxies (timeout: ${timeout}ms, concurrent: ${maxConcurrent})`);
-    console.log('━'.repeat(80));
+    const summary = {
+        total: results.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length,
+        paymentRequired: results.filter(r => r.isPaymentRequired).length,
+        byType: {
+            http: {
+                total: results.filter(r => r.type === 'http').length,
+                successful: results.filter(r => r.type === 'http' && r.success).length,
+                failed: results.filter(r => r.type === 'http' && !r.success).length,
+                paymentRequired: results.filter(r => r.type === 'http' && r.isPaymentRequired).length
+            },
+            socks5: {
+                total: results.filter(r => r.type === 'socks5').length,
+                successful: results.filter(r => r.type === 'socks5' && r.success).length,
+                failed: results.filter(r => r.type === 'socks5' && !r.success).length,
+                paymentRequired: results.filter(r => r.type === 'socks5' && r.isPaymentRequired).length
+            }
+        },
+        timestamp: new Date().toISOString()
+    };
     
-    const results = [];
-    const queue = [...allProxies];
-    const running = [];
+    console.log(`\n✅ Working: ${summary.successful}/${summary.total} (${(summary.successful/summary.total*100).toFixed(1)}%)`);
+    console.log(`❌ Failed: ${summary.failed}/${summary.total}`);
+    console.log(`💳 Payment Required: ${summary.paymentRequired}/${summary.total}`);
     
-    async function testProxy(proxy) {
-        try {
-            console.log(`📡 Testing ${proxy.label} (${proxy.type}) - ${proxy.host}:${proxy.port}`);
-            const result = await proxyManager.testProxy(proxy, timeout);
+    console.log(`\nHTTP Proxies: ${summary.byType.http.successful}/${summary.byType.http.total} working`);
+    console.log(`SOCKS5 Proxies: ${summary.byType.socks5.successful}/${summary.byType.socks5.total} working`);
+    
+    // List payment-required proxies
+    const paymentProxies = results.filter(r => r.isPaymentRequired);
+    if (paymentProxies.length > 0) {
+        console.log('\n💳 Proxies requiring payment:');
+        paymentProxies.forEach(p => {
+            console.log(`   ${p.label} (${p.type}): ${p.error}`);
+        });
+    }
+    
+    // List other failed proxies
+    const otherFailed = results.filter(r => !r.success && !r.isPaymentRequired);
+    if (otherFailed.length > 0) {
+        console.log('\n❌ Other failed proxies:');
+        otherFailed.forEach(p => {
+            console.log(`   ${p.label} (${p.type}): ${p.error}`);
+        });
+    }
+    
+    // Save results if requested
+    if (saveResults) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `proxy-test-results-${timestamp}.json`;
+        const outputPath = `./output/${filename}`;
+        
+        await fs.ensureDir('./output');
+        await fs.writeJson(outputPath, {
+            summary,
+            results,
+            testConfig: { timeout, maxConcurrent }
+        }, { spaces: 2 });
+        
+        console.log(`\n💾 Results saved to: ${outputPath}`);
+    }
+    
+    return { summary, results };
+}
+
+// CLI usage
+if (import.meta.url === `file://${process.argv[1]}`) {
+    const args = process.argv.slice(2);
+    const options = {
+        timeout: 15000,
+        maxConcurrent: 5,
+        saveResults: true
+    };
+    
+    // Parse command line arguments
+    for (let i = 0; i < args.length; i++) {
+        switch (args[i]) {
+            case '--timeout':
+                options.timeout = parseInt(args[++i]) || 15000;
+                break;
+            case '--concurrent':
+                options.maxConcurrent = parseInt(args[++i]) || 5;
+                break;
+            case '--no-save':
+                options.saveResults = false;
+                break;
+            case '--help':
+                console.log(`
+Usage: node test-all-proxies.js [options]
+
+Options:
+  --timeout <ms>       Request timeout in milliseconds (default: 15000)
+  --concurrent <n>     Max concurrent tests (default: 5)
+  --no-save           Don't save results to file
+  --help              Show this help
+
+Examples:
+  node test-all-proxies.js
+  node test-all-proxies.js --timeout 10000 --concurrent 3
+  node test-all-proxies.js --no-save
+`);
+                process.exit(0);
+                break;
+        }
+    }
+    
+    testAllProxies(options)
+        .then(({ summary }) => {
+            const successRate = (summary.successful / summary.total * 100).toFixed(1);
+            console.log(`\n🎉 Proxy testing complete! ${summary.successful}/${summary.total} proxies working (${successRate}%)`);
             
-            const status = {
-                label: proxy.label,
-                type: proxy.type,
-                host: proxy.host,
-                port: proxy.port,
-                success: result.success,
-                error: result.error,
-                ip: result.ip,
-                service: result.service,
-                latency: result.latency,
-                statusCode: result.statusCode,
-                isPaymentRequired: result.isPaymentRequired || false,
-                timestamp: new Date().toISOString()
-            };
-            
-            if (result.success) {
-                console.log(`✅ ${proxy.label}: ${result.ip} (${result.latency}ms via ${result.service})`);
-            } else {
-                const paymentFlag = result.isPaymentRequired ? ' 💳' : '';
-                console.log(`❌ ${proxy.label}: ${result.error}${paymentFlag}`);
-                
-                // Mark proxy as bad in the manager
-                proxyManager.markProxyAsBad(proxy.label, result.error, result.isPaymentRequired);
+            if (summary.failed > 0) {
+                console.log(`⚠️  ${summary.failed} proxies failed (${summary.paymentRequired} require payment)`);
             }
             
-            results.push(status);
-            return status;\n            \n        } catch (error) {\n            const status = {\n                label: proxy.label,\n                type: proxy.type,\n                host: proxy.host,\n                port: proxy.port,\n                success: false,\n                error: error.message,\n                isPaymentRequired: false,\n                timestamp: new Date().toISOString()\n            };\n            \n            console.log(`💥 ${proxy.label}: ${error.message}`);\n            proxyManager.markProxyAsBad(proxy.label, error.message, false);\n            results.push(status);\n            return status;\n        }\n    }\n    \n    // Process queue with concurrency control\n    while (queue.length > 0 || running.length > 0) {\n        // Start new tasks up to the concurrency limit\n        while (running.length < maxConcurrent && queue.length > 0) {\n            const proxy = queue.shift();\n            const task = testProxy(proxy);\n            running.push(task);\n        }\n        \n        // Wait for at least one task to complete\n        if (running.length > 0) {\n            await Promise.race(running);\n            // Remove completed tasks\n            for (let i = running.length - 1; i >= 0; i--) {\n                if (running[i].isFulfilled !== undefined || running[i].isRejected !== undefined) {\n                    running.splice(i, 1);\n                }\n            }\n        }\n        \n        // Small delay to prevent overwhelming\n        await new Promise(resolve => setTimeout(resolve, 100));\n    }\n    \n    // Wait for all remaining tasks\n    if (running.length > 0) {\n        await Promise.allSettled(running);\n    }\n    \n    console.log('\\n' + '━'.repeat(80));\n    console.log('📊 Test Results Summary:');\n    \n    const summary = {\n        total: results.length,\n        successful: results.filter(r => r.success).length,\n        failed: results.filter(r => !r.success).length,\n        paymentRequired: results.filter(r => r.isPaymentRequired).length,\n        byType: {\n            http: {\n                total: results.filter(r => r.type === 'http').length,\n                successful: results.filter(r => r.type === 'http' && r.success).length,\n                failed: results.filter(r => r.type === 'http' && !r.success).length,\n                paymentRequired: results.filter(r => r.type === 'http' && r.isPaymentRequired).length\n            },\n            socks5: {\n                total: results.filter(r => r.type === 'socks5').length,\n                successful: results.filter(r => r.type === 'socks5' && r.success).length,\n                failed: results.filter(r => r.type === 'socks5' && !r.success).length,\n                paymentRequired: results.filter(r => r.type === 'socks5' && r.isPaymentRequired).length\n            }\n        },\n        timestamp: new Date().toISOString()\n    };\n    \n    console.log(`\\n✅ Working: ${summary.successful}/${summary.total} (${(summary.successful/summary.total*100).toFixed(1)}%)`);\n    console.log(`❌ Failed: ${summary.failed}/${summary.total}`);\n    console.log(`💳 Payment Required: ${summary.paymentRequired}/${summary.total}`);\n    \n    console.log(`\\nHTTP Proxies: ${summary.byType.http.successful}/${summary.byType.http.total} working`);\n    console.log(`SOCKS5 Proxies: ${summary.byType.socks5.successful}/${summary.byType.socks5.total} working`);\n    \n    // List payment-required proxies\n    const paymentProxies = results.filter(r => r.isPaymentRequired);\n    if (paymentProxies.length > 0) {\n        console.log('\\n💳 Proxies requiring payment:');\n        paymentProxies.forEach(p => {\n            console.log(`   ${p.label} (${p.type}): ${p.error}`);\n        });\n    }\n    \n    // List other failed proxies\n    const otherFailed = results.filter(r => !r.success && !r.isPaymentRequired);\n    if (otherFailed.length > 0) {\n        console.log('\\n❌ Other failed proxies:');\n        otherFailed.forEach(p => {\n            console.log(`   ${p.label} (${p.type}): ${p.error}`);\n        });\n    }\n    \n    // Save results if requested\n    if (saveResults) {\n        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');\n        const filename = `proxy-test-results-${timestamp}.json`;\n        const outputPath = `./output/${filename}`;\n        \n        await fs.ensureDir('./output');\n        await fs.writeJson(outputPath, {\n            summary,\n            results,\n            testConfig: { timeout, maxConcurrent }\n        }, { spaces: 2 });\n        \n        console.log(`\\n💾 Results saved to: ${outputPath}`);\n    }\n    \n    return { summary, results };\n}\n\n// CLI usage\nif (import.meta.url === `file://${process.argv[1]}`) {\n    const args = process.argv.slice(2);\n    const options = {\n        timeout: 15000,\n        maxConcurrent: 5,\n        saveResults: true\n    };\n    \n    // Parse command line arguments\n    for (let i = 0; i < args.length; i++) {\n        switch (args[i]) {\n            case '--timeout':\n                options.timeout = parseInt(args[++i]) || 15000;\n                break;\n            case '--concurrent':\n                options.maxConcurrent = parseInt(args[++i]) || 5;\n                break;\n            case '--no-save':\n                options.saveResults = false;\n                break;\n            case '--help':\n                console.log(`\nUsage: node test-all-proxies.js [options]\n\nOptions:\n  --timeout <ms>       Request timeout in milliseconds (default: 15000)\n  --concurrent <n>     Max concurrent tests (default: 5)\n  --no-save           Don't save results to file\n  --help              Show this help\n\nExamples:\n  node test-all-proxies.js\n  node test-all-proxies.js --timeout 10000 --concurrent 3\n  node test-all-proxies.js --no-save\n`);\n                process.exit(0);\n                break;\n        }\n    }\n    \n    testAllProxies(options)\n        .then(({ summary }) => {\n            const successRate = (summary.successful / summary.total * 100).toFixed(1);\n            console.log(`\\n🎉 Proxy testing complete! ${summary.successful}/${summary.total} proxies working (${successRate}%)`);\n            \n            if (summary.failed > 0) {\n                console.log(`⚠️  ${summary.failed} proxies failed (${summary.paymentRequired} require payment)`);\n            }\n            \n            process.exit(summary.successful > 0 ? 0 : 1);\n        })\n        .catch(error => {\n            console.error('💥 Error testing proxies:', error.message);\n            process.exit(1);\n        });\n}\n\nexport { testAllProxies };\n
+            process.exit(summary.successful > 0 ? 0 : 1);
+        })
+        .catch(error => {
+            console.error('💥 Error testing proxies:', error.message);
+            process.exit(1);
+        });
+}
+
+export { testAllProxies };

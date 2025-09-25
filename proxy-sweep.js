@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { ProxyManager } from './src/ProxyManager.js';
 import fs from 'fs-extra';
+import http from 'http';
 
 /**
- * Comprehensive proxy validation sweep with parallel processing and jitter
+ * Comprehensive proxy validation        console.log(`
+📦 Batch ${batchIndex + 1}/${batches.length}: Testing ${batch.length} proxies...`);sweep with parallel processing and jitter
  */
 async function sweepProxyValidation(options = {}) {
     const { 
@@ -12,6 +13,7 @@ async function sweepProxyValidation(options = {}) {
         maxConcurrent = 50, 
         jitterMs = 100,
         saveResults = true,
+        updateProxies = false,
         onlyTestWorking = false 
     } = options;
     
@@ -39,11 +41,12 @@ async function sweepProxyValidation(options = {}) {
             console.log(`📡 [${index + 1}/${allProxies.length}] Testing ${proxy.customName} (${proxy.country}) - ${proxy.host}:${proxy.port}`);
             
             const result = await testProxyConnectivity(proxy, timeout);
-            
             const testDuration = Date.now() - testStart;
             
             const status = {
                 index: index + 1,
+                _id: proxy._id, // Include _id for proper matching
+                id: proxy.id,   // Include id as backup
                 customName: proxy.customName,
                 country: proxy.country,
                 host: proxy.host,
@@ -77,6 +80,8 @@ async function sweepProxyValidation(options = {}) {
             
             const status = {
                 index: index + 1,
+                _id: proxy._id, // Include _id for proper matching
+                id: proxy.id,   // Include id as backup
                 customName: proxy.customName,
                 country: proxy.country,
                 host: proxy.host,
@@ -110,7 +115,7 @@ async function sweepProxyValidation(options = {}) {
     
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
-        console.log(`\n📦 Batch ${batchIndex + 1}/${batches.length}: Testing ${batch.length} proxies...`);
+        console.log(`\\n📦 Batch ${batchIndex + 1}/${batches.length}: Testing ${batch.length} proxies...`);
         
         const batchPromises = batch.map((proxy, batchItemIndex) => {
             const globalIndex = batchIndex * maxConcurrent + batchItemIndex;
@@ -148,6 +153,405 @@ async function sweepProxyValidation(options = {}) {
     const totalDuration = Date.now() - startTime;
     
     // Generate comprehensive summary
-    console.log('\n' + '━'.repeat(80));
+    console.log('\\n' + '━'.repeat(80));
     console.log('📊 Proxy Validation Sweep Results');
-    console.log('━'.repeat(80));\n    \n    const summary = generateSummary(results, totalDuration);\n    displaySummary(summary);\n    \n    // Save detailed results\n    if (saveResults) {\n        await saveResults(results, summary, {\n            timeout,\n            maxConcurrent,\n            jitterMs,\n            onlyTestWorking\n        });\n    }\n    \n    return { results, summary };\n}\n\n/**\n * Test individual proxy connectivity\n */\nasync function testProxyConnectivity(proxy, timeout) {\n    const testServices = [\n        'http://icanhazip.com',\n        'http://ipv4.icanhazip.com',\n        'http://checkip.amazonaws.com'\n    ];\n    \n    for (const service of testServices) {\n        try {\n            const result = await makeProxyRequest(service, proxy, timeout);\n            \n            if (result.isProxyError) {\n                const isPaymentRequired = result.statusCode === 401 || result.statusCode === 402 ||\n                                        result.error.toLowerCase().includes('payment') ||\n                                        result.error.toLowerCase().includes('subscription');\n                                        \n                const isAuthRequired = result.statusCode === 407 ||\n                                     result.error.toLowerCase().includes('authentication');\n                \n                return {\n                    success: false,\n                    error: result.error,\n                    statusCode: result.statusCode,\n                    isPaymentRequired,\n                    isAuthRequired,\n                    service\n                };\n            }\n            \n            return {\n                success: true,\n                ip: result.ip,\n                service,\n                latency: result.latency\n            };\n            \n        } catch (error) {\n            // Try next service\n            continue;\n        }\n    }\n    \n    return {\n        success: false,\n        error: 'All test services failed',\n        isPaymentRequired: false,\n        isAuthRequired: false\n    };\n}\n\n/**\n * Make HTTP request through proxy\n */\nasync function makeProxyRequest(url, proxy, timeout) {\n    const http = await import('http');\n    \n    return new Promise((resolve, reject) => {\n        const startTime = Date.now();\n        \n        const options = {\n            hostname: proxy.host,\n            port: proxy.port,\n            path: url,\n            method: 'GET',\n            headers: {\n                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',\n                'Accept': '*/*',\n                'Connection': 'close'\n            },\n            timeout\n        };\n        \n        // Add proxy authentication\n        if (proxy.username && proxy.password) {\n            const auth = Buffer.from(`${proxy.username}:${proxy.password}`).toString('base64');\n            options.headers['Proxy-Authorization'] = `Basic ${auth}`;\n        }\n        \n        const req = http.default.request(options, (res) => {\n            let data = '';\n            res.setEncoding('utf8');\n            \n            res.on('data', (chunk) => { data += chunk; });\n            \n            res.on('end', () => {\n                const latency = Date.now() - startTime;\n                \n                // Check for proxy errors\n                if (res.statusCode === 407) {\n                    return resolve({\n                        isProxyError: true,\n                        error: 'Proxy authentication required (407)',\n                        statusCode: res.statusCode\n                    });\n                }\n                \n                if (res.statusCode === 401 || res.statusCode === 402) {\n                    return resolve({\n                        isProxyError: true,\n                        error: `Proxy requires payment/auth (${res.statusCode})`,\n                        statusCode: res.statusCode\n                    });\n                }\n                \n                if (res.statusCode >= 400) {\n                    return resolve({\n                        isProxyError: true,\n                        error: `HTTP ${res.statusCode}: ${data.slice(0, 100)}`,\n                        statusCode: res.statusCode\n                    });\n                }\n                \n                // Extract IP from response\n                const ip = data.trim().split('\\n')[0];\n                \n                if (ip && /^\\d{1,3}(\\.\\d{1,3}){3}$/.test(ip)) {\n                    resolve({ ip, latency, isProxyError: false });\n                } else {\n                    reject(new Error(`Invalid IP response: ${data.slice(0, 100)}`));\n                }\n            });\n        });\n        \n        req.on('timeout', () => {\n            req.destroy();\n            reject(new Error('Request timeout'));\n        });\n        \n        req.on('error', (error) => {\n            reject(error);\n        });\n        \n        req.setTimeout(timeout);\n        req.end();\n    });\n}\n\n/**\n * Generate comprehensive summary statistics\n */\nfunction generateSummary(results, totalDuration) {\n    const successful = results.filter(r => r.success);\n    const failed = results.filter(r => !r.success);\n    const paymentRequired = results.filter(r => r.isPaymentRequired);\n    const authRequired = results.filter(r => r.isAuthRequired);\n    \n    // Group by country\n    const byCountry = results.reduce((acc, result) => {\n        const country = result.country || 'Unknown';\n        if (!acc[country]) {\n            acc[country] = { total: 0, working: 0, failed: 0 };\n        }\n        acc[country].total++;\n        if (result.success) {\n            acc[country].working++;\n        } else {\n            acc[country].failed++;\n        }\n        return acc;\n    }, {});\n    \n    // Group by connection type\n    const byConnectionType = results.reduce((acc, result) => {\n        const type = result.connectionType || 'Unknown';\n        if (!acc[type]) {\n            acc[type] = { total: 0, working: 0, failed: 0 };\n        }\n        acc[type].total++;\n        if (result.success) {\n            acc[type].working++;\n        } else {\n            acc[type].failed++;\n        }\n        return acc;\n    }, {});\n    \n    return {\n        total: results.length,\n        successful: successful.length,\n        failed: failed.length,\n        paymentRequired: paymentRequired.length,\n        authRequired: authRequired.length,\n        successRate: (successful.length / results.length * 100),\n        byCountry,\n        byConnectionType,\n        avgLatency: successful.length > 0 ? successful.reduce((sum, r) => sum + (r.latency || 0), 0) / successful.length : 0,\n        totalDuration,\n        timestamp: new Date().toISOString()\n    };\n}\n\n/**\n * Display summary to console\n */\nfunction displaySummary(summary) {\n    console.log(`\\n✅ Working: ${summary.successful}/${summary.total} (${summary.successRate.toFixed(1)}%)`);\n    console.log(`❌ Failed: ${summary.failed}/${summary.total}`);\n    console.log(`💳 Payment Required: ${summary.paymentRequired}/${summary.total}`);\n    console.log(`🔐 Auth Required: ${summary.authRequired}/${summary.total}`);\n    \n    if (summary.successful > 0) {\n        console.log(`⚡ Average Latency: ${summary.avgLatency.toFixed(0)}ms`);\n    }\n    \n    console.log(`⏱️  Total Duration: ${(summary.totalDuration / 1000).toFixed(1)}s`);\n    \n    // Country breakdown\n    console.log('\\n🌍 By Country:');\n    Object.entries(summary.byCountry)\n        .sort(([,a], [,b]) => b.working - a.working)\n        .slice(0, 10)\n        .forEach(([country, stats]) => {\n            const rate = (stats.working / stats.total * 100).toFixed(1);\n            console.log(`   ${country}: ${stats.working}/${stats.total} (${rate}%)`);\n        });\n    \n    // Connection type breakdown\n    console.log('\\n🔗 By Connection Type:');\n    Object.entries(summary.byConnectionType).forEach(([type, stats]) => {\n        const rate = (stats.working / stats.total * 100).toFixed(1);\n        console.log(`   ${type}: ${stats.working}/${stats.total} (${rate}%)`);\n    });\n}\n\n/**\n * Save results to files\n */\nasync function saveResults(results, summary, config) {\n    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');\n    const outputDir = './output';\n    \n    await fs.ensureDir(outputDir);\n    \n    // Save detailed results\n    const detailedFile = `${outputDir}/proxy-sweep-${timestamp}.json`;\n    await fs.writeJson(detailedFile, {\n        summary,\n        results,\n        config\n    }, { spaces: 2 });\n    \n    // Save working proxies list\n    const workingProxies = results.filter(r => r.success);\n    const workingFile = `${outputDir}/working-proxies-${timestamp}.json`;\n    await fs.writeJson(workingFile, workingProxies, { spaces: 2 });\n    \n    // Save CSV for analysis\n    const csvFile = `${outputDir}/proxy-sweep-${timestamp}.csv`;\n    const csvHeader = 'customName,country,host,port,connectionType,success,ip,latency,error,isPaymentRequired,isAuthRequired\\n';\n    const csvRows = results.map(r => [\n        r.customName,\n        r.country,\n        r.host,\n        r.port,\n        r.connectionType,\n        r.success,\n        r.ip || '',\n        r.latency || '',\n        (r.error || '').replace(/,/g, ';'),\n        r.isPaymentRequired,\n        r.isAuthRequired\n    ].join(','));\n    \n    await fs.writeFile(csvFile, csvHeader + csvRows.join('\\n'));\n    \n    console.log(`\\n💾 Results saved:`);\n    console.log(`   Detailed: ${detailedFile}`);\n    console.log(`   Working: ${workingFile}`);\n    console.log(`   CSV: ${csvFile}`);\n}\n\n// CLI usage\nif (import.meta.url === `file://${process.argv[1]}`) {\n    const args = process.argv.slice(2);\n    const options = {\n        timeout: 8000,\n        maxConcurrent: 50,\n        jitterMs: 100,\n        saveResults: true,\n        onlyTestWorking: false\n    };\n    \n    // Parse command line arguments\n    for (let i = 0; i < args.length; i++) {\n        switch (args[i]) {\n            case '--timeout':\n                options.timeout = parseInt(args[++i]) || 8000;\n                break;\n            case '--concurrent':\n                options.maxConcurrent = parseInt(args[++i]) || 50;\n                break;\n            case '--jitter':\n                options.jitterMs = parseInt(args[++i]) || 100;\n                break;\n            case '--working-only':\n                options.onlyTestWorking = true;\n                break;\n            case '--all':\n                options.onlyTestWorking = false;\n                break;\n            case '--no-save':\n                options.saveResults = false;\n                break;\n            case '--help':\n                console.log(`\nUsage: node proxy-sweep.js [options]\n\nOptions:\n  --timeout <ms>       Request timeout in milliseconds (default: 8000)\n  --concurrent <n>     Max concurrent tests (default: 50)\n  --jitter <ms>        Random delay between requests (default: 100)\n  --working-only       Only test proxies marked as working\n  --all               Test all proxies (default)\n  --no-save           Don't save results to files\n  --help              Show this help\n\nExamples:\n  node proxy-sweep.js\n  node proxy-sweep.js --concurrent 30 --timeout 10000\n  node proxy-sweep.js --working-only --jitter 200\n`);\n                process.exit(0);\n                break;\n        }\n    }\n    \n    sweepProxyValidation(options)\n        .then(({ summary }) => {\n            const successRate = summary.successRate.toFixed(1);\n            console.log(`\\n🎉 Proxy validation sweep complete!`);\n            console.log(`✅ ${summary.successful}/${summary.total} proxies working (${successRate}%)`);\n            \n            if (summary.failed > 0) {\n                console.log(`⚠️  ${summary.failed} proxies failed (${summary.paymentRequired} payment required, ${summary.authRequired} auth required)`);\n            }\n            \n            process.exit(summary.successful > 0 ? 0 : 1);\n        })\n        .catch(error => {\n            console.error('💥 Error during proxy sweep:', error.message);\n            process.exit(1);\n        });\n}\n\nexport { sweepProxyValidation };
+    console.log('━'.repeat(80));
+    
+    const summary = generateSummary(results, totalDuration);
+    displaySummary(summary);
+    
+    // Save detailed results
+    if (saveResults) {
+        await saveResultsToFiles(results, summary, {
+            timeout,
+            maxConcurrent,
+            jitterMs,
+            onlyTestWorking
+        });
+    }
+
+    // Optionally update the original proxies JSON with the latest status
+    if (updateProxies) {
+        try {
+            await saveUpdatedProxiesFile(results);
+        } catch (err) {
+            console.warn(`⚠️  Could not update proxies file: ${err.message}`);
+        }
+    }
+    
+    return { results, summary };
+}
+
+/**
+ * Test individual proxy connectivity
+ */
+async function testProxyConnectivity(proxy, timeout) {
+    const testServices = [
+        'http://icanhazip.com',
+        'http://ipv4.icanhazip.com',
+        'http://checkip.amazonaws.com'
+    ];
+    
+    for (const service of testServices) {
+        try {
+            const result = await makeProxyRequest(service, proxy, timeout);
+            
+            if (result.isProxyError) {
+                const isPaymentRequired = result.statusCode === 401 || result.statusCode === 402 ||
+                                        result.error.toLowerCase().includes('payment') ||
+                                        result.error.toLowerCase().includes('subscription');
+                                        
+                const isAuthRequired = result.statusCode === 407 ||
+                                     result.error.toLowerCase().includes('authentication');
+                
+                return {
+                    success: false,
+                    error: result.error,
+                    statusCode: result.statusCode,
+                    isPaymentRequired,
+                    isAuthRequired,
+                    service
+                };
+            }
+            
+            return {
+                success: true,
+                ip: result.ip,
+                service,
+                latency: result.latency
+            };
+            
+        } catch (error) {
+            // Try next service
+            continue;
+        }
+    }
+    
+    return {
+        success: false,
+        error: 'All test services failed',
+        isPaymentRequired: false,
+        isAuthRequired: false
+    };
+}
+
+/**
+ * Make HTTP request through proxy
+ */
+async function makeProxyRequest(url, proxy, timeout) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        // Use absolute-form request path and set Host header for proxy compatibility
+        const target = new URL(url);
+        const options = {
+            hostname: proxy.host,
+            port: proxy.port,
+            path: url, // absolute-form required when talking to an HTTP proxy
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Accept': '*/*',
+                'Connection': 'close',
+                'Host': target.host,
+                'Proxy-Connection': 'keep-alive'
+            },
+            timeout
+        };
+        
+        // Add proxy authentication if provided
+        if (proxy.username && proxy.password) {
+            const auth = Buffer.from(`${proxy.username}:${proxy.password}`).toString('base64');
+            options.headers['Proxy-Authorization'] = `Basic ${auth}`;
+        }
+        
+        const req = http.request(options, (res) => {
+            let data = '';
+            res.setEncoding('utf8');
+            
+            res.on('data', (chunk) => { data += chunk; });
+            
+            res.on('end', () => {
+                const latency = Date.now() - startTime;
+                
+                // Check for proxy errors
+                if (res.statusCode === 407) {
+                    return resolve({
+                        isProxyError: true,
+                        error: 'Proxy authentication required (407)',
+                        statusCode: res.statusCode
+                    });
+                }
+                
+                if (res.statusCode === 401 || res.statusCode === 402) {
+                    return resolve({
+                        isProxyError: true,
+                        error: `Proxy requires payment/auth (${res.statusCode})`,
+                        statusCode: res.statusCode
+                    });
+                }
+                
+                if (res.statusCode >= 400) {
+                    return resolve({
+                        isProxyError: true,
+                        error: `HTTP ${res.statusCode}: ${data.slice(0, 100)}`,
+                        statusCode: res.statusCode
+                    });
+                }
+                
+                // Extract IP from response
+                const ip = data.trim().split('\n')[0];
+                
+                if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+                    resolve({ ip, latency, isProxyError: false });
+                } else {
+                    reject(new Error(`Invalid IP response: ${data.slice(0, 100)}`));
+                }
+            });
+        });
+        
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('Request timeout'));
+        });
+        
+        req.on('error', (error) => {
+            reject(error);
+        });
+        
+        req.setTimeout(timeout);
+        req.end();
+    });
+}
+
+/**
+ * Generate comprehensive summary statistics
+ */
+function generateSummary(results, totalDuration) {
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+    const paymentRequired = results.filter(r => r.isPaymentRequired);
+    const authRequired = results.filter(r => r.isAuthRequired);
+    
+    // Group by country
+    const byCountry = results.reduce((acc, result) => {
+        const country = result.country || 'Unknown';
+        if (!acc[country]) {
+            acc[country] = { total: 0, working: 0, failed: 0 };
+        }
+        acc[country].total++;
+        if (result.success) {
+            acc[country].working++;
+        } else {
+            acc[country].failed++;
+        }
+        return acc;
+    }, {});
+    
+    // Group by connection type
+    const byConnectionType = results.reduce((acc, result) => {
+        const type = result.connectionType || 'Unknown';
+        if (!acc[type]) {
+            acc[type] = { total: 0, working: 0, failed: 0 };
+        }
+        acc[type].total++;
+        if (result.success) {
+            acc[type].working++;
+        } else {
+            acc[type].failed++;
+        }
+        return acc;
+    }, {});
+    
+    return {
+        total: results.length,
+        successful: successful.length,
+        failed: failed.length,
+        paymentRequired: paymentRequired.length,
+        authRequired: authRequired.length,
+        successRate: (successful.length / results.length * 100),
+        byCountry,
+        byConnectionType,
+        avgLatency: successful.length > 0 ? successful.reduce((sum, r) => sum + (r.latency || 0), 0) / successful.length : 0,
+        totalDuration,
+        timestamp: new Date().toISOString()
+    };
+}
+
+/**
+ * Display summary to console
+ */
+function displaySummary(summary) {
+    console.log(`\n✅ Working: ${summary.successful}/${summary.total} (${summary.successRate.toFixed(1)}%)`);
+    console.log(`❌ Failed: ${summary.failed}/${summary.total}`);
+    console.log(`💳 Payment Required: ${summary.paymentRequired}/${summary.total}`);
+    console.log(`🔐 Auth Required: ${summary.authRequired}/${summary.total}`);
+    
+    if (summary.successful > 0) {
+        console.log(`⚡ Average Latency: ${summary.avgLatency.toFixed(0)}ms`);
+    }
+    
+    console.log(`⏱️  Total Duration: ${(summary.totalDuration / 1000).toFixed(1)}s`);
+    
+    // Country breakdown
+    console.log('\n🌍 By Country:');
+    Object.entries(summary.byCountry)
+        .sort(([,a], [,b]) => b.working - a.working)
+        .slice(0, 10)
+        .forEach(([country, stats]) => {
+            const rate = (stats.working / stats.total * 100).toFixed(1);
+            console.log(`   ${country}: ${stats.working}/${stats.total} (${rate}%)`);
+        });
+    
+    // Connection type breakdown
+    console.log('\n🔗 By Connection Type:');
+    Object.entries(summary.byConnectionType).forEach(([type, stats]) => {
+        const rate = (stats.working / stats.total * 100).toFixed(1);
+        console.log(`   ${type}: ${stats.working}/${stats.total} (${rate}%)`);
+    });
+}
+
+/**
+ * Save results to files
+ */
+async function saveResultsToFiles(results, summary, config) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const outputDir = './output';
+    
+    await fs.ensureDir(outputDir);
+    
+    // Save detailed results
+    const detailedFile = `${outputDir}/proxy-sweep-${timestamp}.json`;
+    await fs.writeJson(detailedFile, {
+        summary,
+        results,
+        config
+    }, { spaces: 2 });
+    
+    // Save working proxies list
+    const workingProxies = results.filter(r => r.success);
+    const workingFile = `${outputDir}/working-proxies-${timestamp}.json`;
+    await fs.writeJson(workingFile, workingProxies, { spaces: 2 });
+    
+    console.log(`\n💾 Results saved:`);
+    console.log(`   Detailed: ${detailedFile}`);
+    console.log(`   Working: ${workingFile}`);
+}
+
+/**
+ * Update original proxies file (`./proxies/http.proxies.v2.json`) with latest status
+ */
+async function saveUpdatedProxiesFile(results) {
+    const proxiesPath = './proxies/http.proxies.v2.json';
+    const backupPath = `./proxies/http.proxies.v2.json.bak-${Date.now()}`;
+
+    // Read current proxies file
+    const proxies = JSON.parse(await fs.readFile(proxiesPath, 'utf8'));
+
+    // Build a lookup by host:port or _id if present
+    const lookup = new Map();
+    proxies.forEach(p => {
+        const key = p._id || `${p.host}:${p.port}`;
+        lookup.set(key, p);
+    });
+
+    // Apply results
+    for (const r of results) {
+        // Try to find matching proxy by index fields or host/port
+        let match = null;
+        if (r._id && lookup.has(r._id)) match = lookup.get(r._id);
+        if (!match && r.host && r.port && lookup.has(`${r.host}:${r.port}`)) match = lookup.get(`${r.host}:${r.port}`);
+
+        if (match) {
+            match.status = r.success === true;
+            match.lastChecked = r.timestamp || new Date().toISOString();
+            match.isPaymentRequired = !!r.isPaymentRequired;
+            match.isAuthRequired = !!r.isAuthRequired;
+            match.lastResult = r.error || (r.success ? 'OK' : 'Failed');
+            match.latency = r.latency || null;
+            match.checkedService = r.service || null;
+        }
+    }
+
+    // Backup original file then write updated
+    await fs.copy(proxiesPath, backupPath);
+    await fs.writeFile(proxiesPath, JSON.stringify(proxies, null, 2), 'utf8');
+    console.log(`💾 Updated proxies file written: ${proxiesPath} (backup: ${backupPath})`);
+}
+
+// CLI usage
+if (import.meta.url === `file://${process.argv[1]}`) {
+    const args = process.argv.slice(2);
+    const options = {
+        timeout: 8000,
+        maxConcurrent: 50,
+        jitterMs: 100,
+        saveResults: true,
+        onlyTestWorking: false
+    };
+    
+    // Parse command line arguments
+    for (let i = 0; i < args.length; i++) {
+        switch (args[i]) {
+            case '--timeout':
+                options.timeout = parseInt(args[++i]) || 8000;
+                break;
+            case '--concurrent':
+                options.maxConcurrent = parseInt(args[++i]) || 50;
+                break;
+            case '--jitter':
+                options.jitterMs = parseInt(args[++i]) || 100;
+                break;
+            case '--working-only':
+                options.onlyTestWorking = true;
+                break;
+            case '--all':
+                options.onlyTestWorking = false;
+                break;
+            case '--no-save':
+                options.saveResults = false;
+                break;
+            case '--update-proxies':
+                options.updateProxies = true;
+                break;
+            case '--help':
+                console.log(`
+Usage: node proxy-sweep.js [options]
+
+Options:
+  --timeout <ms>       Request timeout in milliseconds (default: 8000)
+  --concurrent <n>     Max concurrent tests (default: 50)
+  --jitter <ms>        Random delay between requests (default: 100)
+  --working-only       Only test proxies marked as working
+  --all               Test all proxies (default)
+  --no-save           Don't save results to files
+  --help              Show this help
+
+Examples:
+  node proxy-sweep.js
+  node proxy-sweep.js --concurrent 30 --timeout 10000
+  node proxy-sweep.js --working-only --jitter 200
+`);
+                process.exit(0);
+                break;
+        }
+    }
+    
+    sweepProxyValidation(options)
+        .then(({ summary }) => {
+            const successRate = summary.successRate.toFixed(1);
+            console.log(`\n🎉 Proxy validation sweep complete!`);
+            console.log(`✅ ${summary.successful}/${summary.total} proxies working (${successRate}%)`);
+            
+            if (summary.failed > 0) {
+                console.log(`⚠️  ${summary.failed} proxies failed (${summary.paymentRequired} payment required, ${summary.authRequired} auth required)`);
+            }
+            
+            process.exit(summary.successful > 0 ? 0 : 1);
+        })
+        .catch(error => {
+            console.error('💥 Error during proxy sweep:', error.message);
+            process.exit(1);
+        });
+}
+
+export { sweepProxyValidation };
