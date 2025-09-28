@@ -43,7 +43,7 @@ export class IPTracker {
             'https://api.myip.com',
             'https://wtfismyip.com/text'
         ];
-    
+        const debug = process.env.PROXY_DEBUG === '1';
         const errors = [];
         const timeoutMs = overrides.timeoutMs || this.ipCheckTimeoutMs;
         const maxAttempts = Math.max(1, overrides.maxAttempts || this.ipCheckMaxAttempts);
@@ -54,20 +54,20 @@ export class IPTracker {
             attempts++;
     
             try {
-                console.log(`Trying IP service: ${service} with proxy: ${proxyConfig.server}`);
+                if (debug) console.log(`Trying IP service: ${service} with proxy: ${proxyConfig.server}`);
                 const result = await this.fetchIPFromURL(service, proxyConfig, timeoutMs);
                 
                 if (result.isProxyError) {
                     // Mark proxy as problematic and continue to next service
-                    console.log(`⚠️ Proxy issue detected with ${service}: ${result.error}`);
+                    if (debug) console.log(`⚠️ Proxy issue detected with ${service}: ${result.error}`);
                     errors.push(`${service}: ${result.error} (proxy issue)`);
                     continue;
                 }
                 
-                console.log(`Got IP: ${result.ip} from ${service}`);
+                if (debug) console.log(`Got IP: ${result.ip} from ${service}`);
                 return result.ip;
             } catch (error) {
-                console.log(`Failed to get IP from ${service}:`, error.message);
+                if (debug) console.log(`Failed to get IP from ${service}:`, error.message);
                 errors.push(`${service}: ${error.message}`);
                 continue;
             }
@@ -80,197 +80,15 @@ export class IPTracker {
      * Fetch IP from a specific URL using proxy with enhanced error detection
      */
     async fetchIPFromURL(url, proxyConfig, timeoutMs = 10000) {
-        return new Promise((resolve, reject) => {
-            try {
-                const timeout = timeoutMs;
-                const targetUrl = new URL(url);
-
-                // Choose protocol module for direct/SOCKS5 requests
-                const isHttpsTarget = targetUrl.protocol === 'https:';
-                const httpModule = isHttpsTarget ? https : http;
-
-                // Base options
-                const options = {
-                    timeout,
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Accept': '*/*',
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'Accept-Encoding': 'gzip, deflate',
-                        'Cache-Control': 'no-cache'
-                    },
-                    method: 'GET'
-                };
-
-                // Defensive: ensure proxyConfig is sane
-                if (!proxyConfig || !proxyConfig.server) {
-                    return reject(new Error('Invalid proxy configuration: missing server'));
-                }
-
-                // Proxy handling
-                const server = String(proxyConfig.server || '');
-                if (server.startsWith('socks5://')) {
-                    // SOCKS5 agent handles both http and https targets
-                    options.agent = new SocksProxyAgent(server);
-                    options.hostname = targetUrl.hostname;
-                    options.port = targetUrl.port || (isHttpsTarget ? 443 : 80);
-                    options.path = targetUrl.pathname + targetUrl.search;
-                } else if (server.startsWith('http://')) {
-                    // HTTP proxy: handle both HTTP and HTTPS targets
-                    const proxyUrl = new URL(server);
-                    if (isHttpsTarget) {
-                        // For HTTPS targets through HTTP proxy, use CONNECT method
-                        options.agent = new (isHttpsTarget ? https : http).Agent({
-                            host: proxyUrl.hostname,
-                            port: proxyUrl.port || 80,
-                            auth: proxyConfig.username && proxyConfig.password 
-                                ? `${proxyConfig.username}:${proxyConfig.password}` 
-                                : undefined
-                        });
-                        options.hostname = targetUrl.hostname;
-                        options.port = targetUrl.port || 443;
-                        options.path = targetUrl.pathname + targetUrl.search;
-                    } else {
-                        // For HTTP targets, request absolute URL through proxy
-                        options.hostname = proxyUrl.hostname;
-                        options.port = proxyUrl.port || 80;
-                        options.path = url; // absolute URL for proxy
-                        options.headers['Host'] = targetUrl.host;
-                        options.headers['Proxy-Connection'] = 'keep-alive';
-                        // Proxy auth
-                        if (proxyConfig.username && proxyConfig.password) {
-                            const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
-                            options.headers['Proxy-Authorization'] = `Basic ${auth}`;
-                        }
-                    }
-                } else {
-                    // Direct request (no proxy)
-                    options.hostname = targetUrl.hostname;
-                    options.port = targetUrl.port || (isHttpsTarget ? 443 : 80);
-                    options.path = targetUrl.pathname + targetUrl.search;
-                }
-
-                const req = httpModule.request(options, (res) => {
-                    let data = '';
-                    res.setEncoding('utf8');
-
-                    res.on('data', (chunk) => { data += chunk; });
-
-                    res.on('aborted', () => {
-                        reject(new Error('Response aborted'));
-                    });
-
-                    res.on('error', (err) => {
-                        reject(new Error(`Response error: ${err.message}`));
-                    });
-
-                    res.on('end', () => {
-                        try {
-                            // Check for proxy authentication or payment errors
-                            if (res.statusCode === 401) {
-                                const errorMsg = 'Proxy requires authentication (401 Unauthorized)';
-                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 401 });
-                            }
-                            if (res.statusCode === 402) {
-                                const errorMsg = 'Proxy requires payment (402 Payment Required)';
-                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 402 });
-                            }
-                            if (res.statusCode === 403) {
-                                const errorMsg = 'Proxy access forbidden (403 Forbidden)';
-                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 403 });
-                            }
-                            if (res.statusCode === 407) {
-                                const errorMsg = 'Proxy authentication required (407)';
-                                return resolve({ isProxyError: true, error: errorMsg, statusCode: 407 });
-                            }
-                            if (res.statusCode >= 500) {
-                                const errorMsg = `Proxy server error (${res.statusCode})`;
-                                return resolve({ isProxyError: true, error: errorMsg, statusCode: res.statusCode });
-                            }
-                            
-                            // Check for common proxy error pages in response body
-                            if (data.toLowerCase().includes('payment required') || 
-                                data.toLowerCase().includes('upgrade your plan') ||
-                                data.toLowerCase().includes('subscription expired') ||
-                                data.toLowerCase().includes('insufficient funds')) {
-                                const errorMsg = 'Proxy subscription/payment required';
-                                return resolve({ isProxyError: true, error: errorMsg, statusCode: res.statusCode });
-                            }
-                            
-                            if (res.statusCode !== 200) {
-                                reject(new Error(`HTTP ${res.statusCode}: ${data?.slice(0, 200) || 'No response body'}`));
-                                return;
-                            }
-
-                            let ip;
-                            // Handle different response formats from various services
-                            try {
-                                // Try JSON first (ipify, postman-echo, etc.)
-                                const parsed = JSON.parse(data);
-                                ip = parsed.ip || parsed.origin?.split(',')[0]?.trim();
-                            } catch {
-                                // Fallback to plain text (icanhazip, ident.me, etc.)
-                                ip = (data || '').trim();
-                                
-                                // Handle potential multi-line responses
-                                const lines = ip.split('\n').map(l => l.trim()).filter(l => l);
-                                if (lines.length > 0) {
-                                    ip = lines[0]; // Take first non-empty line
-                                }
-                            }
-
-                            // Validate IPv4 format
-                            if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
-                                // Additional validation: check if octets are in valid range
-                                const octets = ip.split('.').map(Number);
-                                if (octets.every(octet => octet >= 0 && octet <= 255)) {
-                                    return resolve({ ip, isProxyError: false });
-                                }
-                            }
-                            
-                            reject(new Error(`Invalid IP response: ${data?.slice(0, 200) || 'Empty response'}`));
-                        } catch (error) {
-                            reject(error);
-                        }
-                    });
-                });
-
-                // Enhanced error handling
-                req.on('timeout', () => {
-                    try { req.destroy(); } catch (_) {}
-                    reject(new Error('Request timeout'));
-                });
-
-                req.on('abort', () => {
-                    reject(new Error('Request aborted'));
-                });
-
-                req.on('error', (error) => {
-                    // Check for common proxy connection errors
-                    if (error.code === 'ECONNREFUSED') {
-                        error.message += ' (proxy connection refused)';
-                    } else if (error.code === 'ETIMEDOUT') {
-                        error.message += ' (proxy connection timeout)';
-                    } else if (error.code === 'ENOTFOUND') {
-                        error.message += ' (proxy host not found)';
-                    }
-                    reject(error);
-                });
-
-                req.on('socket', (socket) => {
-                    // Prevent unhandled socket errors from crashing the process
-                    const onSockErr = (err) => {
-                        try { req.destroy(err); } catch (_) {}
-                    };
-                    socket.on('error', onSockErr);
-                });
-
-                req.setTimeout(timeout);
-                req.end();
-            } catch (outerErr) {
-                reject(outerErr);
-            }
-        });
+        // Use ProxyManager's improved fetchIPThroughProxy method
+        const { ProxyManager } = await import('./ProxyManager.js');
+        const proxyManager = new ProxyManager();
+        
+        try {
+            return await proxyManager.fetchIPThroughProxy(url, proxyConfig, timeoutMs);
+        } catch (error) {
+            throw error;
+        }
     }
 
     /**

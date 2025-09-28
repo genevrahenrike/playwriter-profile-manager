@@ -720,6 +720,16 @@ export class ProfileLauncher {
                 
                 // Add proxy configuration only if specified
                 if (proxyConfig) {
+                    // Sanitize for logging
+                    const sanitized = {
+                        server: proxyConfig.server,
+                        username: proxyConfig.username ? '***' : undefined,
+                        password: proxyConfig.password ? '***' : undefined,
+                        label: proxyConfig._label,
+                        country: proxyConfig._country,
+                        connectionType: proxyConfig._connectionType
+                    };
+                    console.log(`🧪 Using proxy (pre-launch):`, sanitized);
                     launchOptions.proxy = proxyConfig;
                 }
                 
@@ -734,50 +744,71 @@ export class ProfileLauncher {
                 context = await chromium.launchPersistentContext(profile.userDataDir, launchOptions);
                 browser = context.browser();
                 
-                // Handle proxy authentication if needed
+                // Handle proxy authentication & runtime 407 detection
                 if (proxyConfig && proxyConfig.username && proxyConfig.password) {
-                    console.log('🔐 Setting up proxy authentication handler');
-                    
+                    console.log('🔐 Configuring proxy credentials');
                     try {
-                        // Set credentials for the initial context first
                         await context.setHTTPCredentials({
                             username: proxyConfig.username,
                             password: proxyConfig.password
                         });
-                        
-                        // Set up authentication for all pages created in this context
-                        context.on('page', async (page) => {
+                        console.log('✅ Proxy credentials applied');
+                    } catch (err) {
+                        console.warn(`⚠️  setHTTPCredentials failed: ${err.message}`);
+                    }
+
+                    // Track first 407 to avoid spamming
+                    let authFailureRecorded = false;
+
+                    const markProxyAuthFailure = async (details = {}) => {
+                        if (authFailureRecorded) return;
+                        authFailureRecorded = true;
+                        console.warn(`🚫 Proxy authentication failure detected for ${proxyConfig._label || proxyConfig.server}`);
+                        // Mark proxy in manager so future selections avoid it (best effort)
+                        try {
+                            this.proxyManager.markProxyAsBad(proxyConfig._label || proxyConfig.server, 'AUTH_REQUIRED', false, true);
+                        } catch {}
+                        // Emit event for external batch controller if present
+                        try {
+                            this.emitSessionEvent && this.emitSessionEvent(sessionId, 'PROXY_AUTH_FAILED', { proxy: proxyConfig._label, ...details });
+                        } catch {}
+                        // Optionally close early to avoid popup loops
+                        try {
+                            setTimeout(() => {
+                                if (this.activeBrowsers.has(sessionId)) {
+                                    console.log('� Closing browser due to proxy auth failure');
+                                    this.closeBrowser(sessionId, { clearCache: false }).catch(()=>{});
+                                }
+                            }, 1500);
+                        } catch {}
+                    };
+
+                    // Listen for 407 responses
+                    context.on('response', (resp) => {
+                        try {
+                            if (resp.status() === 407) {
+                                markProxyAuthFailure({ url: resp.url(), status: 407 });
+                            }
+                        } catch {}
+                    });
+
+                    // Fallback: detect auth popups/dialogs
+                    context.on('page', async (page) => {
+                        page.on('dialog', async (dialog) => {
                             try {
-                                // Handle authentication requests
-                                await page.context().setHTTPCredentials({
-                                    username: proxyConfig.username,
-                                    password: proxyConfig.password
-                                });
-                                
-                                // Handle dialogs that might be proxy auth dialogs
-                                page.on('dialog', async (dialog) => {
-                                    try {
-                                        const message = dialog.message().toLowerCase();
-                                        if (message.includes('proxy') || message.includes('username') || message.includes('password')) {
-                                            console.log('🔐 Proxy authentication dialog detected, accepting with credentials');
-                                            // For proxy auth dialogs, we need to provide username and password
-                                            await dialog.accept(proxyConfig.username);
-                                        } else {
-                                            await dialog.dismiss();
-                                        }
-                                    } catch (error) {
-                                        console.warn('⚠️  Dialog handling error:', error.message);
-                                    }
-                                });
-                            } catch (error) {
-                                console.warn('⚠️  Page proxy auth setup error:', error.message);
+                                const msg = dialog.message().toLowerCase();
+                                if (msg.includes('proxy') && (msg.includes('password') || msg.includes('username') || msg.includes('authentication'))) {
+                                    console.log('🔐 Proxy auth dialog detected (will close)');
+                                    await dialog.dismiss();
+                                    markProxyAuthFailure({ dialog: true, message: msg });
+                                } else {
+                                    await dialog.dismiss();
+                                }
+                            } catch (e) {
+                                console.warn('⚠️  Dialog handling error:', e.message);
                             }
                         });
-                        
-                        console.log('✅ Proxy authentication configured successfully');
-                    } catch (error) {
-                        console.warn('⚠️  Proxy authentication setup failed:', error.message);
-                    }
+                    });
                 }
                 
                 // Load cookies if available

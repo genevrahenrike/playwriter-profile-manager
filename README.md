@@ -1288,7 +1288,32 @@ The Playwright Profile Manager now includes comprehensive proxy support for both
 
 ## Proxy Configuration Files
 
-Proxy configurations are stored in JSON files in the `./proxies` folder. The system supports both v1 and v2 formats:
+Proxy configurations are stored in the `./proxies` folder. The system now supports a new high-density colon-delimited list format in addition to the JSON v2 and legacy v1 formats:
+
+### NEW: Colon-Delimited List (Default if present) `./proxies/decode-proxies-global-5k.txt`
+
+Simple line-based format: `host:port:username:password`
+
+Example (first 3 lines):
+```
+dc.decodo.com:10001:USER:PASSWORD
+dc.decodo.com:10002:USER:PASSWORD
+dc.decodo.com:10003:USER:PASSWORD
+```
+
+Loading & Behavior:
+- If this file exists it becomes the primary source (takes precedence over JSON formats)
+- Each line is converted to an internal proxy object with label pattern `Decodo#`
+- `connectionType` defaults to `datacenter`
+- All entries are treated as `status: OK` initially (use sweep tools to validate)
+- Passwords are URL-encoded automatically for the `url` field
+
+Why this format?
+- Faster to provision large (1K–10K) proxy sets
+- Easier copy/paste from providers
+- Minimal cognitive load—no JSON editing
+
+If you need advanced metadata (country filtering, connection type distinctions, latency history) keep using / also provide a v2 JSON file; both can coexist (colon list still wins precedence).
 
 ### HTTP Proxies v2 Format (`./proxies/http.proxies.v2.json`) - **Recommended**
 ```json
@@ -1335,7 +1360,10 @@ Proxy configurations are stored in JSON files in the `./proxies` folder. The sys
 ]
 ```
 
-**Format Priority**: The system automatically loads v2 format if available, otherwise falls back to v1 format.
+**Format Priority** (highest first):
+1. Colon list (`decode-proxies-global-5k.txt`)
+2. v2 JSON (`http.proxies.v2new.json` then `http.proxies.v2.json`)
+3. v1 JSON (`http.proxies.json`) – currently disabled in loader but retained for reference
 
 ### SOCKS5 Proxies (`./proxies/socks5.proxies.json`)
 ```json

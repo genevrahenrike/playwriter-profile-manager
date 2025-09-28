@@ -1682,6 +1682,10 @@ program
     .option('--credentials-file <path>', 'Path to JSON mapping profileName -> { email, password } (supports "default" key)')
     .option('--email <email>', 'Email to use for autologin (overrides credentials-file)')
     .option('--password <password>', 'Password to use for autologin (overrides credentials-file)')
+    // Direct login flow options
+    .option('--direct-login', 'Skip extension loading and navigate directly to login page for autofill')
+    .option('--no-extensions', 'Disable extension loading (useful for known successful profiles)')
+    .option('--login-url <url>', 'Custom login URL to navigate to', 'https://app.vidiq.com/auth/login')
     .action(async (options) => {
         const resultsDir = path.resolve('./automation-results');
         await fs.ensureDir(resultsDir);
@@ -1944,13 +1948,19 @@ program
             let exportedPath = null;
 
             try {
+                // Configure for direct login flow if requested
+                const isDirectLogin = options.directLogin || options.noExtensions;
+                const shouldEnableAutofill = isDirectLogin || autologinEnabled;
+                
                 const launchOptions = {
                     browserType: 'chromium',
                     headless: !!options.headless,
-                    // Disable autofill monitoring for refresh flows to avoid interacting with login pages
-                    enableAutofillMonitoring: false,
+                    // Enable autofill monitoring for direct login flows, disable for standard refresh
+                    enableAutofillMonitoring: shouldEnableAutofill,
                     enableAutomation: false,
                     enableRequestCapture: true,
+                    // Disable extensions for direct login flow
+                    autoLoadExtensions: !isDirectLogin,
                     autoCloseOnSuccess: false,
                     autoCloseOnFailure: false,
                     autoCloseTimeout: 0,
@@ -1970,11 +1980,19 @@ program
                 const res = await launcher.launchProfile(profile.id, launchOptions);
                 sessionId = res.sessionId;
 
-                // Navigate to VidIQ dashboard
+                // Log flow mode
+                if (isDirectLogin) {
+                    console.log(chalk.cyan(`🔐 Direct login mode: extensions disabled, autofill enabled`));
+                } else {
+                    console.log(chalk.dim(`🔄 Standard refresh mode: extensions enabled, autofill disabled`));
+                }
+
+                // Navigate to appropriate URL
                 const page = res.page;
-                console.log(chalk.dim('↪️  Navigating to https://app.vidiq.com/dashboard ...'));
+                const targetUrl = isDirectLogin ? (options.loginUrl || 'https://app.vidiq.com/auth/login') : 'https://app.vidiq.com/dashboard';
+                console.log(chalk.dim(`↪️  Navigating to ${targetUrl} ...`));
                 try {
-                    await page.goto('https://app.vidiq.com/dashboard', { waitUntil: 'domcontentloaded', timeout: Math.min(perRunTimeout, 45000) });
+                    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: Math.min(perRunTimeout, 45000) });
                 } catch (navErr) {
                     console.log(chalk.yellow(`⚠️  Navigation warning: ${navErr.message}`));
                 }
@@ -1985,6 +2003,7 @@ program
                 let loginProbeSaved = false;
                 let loginFlow = 'unknown';
                 let loginDetected = false;
+                let autofillAttempted = false;
 
                 const probeAndSnapshotLogin = async () => {
                     const probe = await detectLoginPage(page);
@@ -2012,8 +2031,24 @@ program
                     }
                 };
 
+                // Check autofill system completion status
+                const checkAutofillCompletion = () => {
+                    if (!shouldEnableAutofill || !launcher.autofillSystem) return false;
+                    try {
+                        const status = launcher.autofillSystem.getSessionCompletionStatus(sessionId);
+                        return status && status.hasCompletions && status.hooksCompleted > 0;
+                    } catch (_) {
+                        return false;
+                    }
+                };
+
                 // Initial quick probe after navigation
                 await probeAndSnapshotLogin();
+
+                // For direct login mode, give some time for autofill to potentially trigger
+                if (isDirectLogin && shouldEnableAutofill) {
+                    console.log(chalk.dim('🎯 Direct login mode: waiting for autofill system...'));
+                }
 
                 while (true) {
                     const captured = launcher.requestCaptureSystem.getCapturedRequests(sessionId) || [];
@@ -2021,11 +2056,21 @@ program
                     if (outcome.success) break;
 
                     const elapsed = Date.now() - start;
+                    
+                    // Check if autofill completed successfully (for direct login flow)
+                    const autofillCompleted = checkAutofillCompletion();
+                    if (autofillCompleted && !autofillAttempted) {
+                        autofillAttempted = true;
+                        console.log(chalk.green('✅ Autofill completed - checking for API traffic...'));
+                        // Give some time for login API requests to complete
+                        await new Promise(r => setTimeout(r, 3000));
+                        continue;
+                    }
 
-                    // If likely on login page and no success yet, optionally attempt autologin
+                    // If likely on login page and no success yet, optionally attempt manual autologin
                     if (!outcome.success && elapsed > 3000) {
                         await probeAndSnapshotLogin();
-                        if (loginDetected) {
+                        if (loginDetected && !isDirectLogin) { // Only use manual autologin for non-direct-login flows
                             if (autologinEnabled) {
                                 try {
                                     // Analyze current login UI and attempt guarded autologin
@@ -2118,7 +2163,12 @@ program
                     api2xxCount: outcome.api2xxCount || 0,
                     loginRequired: outcome.reason === 'login_required',
                     loginFlow: outcome.reason === 'login_required' ? loginFlow : undefined,
-                    captureExport: exportedPath || undefined
+                    captureExport: exportedPath || undefined,
+                    // Add flow mode information
+                    flowMode: isDirectLogin ? 'direct_login' : 'standard_refresh',
+                    extensionsDisabled: isDirectLogin,
+                    autofillEnabled: shouldEnableAutofill,
+                    autofillCompleted: autofillAttempted
                 };
 
                 await writeResult(resultLine);
@@ -2129,10 +2179,16 @@ program
                                   outcome.reason === 'signin_success' ? 'Signin OK' :
                                   outcome.reason === 'session_valid' ? 'Session valid' :
                                   outcome.reason === 'api_activity_detected' ? 'API active' : 'Success';
-                    console.log(chalk.green(`✅ ${label} for ${profile.name} (api2xx=${resultLine.api2xxCount})`));
+                    const flowInfo = isDirectLogin ? ' (direct login)' : ' (standard)';
+                    console.log(chalk.green(`✅ ${label} for ${profile.name}${flowInfo} (api2xx=${resultLine.api2xxCount})`));
                 } else if (outcome.reason === 'login_required') {
-                    console.log(chalk.yellow(`🔐 Login required for ${profile.name} (${loginFlow})`));
-                    console.log(chalk.dim('Saved login page sample for analysis. Credentials-based autofill can be added later.'));
+                    const flowInfo = isDirectLogin ? ' - Direct login mode enabled' : '';
+                    console.log(chalk.yellow(`🔐 Login required for ${profile.name} (${loginFlow})${flowInfo}`));
+                    if (isDirectLogin) {
+                        console.log(chalk.dim('Autofill monitoring was enabled for login form interaction.'));
+                    } else {
+                        console.log(chalk.dim('Saved login page sample for analysis. Use --direct-login for autofill assistance.'));
+                    }
                 } else {
                     console.log(chalk.red(`❌ Refresh failed for ${profile.name}: ${outcome.reason}`));
                 }
@@ -2157,7 +2213,11 @@ program
         console.log(chalk.cyan(`\n📊 Refresh summary: processed=${processed}, successes=${successes}`));
         console.log(chalk.dim(`Results file: ${resultsFile}`));
         console.log(chalk.dim('Success criteria: token refresh/signin/session validation or significant API activity.'));
-        console.log(chalk.dim('Login-required profiles saved with HTML/screenshot for flow analysis (email-first vs email+password).'));
+        console.log(chalk.dim(''));
+        console.log(chalk.dim('💡 Usage modes:'));
+        console.log(chalk.dim('  • Standard: Extensions enabled, monitors existing sessions (default)'));
+        console.log(chalk.dim('  • Direct login: --direct-login disables extensions, enables autofill for login'));
+        console.log(chalk.dim('  • No extensions: --no-extensions disables extensions for known successful profiles'));
     });
 
 // Enhanced refresh for profiles without credentials (extension install detection + signup flow)

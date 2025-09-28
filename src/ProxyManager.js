@@ -9,6 +9,8 @@ export class ProxyManager {
     constructor(options = {}) {
         this.proxiesDir = options.proxiesDir || path.join(__dirname, '../proxies');
         this.httpProxiesFile = path.join(this.proxiesDir, 'http.proxies.json');
+        // New Decodo style colon-delimited list (host:port:user:pass) - now the preferred default
+        this.colonListFile = path.join(this.proxiesDir, 'decode-proxies-global-5k.txt');
     // Accept either the newer v2 filename or the common `http.proxies.v2.json`
     this.httpProxiesV2File = path.join(this.proxiesDir, 'http.proxies.v2new.json');
     this.httpProxiesV2AltFile = path.join(this.proxiesDir, 'http.proxies.v2.json');
@@ -28,8 +30,13 @@ export class ProxyManager {
      */
     async loadProxies() {
         try {
-            // Load HTTP proxies - try v2 format first, then fallback to v1
-            if (await fs.pathExists(this.httpProxiesV2File)) {
+            // Load HTTP proxies - try new colon list first, then v2 formats, then (disabled) v1
+            if (await fs.pathExists(this.colonListFile)) {
+                const raw = await fs.readFile(this.colonListFile, 'utf8');
+                const parsed = this.parseColonList(raw);
+                this.loadedProxies.http = parsed;
+                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (colon list)`);
+            } else if (await fs.pathExists(this.httpProxiesV2File)) {
                 const httpV2Data = await fs.readJson(this.httpProxiesV2File);
                 this.loadedProxies.http = Array.isArray(httpV2Data) ? this.convertV2ToV1Format(httpV2Data) : [];
                 console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v2 format: v2new)`);
@@ -56,6 +63,51 @@ export class ProxyManager {
         } catch (error) {
             console.warn(`⚠️  Could not load proxies: ${error.message}`);
         }
+    }
+
+    /**
+     * Parse colon-delimited proxy list (host:port:username:password per line)
+     * Returns array in internal v1-compatible shape
+     */
+    parseColonList(text) {
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+        const proxies = [];
+        let count = 0;
+        for (const line of lines) {
+            const parts = line.split(':');
+            if (parts.length < 4) continue; // skip invalid lines
+            const [host, portStr, username, password] = parts;
+            const port = parseInt(portStr, 10);
+            if (!host || !port || !username || !password) continue;
+            count += 1;
+            const label = `Decodo${count}`; // simple incremental label
+            proxies.push({
+                label,
+                host,
+                port,
+                login: username,
+                username,
+                password,
+                url: `http://${username}:${encodeURIComponent(password)}@${host}:${port}`,
+                status: 'OK',
+                lastChecked: null,
+                // Provide baseline fields expected by filters
+                country: null,
+                connectionType: 'datacenter',
+                mode: 'http',
+                profiles: [],
+                profilesCount: 0,
+                checkDate: null,
+                createdAt: null,
+                timezone: null,
+                isPaymentRequired: false,
+                isAuthRequired: false,
+                lastResult: null,
+                latency: null,
+                checkedService: null
+            });
+        }
+        return proxies;
     }
 
     /**
@@ -393,6 +445,12 @@ export class ProxyManager {
         }
 
         const config = this.toPlaywrightProxy(selectedProxy);
+        // Attach metadata for debugging and downstream logic (non-Playwright fields start with underscore)
+        if (config) {
+            config._label = selectedProxy.label;
+            config._country = selectedProxy.country;
+            config._connectionType = selectedProxy.connectionType;
+        }
         const connectionInfo = selectedProxy.connectionType ? ` [${selectedProxy.connectionType}]` : '';
         const countryInfo = selectedProxy.country ? ` (${selectedProxy.country})` : '';
         console.log(`🌐 Selected proxy: ${selectedProxy.label}${connectionInfo}${countryInfo} - ${selectedProxy.host}:${selectedProxy.port}`);
@@ -527,64 +585,103 @@ export class ProxyManager {
             const startTime = Date.now();
             const targetUrl = new URL(url);
             const isHttpsTarget = targetUrl.protocol === 'https:';
-            const httpModule = isHttpsTarget ? https.default : http.default;
 
-            const options = {
-                timeout,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-                    'Accept': 'text/plain, */*',
-                    'Accept-Language': 'en-US,en;q=0.9'
-                },
-                method: 'GET'
-            };
-
-            // Configure proxy
-            if (proxyConfig.server.startsWith('http://')) {
-                const proxyUrl = new URL(proxyConfig.server);
-                
-                if (isHttpsTarget) {
-                    // HTTPS through HTTP proxy
-                    options.hostname = targetUrl.hostname;
-                    options.port = targetUrl.port || 443;
-                    options.path = targetUrl.pathname + targetUrl.search;
-                } else {
-                    // HTTP through HTTP proxy
-                    options.hostname = proxyUrl.hostname;
-                    options.port = proxyUrl.port || 80;
-                    options.path = url; // absolute URL
-                    options.headers['Host'] = targetUrl.host;
-                    options.headers['Proxy-Connection'] = 'keep-alive';
-                    
-                    if (proxyConfig.username && proxyConfig.password) {
-                        const auth = Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64');
-                        options.headers['Proxy-Authorization'] = `Basic ${auth}`;
-                    }
-                }
-            } else {
-                // Direct connection (no proxy)
-                options.hostname = targetUrl.hostname;
-                options.port = targetUrl.port || (isHttpsTarget ? 443 : 80);
-                options.path = targetUrl.pathname + targetUrl.search;
+            // Configure proxy from proxyConfig.server
+            if (!proxyConfig.server.startsWith('http://')) {
+                return reject(new Error('Only HTTP proxies are supported'));
             }
 
-            const req = httpModule.request(options, (res) => {
-                let data = '';
-                res.setEncoding('utf8');
+            const proxyUrl = new URL(proxyConfig.server);
+            const proxyAuth = proxyConfig.username && proxyConfig.password ? 
+                Buffer.from(`${proxyConfig.username}:${proxyConfig.password}`).toString('base64') : null;
 
-                res.on('data', (chunk) => { data += chunk; });
-                res.on('end', () => {
-                    const latency = Date.now() - startTime;
-                    
-                    // Check for proxy errors
-                    if (res.statusCode === 401 || res.statusCode === 407) {
+            if (isHttpsTarget) {
+                // HTTPS through HTTP proxy requires CONNECT tunneling
+                this.fetchHTTPSThroughProxy(targetUrl, proxyUrl, proxyAuth, timeout)
+                    .then(result => resolve({ ...result, latency: Date.now() - startTime }))
+                    .catch(reject);
+            } else {
+                // HTTP through HTTP proxy
+                const options = {
+                    hostname: proxyUrl.hostname,
+                    port: proxyUrl.port || 80,
+                    path: url, // Full URL for HTTP proxy
+                    method: 'GET',
+                    timeout,
+                    headers: {
+                        'Host': targetUrl.host,
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                        'Accept': 'text/plain, */*',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Proxy-Connection': 'keep-alive'
+                    }
+                };
+
+                // Add proxy authentication if available
+                if (proxyAuth) {
+                    options.headers['Proxy-Authorization'] = `Basic ${proxyAuth}`;
+                }
+
+                const req = http.default.request(options, (res) => {
+                    this.handleProxyResponse(res, startTime, resolve, reject);
+                });
+
+                req.on('timeout', () => {
+                    req.destroy();
+                    reject(new Error('Request timeout'));
+                });
+
+                req.on('error', (error) => {
+                    reject(error);
+                });
+
+                req.setTimeout(timeout);
+                req.end();
+            }
+        });
+    }
+
+    /**
+     * Fetch HTTPS through HTTP proxy using CONNECT method
+     */
+    async fetchHTTPSThroughProxy(targetUrl, proxyUrl, proxyAuth, timeout) {
+        const https = await import('https');
+        const http = await import('http');
+        
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            
+            // First, establish CONNECT tunnel to proxy
+            const connectOptions = {
+                hostname: proxyUrl.hostname,
+                port: proxyUrl.port || 80,
+                method: 'CONNECT',
+                path: `${targetUrl.hostname}:${targetUrl.port || 443}`,
+                timeout: timeout / 2, // Use half timeout for CONNECT
+                headers: {
+                    'Host': `${targetUrl.hostname}:${targetUrl.port || 443}`,
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                    'Proxy-Connection': 'keep-alive'
+                }
+            };
+
+            // Add proxy authentication if available
+            if (proxyAuth) {
+                connectOptions.headers['Proxy-Authorization'] = `Basic ${proxyAuth}`;
+            }
+
+            const connectReq = http.default.request(connectOptions);
+
+            connectReq.on('connect', (res, socket, head) => {
+                if (res.statusCode !== 200) {
+                    socket.destroy();
+                    if (res.statusCode === 407) {
                         return resolve({
                             isProxyError: true,
                             error: 'Proxy authentication required',
                             statusCode: res.statusCode
                         });
                     }
-                    
                     if (res.statusCode === 402) {
                         return resolve({
                             isProxyError: true,
@@ -592,58 +689,121 @@ export class ProxyManager {
                             statusCode: res.statusCode
                         });
                     }
-                    
-                    if (res.statusCode >= 500) {
-                        return resolve({
-                            isProxyError: true,
-                            error: `Proxy server error (${res.statusCode})`,
-                            statusCode: res.statusCode
-                        });
-                    }
-                    
-                    // Check response content for payment messages
-                    if (data.toLowerCase().includes('payment required') ||
-                        data.toLowerCase().includes('upgrade your plan') ||
-                        data.toLowerCase().includes('subscription expired')) {
-                        return resolve({
-                            isProxyError: true,
-                            error: 'Proxy subscription/payment required',
-                            statusCode: res.statusCode
-                        });
-                    }
-                    
-                    if (res.statusCode !== 200) {
-                        return reject(new Error(`HTTP ${res.statusCode}`));
-                    }
+                    return reject(new Error(`CONNECT failed: ${res.statusCode}`));
+                }
 
-                    // Extract IP from response
-                    let ip;
-                    try {
-                        const parsed = JSON.parse(data);
-                        ip = parsed.ip;
-                    } catch {
-                        ip = data.trim();
+                // Now make HTTPS request through the tunnel
+                const httpsOptions = {
+                    socket: socket,
+                    servername: targetUrl.hostname,
+                    path: targetUrl.pathname + targetUrl.search,
+                    method: 'GET',
+                    timeout: timeout / 2, // Use remaining half timeout
+                    headers: {
+                        'Host': targetUrl.host,
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                        'Accept': 'text/plain, */*',
+                        'Accept-Language': 'en-US,en;q=0.9'
                     }
+                };
 
-                    if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
-                        resolve({ ip, latency, isProxyError: false });
-                    } else {
-                        reject(new Error(`Invalid IP response: ${data.slice(0, 100)}`));
-                    }
+                const httpsReq = https.default.request(httpsOptions, (httpsRes) => {
+                    this.handleProxyResponse(httpsRes, startTime, resolve, reject);
                 });
+
+                httpsReq.on('timeout', () => {
+                    socket.destroy();
+                    reject(new Error('HTTPS request timeout'));
+                });
+
+                httpsReq.on('error', (error) => {
+                    socket.destroy();
+                    reject(error);
+                });
+
+                httpsReq.setTimeout(timeout / 2);
+                httpsReq.end();
             });
 
-            req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('Request timeout'));
-            });
-
-            req.on('error', (error) => {
+            connectReq.on('error', (error) => {
                 reject(error);
             });
 
-            req.setTimeout(timeout);
-            req.end();
+            connectReq.on('timeout', () => {
+                connectReq.destroy();
+                reject(new Error('CONNECT timeout'));
+            });
+
+            connectReq.setTimeout(timeout / 2);
+            connectReq.end();
+        });
+    }
+
+    /**
+     * Handle proxy response for both HTTP and HTTPS requests
+     */
+    handleProxyResponse(res, startTime, resolve, reject) {
+        let data = '';
+        res.setEncoding('utf8');
+
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+            const latency = Date.now() - startTime;
+            
+            // Check for proxy errors
+            if (res.statusCode === 401 || res.statusCode === 407) {
+                return resolve({
+                    isProxyError: true,
+                    error: 'Proxy authentication required',
+                    statusCode: res.statusCode
+                });
+            }
+            
+            if (res.statusCode === 402) {
+                return resolve({
+                    isProxyError: true,
+                    error: 'Proxy payment required',
+                    statusCode: res.statusCode
+                });
+            }
+            
+            if (res.statusCode >= 500) {
+                return resolve({
+                    isProxyError: true,
+                    error: `Proxy server error (${res.statusCode})`,
+                    statusCode: res.statusCode
+                });
+            }
+            
+            // Check response content for payment messages
+            if (data.toLowerCase().includes('payment required') ||
+                data.toLowerCase().includes('upgrade your plan') ||
+                data.toLowerCase().includes('subscription expired')) {
+                return resolve({
+                    isProxyError: true,
+                    error: 'Proxy subscription/payment required',
+                    statusCode: res.statusCode
+                });
+            }
+            
+            if (res.statusCode !== 200) {
+                return reject(new Error(`HTTP ${res.statusCode}`));
+            }
+
+            // Extract IP from response
+            let ip;
+            try {
+                const parsed = JSON.parse(data);
+                ip = parsed.ip;
+            } catch {
+                ip = data.trim();
+            }
+
+            if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+                resolve({ ip, latency, isProxyError: false });
+            } else {
+                reject(new Error(`Invalid IP response: ${data.slice(0, 100)}`));
+            }
         });
     }
 
