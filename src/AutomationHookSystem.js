@@ -590,6 +590,24 @@ export class AutomationHookSystem {
                 await page.waitForTimeout(interactionDelay);
             }
         }
+
+        // Emit event signaling human interactions completed (used to release deferred submit)
+        try {
+            if (this.eventBus) {
+                // We rely on the automation layer calling this with session context via executeStep -> performHumanInteractions
+                // So we infer sessionId by scanning activeAutomations map for matching context if not passed explicitly.
+                let inferredSessionId = null;
+                for (const [sid, entry] of this.activeAutomations.entries()) {
+                    if (entry.context === page.context()) { inferredSessionId = sid; break; }
+                }
+                const sid = inferredSessionId || 'unknown';
+                this.eventBus.emitSessionEvent(sid, EVENTS.HUMAN_STAGE_COMPLETED, {
+                    url: page.url(),
+                    performedInteractions: interactions,
+                    timestamp: Date.now()
+                });
+            }
+        } catch (e) { console.log(`⚠️  HUMAN_STAGE_COMPLETED emit failed: ${e.message}`); }
     }
 
     /**
@@ -864,16 +882,23 @@ export class AutomationHookSystem {
             }
         }
  
-        // Optional small randomized humanization before clicking (disabled when noPreJitter)
+        // Optional small randomized humanization BEFORE clicking (disabled when noPreJitter)
+        // We also move any focus/tab jitter that previously happened post-click to here to reduce
+        // suspicious activity after network submission.
         if (!noPreJitter) {
-            const preJitterScrolls = Math.floor(Math.random() * 2); // 0-1
+            const preJitterScrolls = 1; // deterministic single gentle scroll for subtlety
             for (let i = 0; i < preJitterScrolls; i++) {
                 try {
-                    const dy = 100 + Math.floor(Math.random() * 200);
+                    const dy = 60 + Math.floor(Math.random() * 120);
                     await page.mouse.wheel(0, dy);
-                    await page.waitForTimeout(150 + Math.floor(Math.random() * 250));
+                    await page.waitForTimeout(180 + Math.floor(Math.random() * 240));
                 } catch (_) {}
             }
+            // Light field focus shuffle (tab once) BEFORE submit to look natural, not after
+            try {
+                await page.keyboard.press('Tab');
+                await page.waitForTimeout(120 + Math.floor(Math.random() * 160));
+            } catch (_) {}
         }
  
         for (const selector of selectors) {
@@ -1139,7 +1164,9 @@ export class AutomationHookSystem {
      */
     async tryHumanJitterResubmit(page, submitSelectors = []) {
         try {
-            // Focus/blur jiggle on inputs
+            // Moved to be usable both pre-submit (light) and for captcha mitigation (full). For captcha
+            // mitigation we still perform jiggle; for pre-submit we keep it minimal. We detect context
+            // by presence of a data attribute we can set externally if needed (not yet used).
             const jiggleTargets = [
                 'input[data-testid="form-input-email"]',
                 'input[name="email"]',
@@ -1281,7 +1308,8 @@ export class AutomationHookSystem {
             '.submit-btn',
             '#submit'
         ];
-        const jitterAttempts = Math.max(0, stepConfig.jitterAttempts ?? 2);
+    // Limit jitter attempts to 1 to avoid multiple rapid-fire submissions which can escalate blocks
+    const jitterAttempts = 1; // previously: Math.max(0, stepConfig.jitterAttempts ?? 2)
         const reloadOnFail = stepConfig.reloadOnFail !== false;
         const maxRetryAttempts = stepConfig.maxRetryAttempts || 2;
 
@@ -1359,10 +1387,10 @@ export class AutomationHookSystem {
             return;
         }
 
-        // Light jitter + resubmit attempts
+        // Light jitter + single resubmit attempt (only once). If still captcha, proceed to reload path.
         for (let i = 0; i < jitterAttempts; i++) {
             await this.tryHumanJitterResubmit(page, submitSelectors);
-            await page.waitForTimeout(700 + Math.floor(Math.random() * 500));
+            await page.waitForTimeout(900 + Math.floor(Math.random() * 700));
             
             // Check if we're back to login screen after jittering
             if (await isBackToLoginScreen()) {
@@ -1413,7 +1441,7 @@ export class AutomationHookSystem {
             console.log(`⚠️  CAPTCHA persists after jitter attempt ${i + 1}`);
         }
 
-        // Reload + refill path
+        // Reload + refill path (our second and final attempt for this cycle)
         if (reloadOnFail) {
             console.log('🔄 Reloading page to reset state...');
             try { await page.reload({ waitUntil: 'domcontentloaded' }); } catch (_) {}
@@ -1460,8 +1488,9 @@ export class AutomationHookSystem {
             // Wait a bit more to ensure form is stable before attempting submit
             await page.waitForTimeout(1000 + Math.floor(Math.random() * 500));
 
+            // Only click submit ONCE after reload to avoid triggering hard lockouts.
             await this.tryHumanJitterResubmit(page, submitSelectors);
-            await page.waitForTimeout(900 + Math.floor(Math.random() * 600));
+            await page.waitForTimeout(1200 + Math.floor(Math.random() * 800));
 
             if (hasRecentSuccessSignals()) {
                 console.log('✅ CAPTCHA bypassed implicitly after reload (success responses observed)');
@@ -1473,7 +1502,7 @@ export class AutomationHookSystem {
                 automation.captchaRetryCount = 0; // Reset on success
                 return;
             }
-            console.log('❌ CAPTCHA still present after reload/refill');
+            console.log('❌ CAPTCHA still present after reload/refill; will not attempt further submits this cycle');
         } else {
             console.log('⏭️  Reload mitigation disabled by configuration');
         }

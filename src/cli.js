@@ -1147,10 +1147,197 @@ program
         }
     });
 
+// Test launch command - convenient one-off cloned profile launch
+program
+    .command('test-launch')
+    .description('Launch a one-off cloned profile for testing (like batch mode but single run)')
+    .argument('[template]', 'Template profile name (optional - will create fresh profile if not provided)')
+    .option('-n, --name <name>', 'Name for the test profile (auto-generated if not provided)')
+    .option('-b, --browser <type>', 'Browser type (chromium, firefox, webkit)', 'chromium')
+    .option('--headless', 'Run in headless mode')
+    .option('--devtools', 'Open devtools')
+    .option('--temp', 'Create temporary profile (auto-deleted on close)', true)
+    .option('--keep', 'Keep the test profile after closing (opposite of --temp)')
+    .option('--no-randomize-fingerprint', 'Disable fingerprint randomization for template clones')
+    .option('--vary-screen-resolution', 'Enable Mac-authentic screen resolution variation')
+    .option('--stealth-preset <preset>', 'Stealth preset (minimal, balanced, maximum)', 'balanced')
+    .option('--load-extensions <paths...>', 'Load additional extensions')
+    .option('--no-auto-extensions', 'Disable automatic extension loading')
+    .option('--automation', 'Enable automation features')
+    .option('--headless-automation', 'Enable headless automation mode')
+    .option('--automation-autofill-only', 'Disable AutofillHookSystem; automation fills email/password')
+    .option('--auto-close-on-success', 'Automatically close browser when success is detected')
+    .option('--auto-close-on-failure', 'Automatically close browser on timeout/failure')
+    .option('--auto-close-timeout <ms>', 'Timeout before treating as failure (ms)', '120000')
+    .option('--captcha-grace <ms>', 'Extra grace time if CAPTCHA is detected (ms)', '45000')
+    .option('--no-capture', 'Disable request capture')
+    .option('--no-autofill-stop-on-success', 'Disable stopping autofill after success')
+    .option('--autofill-enforce-mode', 'Continue autofill monitoring even after success')
+    .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
+    .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
+    .option('--no-compress', 'Disable compress-on-close for this instance')
+    .option('--proxy-file <path>', 'Path to proxy file (.txt for colon format or .json for v2 format)')
+    .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin, geographic')
+    .option('--proxy-start <label>', 'Proxy label to start rotation from')
+    .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
+    .option('--proxy-connection-type <type>', 'Proxy connection type filter: resident, datacenter, mobile')
+    .option('--proxy-country <country>', 'Proxy country filter (ISO code like US, GB, DE or name like Germany)')
+    .option('--geographic-ratio <ratio>', 'Geographic distribution ratio')
+    .option('--disable-images', 'Disable image loading for faster proxy performance')
+    .option('--disable-proxy-wait-increase', 'Disable proxy mode wait time increases')
+    .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks')
+    .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
+    .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
+    .action(async (template, options) => {
+        try {
+            const launcher = getProfileLauncher();
+            const isTemporary = options.temp && !options.keep; // temp by default, unless --keep is specified
+            
+            // Generate test profile name if not provided
+            let testProfileName = options.name;
+            if (!testProfileName) {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const suffix = Math.random().toString(36).substring(2, 8);
+                testProfileName = template ? `test-${template}-${suffix}` : `test-fresh-${timestamp}`;
+            }
+            
+            console.log(chalk.cyan(`🧪 Creating test profile: ${testProfileName}`));
+            console.log(chalk.dim(`Template: ${template || 'fresh profile'}`));
+            console.log(chalk.dim(`Temporary: ${isTemporary ? 'yes (auto-delete on close)' : 'no (kept after close)'}`));
+            
+            let launchResult;
+            
+            if (template) {
+                // Clone from template (similar to launch-template but simpler)
+                console.log(chalk.yellow(`📋 Cloning from template: ${template}`));
+                
+                const templateLauncherOptions = {
+                    autofillStopOnSuccess: !options.noAutofillStopOnSuccess,
+                    autofillEnforceMode: options.autofillEnforceMode,
+                    autofillMinFields: parseInt(options.autofillMinFields, 10) || 2,
+                    autofillCooldown: parseInt(options.autofillCooldown, 10) || 30000
+                };
+                
+                const templateLauncher = new ProfileLauncher(profileManager, templateLauncherOptions);
+                
+                launchResult = await templateLauncher.launchFromTemplate(template, testProfileName, {
+                    browserType: options.browser,
+                    headless: options.headless,
+                    devtools: options.devtools,
+                    randomizeFingerprint: !options.noRandomizeFingerprint,
+                    varyScreenResolution: options.varyScreenResolution,
+                    stealthPreset: options.stealthPreset,
+                    isTemporary: isTemporary,
+                    disableCompression: options.noCompress,
+                    loadExtensions: options.loadExtensions,
+                    autoLoadExtensions: !options.noAutoExtensions,
+                    enableAutomation: options.automation || options.headlessAutomation,
+                    enableAutofillMonitoring: !options.automationAutofillOnly,
+                    automationAutofillOnly: options.automationAutofillOnly,
+                    autoCloseOnSuccess: options.autoCloseOnSuccess,
+                    autoCloseOnFailure: options.autoCloseOnFailure,
+                    autoCloseTimeout: parseInt(options.autoCloseTimeout, 10) || 120000,
+                    captchaGrace: parseInt(options.captchaGrace, 10) || 45000,
+                    enableRequestCapture: !options.noCapture,
+                    disableImages: options.disableImages,
+                    disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                    proxyFile: options.proxyFile,
+                    proxyStrategy: options.proxyStrategy,
+                    proxyStart: options.proxyStart,
+                    proxyType: options.proxyType,
+                    proxyConnectionType: options.proxyConnectionType,
+                    proxyCountry: options.proxyCountry,
+                    geographicRatio: options.geographicRatio,
+                    skipIpCheck: options.skipIpCheck,
+                    ipCheckTimeout: parseInt(options.ipCheckTimeout, 10) || 10000,
+                    ipCheckRetries: parseInt(options.ipCheckRetries, 10) || 3
+                });
+            } else {
+                // Create fresh profile
+                console.log(chalk.yellow(`✨ Creating fresh profile`));
+                
+                // Create a new temporary profile
+                const profile = await profileManager.createProfile(testProfileName, {
+                    description: `Test profile - ${isTemporary ? 'temporary' : 'persistent'}`,
+                    browserType: options.browser || 'chromium'
+                });
+                
+                console.log(chalk.green(`✅ Fresh profile created: ${profile.name}`));
+                
+                // Launch it with the launcher
+                launchResult = await launcher.launchProfile(profile.id, {
+                    browserType: options.browser,
+                    headless: options.headless,
+                    devtools: options.devtools,
+                    loadExtensions: options.loadExtensions,
+                    autoLoadExtensions: !options.noAutoExtensions,
+                    enableAutomation: options.automation || options.headlessAutomation,
+                    enableAutofillMonitoring: !options.automationAutofillOnly,
+                    automationAutofillOnly: options.automationAutofillOnly,
+                    autoCloseOnSuccess: options.autoCloseOnSuccess,
+                    autoCloseOnFailure: options.autoCloseOnFailure,
+                    autoCloseTimeout: parseInt(options.autoCloseTimeout, 10) || 120000,
+                    captchaGrace: parseInt(options.captchaGrace, 10) || 45000,
+                    enableRequestCapture: !options.noCapture,
+                    disableCompression: options.noCompress || isTemporary, // Force no compression for temp profiles
+                    disableImages: options.disableImages,
+                    disableProxyWaitIncrease: options.disableProxyWaitIncrease,
+                    proxyFile: options.proxyFile,
+                    proxyStrategy: options.proxyStrategy,
+                    proxyStart: options.proxyStart,
+                    proxyType: options.proxyType,
+                    proxyConnectionType: options.proxyConnectionType,
+                    proxyCountry: options.proxyCountry,
+                    geographicRatio: options.geographicRatio,
+                    skipIpCheck: options.skipIpCheck,
+                    ipCheckTimeout: parseInt(options.ipCheckTimeout, 10) || 10000,
+                    ipCheckRetries: parseInt(options.ipCheckRetries, 10) || 3
+                });
+            }
+            
+            const { browser, page, sessionId, proxy } = launchResult;
+            
+            console.log(chalk.green(`🚀 Test profile launched successfully!`));
+            console.log(chalk.dim(`Session ID: ${sessionId}`));
+            if (proxy) {
+                console.log(chalk.dim(`Proxy: ${proxy.label || proxy.host} (${proxy.country || 'unknown location'})`));
+            }
+            console.log(chalk.yellow(`💡 Browser will stay open for testing. Close it when done.`));
+            
+            if (isTemporary) {
+                console.log(chalk.yellow(`🗑️  Profile will be automatically deleted when browser closes.`));
+            } else {
+                console.log(chalk.blue(`💾 Profile will be saved as: ${testProfileName}`));
+            }
+            
+            // Handle cleanup on browser close
+            browser.on('disconnected', async () => {
+                if (isTemporary) {
+                    console.log(chalk.yellow(`🧹 Cleaning up temporary test profile: ${testProfileName}`));
+                    try {
+                        await profileManager.deleteProfile(testProfileName);
+                        console.log(chalk.green(`✅ Temporary test profile deleted`));
+                    } catch (error) {
+                        console.warn(chalk.yellow(`⚠️  Could not delete temporary profile: ${error.message}`));
+                    }
+                }
+            });
+            
+            // Keep process alive until browser closes
+            await new Promise((resolve) => {
+                browser.on('disconnected', resolve);
+            });
+            
+        } catch (error) {
+            console.error(chalk.red('✗ Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
 // Batch automation command (process-isolated orchestrator)
 program
     .command('batch')
-    .description('Run continuous automated signups with retry and profile management')
+    .description('Run continuous automated signups with retry and profile management. Use --verbose-console for detailed real-time output.')
     .requiredOption('-t, --template <name>', 'Template profile to clone from (e.g., vidiq-clean)')
     .option('-c, --count <number>', 'Number of profiles to create', '1')
     .option('-p, --prefix <prefix>', 'Profile name prefix', 'auto')
@@ -1174,6 +1361,7 @@ program
     .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
     .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
     .option('--max-profiles-per-ip <number>', 'Maximum profiles per IP address before rotating proxy', '5')
+    .option('--verbose-console', 'Show detailed real-time console output from child processes (for debugging)')
     .action(async (options) => {
         const pathMod = (await import('path')).default;
         const fsx = (await import('fs-extra')).default;
@@ -1207,6 +1395,7 @@ program
         const delayBetweenRuns = parseInt(options.delay, 10) || 60; // 60 seconds default
         const failureDelay = parseInt(options.failureDelay, 10) || 300; // 5 minutes default
         const maxProfilesPerIP = parseInt(options.maxProfilesPerIp, 10) || 5;
+        const verboseConsole = !!options.verboseConsole;
 
         const resultsDir = pathMod.resolve('./automation-results');
         await fsx.ensureDir(resultsDir);
@@ -1260,6 +1449,64 @@ program
             const onLine = (line, source) => {
                 // Log all output to detailed logs
                 writeDetailedLog(runId, source, line);
+                
+                // Stream important progress to main console with timestamps (configurable verbose mode)
+                if (verboseConsole) {
+                    // In verbose mode, show more detailed output
+                    const shouldShowInConsole = (
+                        // Key automation milestones
+                        /Profile launched successfully|Autofill completed|Form submitted|clicking submit/i.test(line) ||
+                        // Success/failure indicators
+                        /Success:|Failed:|✅|❌|API Response:\s+20[01]/i.test(line) ||
+                        // CAPTCHA detection
+                        /CAPTCHA detected|captcha/i.test(line) ||
+                        // Important errors
+                        /(error|failed|timeout|exception).*(?:browser|profile|automation)/i.test(line) ||
+                        // Proxy status changes
+                        /Using proxy:|proxy.*failed|IP.*resolved/i.test(line) ||
+                        // Progress indicators
+                        /Starting|Launching|Monitoring|outcome.*polling/i.test(line) ||
+                        // Final status
+                        /Process exiting|Browser cleanup/i.test(line) ||
+                        // Additional verbose details
+                        /Autofill system|automation.*steps|proxy.*rotation/i.test(line)
+                    );
+                    
+                    if (shouldShowInConsole) {
+                        // Clean up the line for console display
+                        let cleanLine = line
+                            .replace(/^\d{4}-\d{2}-\d{2}T[\d:.-]+Z\s+/, '') // Remove timestamp
+                            .replace(/^\[.*?\]\s*\[.*?\]\s*/, '') // Remove log prefixes
+                            .replace(/^\s*/, ''); // Remove leading whitespace
+                        
+                        // Add profile prefix for context
+                        const timestamp = new Date().toISOString().substring(11, 19); // HH:mm:ss format
+                        console.log(chalk.gray(`[${timestamp}]`) + ` [${instanceName}] ${cleanLine}`);
+                    }
+                } else {
+                    // In normal mode, show only critical milestones
+                    const shouldShowInConsole = (
+                        // Only the most important milestones
+                        /Profile launched successfully|Autofill completed|Form submitted automatically/i.test(line) ||
+                        // Clear success/failure indicators
+                        /✅|❌|API Response:\s+20[01]/i.test(line) ||
+                        // CAPTCHA warnings
+                        /CAPTCHA.*detected/i.test(line) ||
+                        // Critical errors
+                        /(failed|timeout).*(?:browser|profile)/i.test(line)
+                    );
+                    
+                    if (shouldShowInConsole) {
+                        // Clean up the line for console display
+                        let cleanLine = line
+                            .replace(/^\d{4}-\d{2}-\d{2}T[\d:.-]+Z\s+/, '') // Remove timestamp
+                            .replace(/^\[.*?\]\s*\[.*?\]\s*/, '') // Remove log prefixes  
+                            .replace(/^\s*/, ''); // Remove leading whitespace
+                        
+                        // Add compact profile prefix
+                        console.log(`  ${cleanLine}`);
+                    }
+                }
                 
                 // Capture our tagged line
                 if (line.startsWith('::RUN_RESULT::')) {
@@ -1459,6 +1706,11 @@ program
         console.log(chalk.dim(`Results JSONL: ${resultsFile}`));
         console.log(chalk.dim(`Detailed logs: ${detailedLogsDir}`));
         console.log(chalk.dim(`⏱️  Delays: ${delayBetweenRuns}s between runs, ${failureDelay}s after failures`));
+        if (verboseConsole) {
+            console.log(chalk.dim(`🔊 Verbose console logging: ENABLED (detailed real-time output)`));
+        } else {
+            console.log(chalk.dim(`🔇 Console logging: COMPACT (use --verbose-console for detailed output)`));
+        }
         if (useProxyRotation) {
             console.log(chalk.dim(`🌐 Proxy rotation: max ${maxProfilesPerIP} profiles per IP, then rotate`));
         }
@@ -1529,7 +1781,8 @@ program
                 }
             }
 
-            console.log(chalk.blue(`\n▶️  Run ${runNo}/${total}: ${name}`));
+            console.log(chalk.blue(`\n▶️  Run ${runNo}/${total}: ${name}`) + (currentProxy ? chalk.dim(` [proxy: ${currentProxy.label}]`) : ''));
+            console.log(chalk.dim(`📍 Real-time logs: tail -f ${pathMod.join(detailedLogsDir, runId + '-stdout.log')}`));
             await writeBatchLog(`Starting run ${runNo}/${total}: ${name} with proxy: ${currentProxy?.label || 'none'}`);
             
             // Process-isolated single run
@@ -1628,6 +1881,8 @@ program
         console.log(chalk.dim(`  - Log types: start, stdout, stderr, result, error, network, automation, exit, final`));
         console.log(chalk.dim(`  - Batch summary: ${batchSummaryFile}`));
         console.log(chalk.dim(`  - Screenshots saved in: ./automation-results/`));
+        console.log(chalk.dim(`  - Real-time monitoring: tail -f ${detailedLogsDir}/*-stdout.log`));
+        console.log(chalk.dim(`  - For verbose console output: add --verbose-console flag`));
         
         if (successes < created) {
             console.log(chalk.yellow('\n⚠️  Some runs failed. Check detailed logs for troubleshooting:'));

@@ -210,35 +210,13 @@ export default {
             
         } else if (passwordCount > 0) {
             console.log(`🔐 Step 2 detected: Password form visible`);
-            
-            // Fill password if it's empty and we have the data
-            if (userData && userData.password) {
-                try {
-                    const currentValue = await passwordField.inputValue();
-                    if (!currentValue) {
-                        await passwordField.fill(userData.password);
-                        console.log(`✅ Password filled in step 2`);
-                        
-                        // Look for final submit button
-                        const finalSubmitBtn = page.locator('button[type="submit"]:visible').first();
-                        if (await finalSubmitBtn.count() > 0) {
-                            const buttonText = await finalSubmitBtn.textContent().catch(() => 'Submit');
-                            console.log(`🔘 Found final submit button: "${buttonText}"`);
-                            
-                            if (userData.submitForm) {
-                                await finalSubmitBtn.click();
-                                console.log(`🚀 Final form submitted`);
-                            }
-                        }
-                    } else {
-                        console.log(`ℹ️  Password field already filled`);
-                    }
-                } catch (error) {
-                    console.log(`⚠️  Step 2 password fill error: ${error.message}`);
-                }
-            }
-            
-            return { step: 2, completed: true };
+
+            // IMPORTANT: Do NOT fill password here anymore. Let the core autofill system handle ordering
+            // so that email is always filled first. Early password fill looked suspicious (instant paste
+            // followed by username typing) and could contribute to CAPTCHA heuristics. We only report the
+            // state and allow executeAutofill() to proceed with its prioritized sequential fill.
+
+            return { step: 2, completed: false, deferPasswordFill: true };
         }
         
         console.log(`❓ Unknown form state - will continue monitoring...`);

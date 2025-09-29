@@ -153,6 +153,7 @@ export const EVENTS = {
     AUTOMATION_STEP_FAILED: 'automation:step_failed',
     AUTOMATION_COMPLETED: 'automation:completed',
     AUTOMATION_FAILED: 'automation:failed',
+    HUMAN_STAGE_COMPLETED: 'automation:human_stage_completed',
     
     // CAPTCHA events
     CAPTCHA_DETECTED: 'captcha:detected',

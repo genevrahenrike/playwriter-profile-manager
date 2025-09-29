@@ -32,6 +32,11 @@ export class AutofillHookSystem {
             postRefreshWatchWindowMs: options.postRefreshWatchWindowMs || 20000, // Watch window after fills for refresh-clears
             postRefreshCheckIntervalMs: options.postRefreshCheckIntervalMs || 1200, // Poll cadence while in watch window
             maxPostRefreshRetries: options.maxPostRefreshRetries || 2, // Max re-attempts triggered by cleared fields
+            deferAutoSubmitUntilHumanStage: options.deferAutoSubmitUntilHumanStage !== false, // default true now
+            // Humanization / pacing controls
+            delayMultiplier: options.delayMultiplier || 1.25, // Global multiplier for per-char typing delays
+            humanPreFieldDelayMin: options.humanPreFieldDelayMin || 140, // Added delay before first keystrokes per field
+            humanPreFieldDelayMax: options.humanPreFieldDelayMax || 420,
             ...options
         };
         
@@ -586,6 +591,7 @@ export class AutofillHookSystem {
                 }
                 
                 // Fill strategy: minimal paste-like or human-like typing
+                const delayMult = this.options.delayMultiplier || 1;
                 if (this.options && this.options.fillStrategy === 'paste') {
                     try { await firstField.click({ clickCount: 3 }); } catch (_) {}
                     try {
@@ -606,19 +612,27 @@ export class AutofillHookSystem {
                         }
                     }
                 } else {
+                    // Optional pre-field "thinking" delay to reduce instantaneous fill patterns
+                    if (attempt === 1) {
+                        const preMin = this.options.humanPreFieldDelayMin || 120;
+                        const preMax = this.options.humanPreFieldDelayMax || 360;
+                        const preDelay = preMin + Math.floor(Math.random() * (preMax - preMin));
+                        await page.waitForTimeout(Math.round(preDelay * delayMult));
+                    }
                     if (isPasswordField) {
                         if (existingValue && existingValue.length > 0) {
                             await this.clearFieldSafely(firstField);
-                            await page.waitForTimeout(60 + Math.floor(Math.random() * 120));
+                            await page.waitForTimeout(Math.round((60 + Math.floor(Math.random() * 120)) * delayMult));
                         }
-                        const perCharDelay = 40 + Math.floor(Math.random() * 80); // 40-120ms
+                        // Slower, more human password typing cadence (scaled by multiplier)
+                        const perCharDelay = Math.round((50 + Math.floor(Math.random() * 90)) * delayMult); // ~50-140ms * multiplier
                         await firstField.pressSequentially(value, { delay: perCharDelay });
                     } else {
                         if (existingValue && existingValue !== value) {
                             await this.clearFieldSafely(firstField);
-                            await page.waitForTimeout(40 + Math.floor(Math.random() * 100));
+                            await page.waitForTimeout(Math.round((50 + Math.floor(Math.random() * 120)) * delayMult));
                         }
-                        const perCharDelay = 20 + Math.floor(Math.random() * 60); // 20-80ms
+                        const perCharDelay = Math.round((30 + Math.floor(Math.random() * 70)) * delayMult); // ~30-100ms * multiplier
                         await firstField.pressSequentially(value, { delay: perCharDelay });
                     }
                 }
@@ -1183,8 +1197,32 @@ export class AutofillHookSystem {
                         submitButtonFound = true;
                         
                         if (settings.autoSubmit) {
-                            await submitButton.first().click();
-                            console.log(`✅ Form submitted automatically`);
+                            // New: optionally defer submission until human interactions stage completes
+                            const defer = (this.options.deferAutoSubmitUntilHumanStage === true);
+                            if (defer && this.eventBus) {
+                                let released = false;
+                                const sessionListener = this.eventBus.onSessionEvent(sessionId, EVENTS.HUMAN_STAGE_COMPLETED, async () => {
+                                    if (released) return;
+                                    released = true;
+                                    try {
+                                        await submitButton.first().click();
+                                        console.log(`✅ Deferred form submit after human interactions`);
+                                    } catch (e) {
+                                        console.log(`⚠️  Deferred submit click failed: ${e.message}`);
+                                    }
+                                });
+                                // Safety timeout in case HUMAN_STAGE_COMPLETED never fires
+                                setTimeout(async () => {
+                                    if (released) return;
+                                    released = true;
+                                    try { await submitButton.first().click(); console.log('⏰ Safety fallback submit executed'); } catch(_) {}
+                                    try { sessionListener && sessionListener(); } catch(_) {}
+                                }, 8000);
+                                console.log('⏳ Auto-submit deferred awaiting HUMAN_STAGE_COMPLETED event');
+                            } else {
+                                await submitButton.first().click();
+                                console.log(`✅ Form submitted automatically`);
+                            }
                         }
                         break;
                     } catch (error) {

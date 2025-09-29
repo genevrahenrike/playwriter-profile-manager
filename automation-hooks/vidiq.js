@@ -163,7 +163,8 @@ export default {
             // Pause autofill monitoring right before clicking to avoid races
             pauseAutofill: true,
             // Disable pre-click jitter/hover to avoid noise around submission
-            noPreJitter: true,
+            // Allow controlled pre-submit jitter (light scroll + single tab) handled in AutomationHookSystem now
+            noPreJitter: false,
             // Additional pre-submit validation
             preSubmitValidation: {
                 checkEmailField: true,
