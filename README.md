@@ -119,6 +119,34 @@ npx ppm launch my-profile --autofill-min-fields 3 --autofill-cooldown 60000  # C
 # Headless automation mode - Complete automated workflow
 npx ppm launch my-profile --headless-automation --auto-close-on-success --proxy auto
 npx ppm launch my-profile --headless --headless-automation --auto-close-on-success --proxy "US"
+
+### Advanced Proxy Authentication & Diagnostics
+
+To address environments where Chromium shows a proxy auth popup, new options let you control how credentials are applied and add diagnostics:
+
+```
+# Default (Playwright passes credentials via launchOptions.proxy)
+npx ppm launch my-profile --proxy-strategy auto --proxy-auth-mode playwright
+
+# Force Chrome arg embedding (injects user:pass@ into --proxy-server=)
+npx ppm launch my-profile --proxy-strategy auto --proxy-auth-mode chrome-arg
+
+# Dual mode: try playwright first, fall back automatically to chrome-arg if preflight fails
+npx ppm launch my-profile --proxy-strategy auto --proxy-auth-mode dual
+
+# Enable verbose proxy response logging (shows 4xx/5xx and 407 events)
+npx ppm launch my-profile --proxy-strategy auto --proxy-debug
+
+# Disable the preflight (faster, but may allow popup if credentials misapplied)
+npx ppm launch my-profile --proxy-strategy auto --no-proxy-preflight
+```
+
+Behavior:
+- Preflight spins up a tiny headless test to confirm a 200 IP echo before launching full persistent context.
+- Dual mode minimizes UI auth dialogs by retrying with alternative credential injection strategy.
+- `--proxy-debug` surfaces 407/401 quickly so you can mark/remove failing proxies.
+
+If a proxy still triggers a dialog in both modes, it is usually due to provider-side session/account gating rather than client code—consider rotating that entry out.
 ```
 
 ### Headless Automation Mode

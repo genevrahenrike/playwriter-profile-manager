@@ -59,7 +59,9 @@ export class ProfileLauncher {
         this.stealthManager = new StealthManager();
         
         // Initialize proxy manager
-        this.proxyManager = new ProxyManager();
+        this.proxyManager = new ProxyManager({
+            proxyFile: options.proxyFile // Pass through proxy file option
+        });
         // Note: Proxies will be loaded asynchronously when first needed
     }
 
@@ -544,6 +546,7 @@ export class ProfileLauncher {
             disableImages = false, // Disable image loading for faster proxy connections
             disableProxyWaitIncrease = false, // Disable proxy mode wait time increases
             automationAutofillOnly = false, // Use automation-owned fill and disable AutofillHookSystem during automation
+            proxyFile = null, // Path to proxy file (.txt for colon format or .json for v2 format)
             proxy = null, // Legacy proxy configuration (deprecated, use proxyStrategy)
             proxyStrategy = null, // Proxy strategy: 'auto', 'random', 'fastest', 'round-robin', 'geographic'
             proxyStart = null, // Proxy label to start rotation from
@@ -554,7 +557,10 @@ export class ProfileLauncher {
             // IP check controls (for rotator path)
             skipIpCheck = false,
             ipCheckTimeout = 10000,
-            ipCheckRetries = 3
+            ipCheckRetries = 3,
+            proxyAuthMode = 'playwright', // playwright | chrome-arg | dual
+            proxyDebug = false,
+            proxyPreflight = true
         } = options;
 
         const profile = await this.profileManager.getProfile(nameOrId);
@@ -582,13 +588,22 @@ export class ProfileLauncher {
         let proxyConfig = null;
         const proxySelection = proxyStrategy || proxy; // Use new proxyStrategy or fall back to legacy proxy
         
-        if (proxySelection || proxyStart) {
+        // Handle per-launch proxy file specification
+        let proxyManager = this.proxyManager;
+        if (proxyFile) {
+            // Create temporary ProxyManager for this specific proxy file
+            proxyManager = new ProxyManager({ proxyFile });
+            await proxyManager.loadProxies();
+            console.log(`📂 Using custom proxy file for this session: ${proxyFile}`);
+        } else if (proxySelection || proxyStart) {
             await this.ensureProxiesLoaded();
-            
+        }
+        
+        if (proxySelection || proxyStart) {
             // If using geographic strategy, use GeographicProxyRotator
             if (proxySelection === 'geographic' || geographicRatio) {
                 const { GeographicProxyRotator } = await import('./GeographicProxyRotator.js');
-                const rotator = new GeographicProxyRotator(this.proxyManager, {
+                const rotator = new GeographicProxyRotator(proxyManager, {
                     geographicRatio: geographicRatio || 'US:45,Other:55', // Default to 45% US, 55% Other
                     // Wire IP-check behavior
                     skipIPCheck: !!skipIpCheck,
@@ -609,7 +624,7 @@ export class ProfileLauncher {
             // If we have a start position, we need to use ProxyRotator for round-robin
             else if (proxyStart && (proxySelection === 'round-robin' || !proxySelection)) {
                 const { ProxyRotator } = await import('./ProxyRotator.js');
-                const rotator = new ProxyRotator(this.proxyManager, {
+                const rotator = new ProxyRotator(proxyManager, {
                     strategy: 'round-robin',
                     startProxyLabel: proxyStart,
                     proxyType: proxyType,
@@ -631,7 +646,7 @@ export class ProfileLauncher {
                 }
             } else if (proxySelection) {
                 // Use standard proxy selection with filtering options
-                proxyConfig = await this.proxyManager.getProxyConfig(proxySelection, proxyType, {
+                proxyConfig = await proxyManager.getProxyConfig(proxySelection, proxyType, {
                     connectionType: proxyConnectionType,
                     country: proxyCountry
                 });
@@ -642,6 +657,46 @@ export class ProfileLauncher {
         }
 
         let browser, context;
+
+        // Internal helper: perform proxy preflight in isolation to avoid UI auth dialogs
+        const performProxyPreflight = async (proxyCfg, mode) => {
+            const { chromium } = await import('playwright');
+            const testUrl = 'https://api.ipify.org?format=text';
+            const launchArgs = [];
+            const pwProxy = { ...proxyCfg };
+            if (mode === 'chrome-arg' || mode === 'dual') {
+                if (pwProxy.username && pwProxy.password) {
+                    const auth = `${encodeURIComponent(pwProxy.username)}:${encodeURIComponent(pwProxy.password)}`;
+                    launchArgs.push(`--proxy-server=${pwProxy.server.replace('://', '://'+auth+'@')}`);
+                    delete pwProxy.username;
+                    delete pwProxy.password; // credentials now embedded
+                } else {
+                    launchArgs.push(`--proxy-server=${pwProxy.server}`);
+                }
+            }
+            try {
+                const b = await chromium.launch({ headless: true, proxy: mode === 'chrome-arg' ? undefined : pwProxy, args: launchArgs });
+                const c = await b.newContext();
+                const p = await c.newPage();
+                let status; let body='';
+                try {
+                    const resp = await p.goto(testUrl, { timeout: 15000 });
+                    status = resp?.status();
+                    body = (await resp?.text()) || '';
+                } catch (e) {
+                    await b.close();
+                    return { ok:false, error:e.message, mode };
+                }
+                await b.close();
+                if (status === 200 && /\b\d{1,3}(?:\.\d{1,3}){3}\b/.test(body.trim())) {
+                    return { ok:true, ip: body.trim(), mode };
+                }
+                if (status === 407) return { ok:false, auth:true, status, mode };
+                return { ok:false, status, body: body.slice(0,80), mode };
+            } catch (e) {
+                return { ok:false, error:e.message, mode };
+            }
+        };
         
         try {
             if (browserType === 'chromium') {
@@ -718,10 +773,9 @@ export class ProfileLauncher {
                     await this.setupImageBlocking(context, launchOptions, true);
                 }
                 
-                // Add proxy configuration only if specified
+                // Proxy handling with optional preflight logic
                 if (proxyConfig) {
-                    // Sanitize for logging
-                    const sanitized = {
+                    const sanitizedBase = {
                         server: proxyConfig.server,
                         username: proxyConfig.username ? '***' : undefined,
                         password: proxyConfig.password ? '***' : undefined,
@@ -729,8 +783,45 @@ export class ProfileLauncher {
                         country: proxyConfig._country,
                         connectionType: proxyConfig._connectionType
                     };
-                    console.log(`🧪 Using proxy (pre-launch):`, sanitized);
-                    launchOptions.proxy = proxyConfig;
+                    if (proxyPreflight) {
+                        console.log(`🧪 Proxy preflight start (mode=${proxyAuthMode})`, sanitizedBase);
+                        let decision = null;
+                        if (proxyAuthMode === 'dual') {
+                            const r1 = await performProxyPreflight(proxyConfig, 'playwright');
+                            if (r1.ok) {
+                                decision = { mode: 'playwright', result: r1 };
+                                console.log(`✅ Preflight success (playwright) IP=${r1.ip}`);
+                            } else {
+                                console.log(`↩️  Preflight fallback to chrome-arg (reason=${r1.auth?'auth':(r1.error||r1.status||'fail')})`);
+                                const r2 = await performProxyPreflight(proxyConfig, 'chrome-arg');
+                                decision = { mode: r2.ok ? 'chrome-arg' : 'fail', result: r2 };
+                                if (r2.ok) console.log(`✅ Preflight success (chrome-arg) IP=${r2.ip}`);
+                            }
+                        } else {
+                            const r = await performProxyPreflight(proxyConfig, proxyAuthMode);
+                            decision = { mode: r.ok ? proxyAuthMode : 'fail', result: r };
+                            if (r.ok) console.log(`✅ Preflight success IP=${r.ip}`);
+                        }
+                        if (!decision || decision.mode === 'fail' || !decision.result.ok) {
+                            console.warn(`🚫 Proxy preflight failed; proceeding anyway (may trigger auth dialog): ${JSON.stringify(decision?.result)}`);
+                            launchOptions.proxy = proxyConfig; // fallback attempt
+                        } else if (decision.mode === 'chrome-arg') {
+                            // Embed credentials into arg
+                            if (proxyConfig.username && proxyConfig.password) {
+                                const auth = `${encodeURIComponent(proxyConfig.username)}:${encodeURIComponent(proxyConfig.password)}`;
+                                launchOptions.args.push(`--proxy-server=${proxyConfig.server.replace('://','://'+auth+'@')}`);
+                                launchOptions.proxy = { server: proxyConfig.server }; // no creds so Chromium uses arg
+                            } else {
+                                launchOptions.proxy = { server: proxyConfig.server };
+                            }
+                        } else {
+                            launchOptions.proxy = proxyConfig;
+                        }
+                        console.log(`🧪 Proxy preflight decision: ${decision.mode}`);
+                    } else {
+                        console.log(`🧪 Proxy (no preflight)`, sanitizedBase);
+                        launchOptions.proxy = proxyConfig;
+                    }
                 }
                 
                 // Add extensions if available - for persistent context, extensions should be in user data dir
@@ -744,70 +835,17 @@ export class ProfileLauncher {
                 context = await chromium.launchPersistentContext(profile.userDataDir, launchOptions);
                 browser = context.browser();
                 
-                // Handle proxy authentication & runtime 407 detection
-                if (proxyConfig && proxyConfig.username && proxyConfig.password) {
-                    console.log('🔐 Configuring proxy credentials');
-                    try {
-                        await context.setHTTPCredentials({
-                            username: proxyConfig.username,
-                            password: proxyConfig.password
-                        });
-                        console.log('✅ Proxy credentials applied');
-                    } catch (err) {
-                        console.warn(`⚠️  setHTTPCredentials failed: ${err.message}`);
-                    }
-
-                    // Track first 407 to avoid spamming
-                    let authFailureRecorded = false;
-
-                    const markProxyAuthFailure = async (details = {}) => {
-                        if (authFailureRecorded) return;
-                        authFailureRecorded = true;
-                        console.warn(`🚫 Proxy authentication failure detected for ${proxyConfig._label || proxyConfig.server}`);
-                        // Mark proxy in manager so future selections avoid it (best effort)
-                        try {
-                            this.proxyManager.markProxyAsBad(proxyConfig._label || proxyConfig.server, 'AUTH_REQUIRED', false, true);
-                        } catch {}
-                        // Emit event for external batch controller if present
-                        try {
-                            this.emitSessionEvent && this.emitSessionEvent(sessionId, 'PROXY_AUTH_FAILED', { proxy: proxyConfig._label, ...details });
-                        } catch {}
-                        // Optionally close early to avoid popup loops
-                        try {
-                            setTimeout(() => {
-                                if (this.activeBrowsers.has(sessionId)) {
-                                    console.log('� Closing browser due to proxy auth failure');
-                                    this.closeBrowser(sessionId, { clearCache: false }).catch(()=>{});
-                                }
-                            }, 1500);
-                        } catch {}
-                    };
-
-                    // Listen for 407 responses
+                // Runtime proxy diagnostics (if enabled)
+                if (proxyDebug && proxyConfig) {
                     context.on('response', (resp) => {
                         try {
-                            if (resp.status() === 407) {
-                                markProxyAuthFailure({ url: resp.url(), status: 407 });
+                            const st = resp.status();
+                            if (st === 407 || st === 401) {
+                                console.warn(`🛑 Proxy auth status ${st}: ${resp.url().slice(0,120)}`);
+                            } else if (st >= 400) {
+                                console.log(`⚠️ ${st} ${resp.url().slice(0,120)}`);
                             }
                         } catch {}
-                    });
-
-                    // Fallback: detect auth popups/dialogs
-                    context.on('page', async (page) => {
-                        page.on('dialog', async (dialog) => {
-                            try {
-                                const msg = dialog.message().toLowerCase();
-                                if (msg.includes('proxy') && (msg.includes('password') || msg.includes('username') || msg.includes('authentication'))) {
-                                    console.log('🔐 Proxy auth dialog detected (will close)');
-                                    await dialog.dismiss();
-                                    markProxyAuthFailure({ dialog: true, message: msg });
-                                } else {
-                                    await dialog.dismiss();
-                                }
-                            } catch (e) {
-                                console.warn('⚠️  Dialog handling error:', e.message);
-                            }
-                        });
                     });
                 }
                 

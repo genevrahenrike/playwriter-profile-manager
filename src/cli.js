@@ -768,6 +768,7 @@ program
     .option('--autofill-min-fields <number>', 'Minimum fields required for autofill success', '2')
     .option('--no-compress', 'Disable compress-on-close for this instance')
     .option('--autofill-cooldown <ms>', 'Cooldown period before re-enabling autofill after success (ms)', '30000')
+    .option('--proxy-file <path>', 'Path to proxy file (.txt for colon format or .json for v2 format)')
     .option('--proxy-strategy <strategy>', 'Proxy selection strategy: auto, random, fastest, round-robin, geographic')
     .option('--proxy-start <label>', 'Proxy label to start rotation from (useful to skip already used proxies)')
     .option('--proxy-type <type>', 'Proxy type filter: http (socks5 not supported by Playwright)')
@@ -780,6 +781,10 @@ program
     .option('--skip-ip-check', 'Skip proxy IP resolution/uniqueness checks (fastest, may allow duplicate IPs)')
     .option('--ip-check-timeout <ms>', 'Per-attempt IP check timeout (ms)', '10000')
     .option('--ip-check-retries <n>', 'Max attempts across IP endpoints', '3')
+    .option('--proxy-auth-mode <mode>', 'Proxy auth mode: playwright, chrome-arg, dual', 'playwright')
+    .option('--proxy-debug', 'Enable verbose proxy response logging')
+    .option('--no-proxy-preflight', 'Disable proxy preflight test (faster, less reliable)')
+    .option('--proxy-file <path>', 'Use specific proxy file instead of scanning proxies directory')
     .action(async (profileName, options) => {
         try {
             // Create ProfileLauncher with autofill options
@@ -823,7 +828,7 @@ program
             }
 
             // Adjust timeouts for proxy mode
-            const hasProxyOptions = options.proxyStrategy || options.proxyStart || options.proxy;
+            const hasProxyOptions = options.proxyFile || options.proxyStrategy || options.proxyStart || options.proxy;
             const baseAutoCloseTimeout = hasProxyOptions ? 180000 : 120000; // 3 minutes vs 2 minutes
             const baseCaptchaGrace = hasProxyOptions ? 60000 : 45000; // 1 minute vs 45 seconds
             
@@ -844,6 +849,7 @@ program
                 autoCloseTimeout: parseInt(options.autoCloseTimeout) || baseAutoCloseTimeout,
                 captchaGraceMs: parseInt(options.captchaGrace) || baseCaptchaGrace,
                 disableCompression: options.compress === false,
+                proxyFile: options.proxyFile,
                 proxyStrategy: options.proxyStrategy,
                 proxyStart: options.proxyStart,
                 proxyType: options.proxyType,
@@ -856,6 +862,9 @@ program
                 skipIpCheck: !!options.skipIpCheck,
                 ipCheckTimeout: parseInt(options.ipCheckTimeout) || 10000,
                 ipCheckRetries: parseInt(options.ipCheckRetries) || 3
+                ,proxyAuthMode: options.proxyAuthMode,
+                proxyDebug: !!options.proxyDebug,
+                proxyPreflight: options.proxyPrefight !== false && options.proxyPreflight !== false && options.proxyPreflight !== undefined ? options.proxyPreflight : options.proxyPreflight !== false && options.proxyPreflight !== undefined ? options.proxyPreflight : options.proxyPreflight,
             };
             
             if (hasProxyOptions) {

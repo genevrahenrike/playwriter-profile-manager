@@ -7,14 +7,7 @@ const __dirname = path.dirname(__filename);
 
 export class ProxyManager {
     constructor(options = {}) {
-        this.proxiesDir = options.proxiesDir || path.join(__dirname, '../proxies');
-        this.httpProxiesFile = path.join(this.proxiesDir, 'http.proxies.json');
-        // New Decodo style colon-delimited list (host:port:user:pass) - now the preferred default
-        this.colonListFile = path.join(this.proxiesDir, 'decode-proxies-global-5k.txt');
-    // Accept either the newer v2 filename or the common `http.proxies.v2.json`
-    this.httpProxiesV2File = path.join(this.proxiesDir, 'http.proxies.v2new.json');
-    this.httpProxiesV2AltFile = path.join(this.proxiesDir, 'http.proxies.v2.json');
-        this.socks5ProxiesFile = path.join(this.proxiesDir, 'socks5.proxies.json');
+        this.proxyFile = options.proxyFile; // The specific proxy file to load
         this.loadedProxies = {
             http: [],
             socks5: []
@@ -29,39 +22,73 @@ export class ProxyManager {
      * Load proxy configurations from files
      */
     async loadProxies() {
-        try {
-            // Load HTTP proxies - try new colon list first, then v2 formats, then (disabled) v1
-            if (await fs.pathExists(this.colonListFile)) {
-                const raw = await fs.readFile(this.colonListFile, 'utf8');
-                const parsed = this.parseColonList(raw);
-                this.loadedProxies.http = parsed;
-                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (colon list)`);
-            } else if (await fs.pathExists(this.httpProxiesV2File)) {
-                const httpV2Data = await fs.readJson(this.httpProxiesV2File);
-                this.loadedProxies.http = Array.isArray(httpV2Data) ? this.convertV2ToV1Format(httpV2Data) : [];
-                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v2 format: v2new)`);
-            } else if (await fs.pathExists(this.httpProxiesV2AltFile)) {
-                const httpV2Data = await fs.readJson(this.httpProxiesV2AltFile);
-                this.loadedProxies.http = Array.isArray(httpV2Data) ? this.convertV2ToV1Format(httpV2Data) : [];
-                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v2 format: v2)`);
-            } /* else if (await fs.pathExists(this.httpProxiesFile)) {
-                const httpData = await fs.readJson(this.httpProxiesFile);
-                this.loadedProxies.http = Array.isArray(httpData) ? httpData : [];
-                console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies (v1 format)`);
-            } */
+        if (!this.proxyFile) {
+            console.log('📡 No proxy file specified - running without proxies');
+            return;
+        }
 
-            // Load SOCKS5 proxies
-            if (await fs.pathExists(this.socks5ProxiesFile)) {
-                const socks5Data = await fs.readJson(this.socks5ProxiesFile);
-                this.loadedProxies.socks5 = Array.isArray(socks5Data) ? socks5Data : [];
-                console.log(`📡 Loaded ${this.loadedProxies.socks5.length} SOCKS5 proxies`);
+        if (!await fs.pathExists(this.proxyFile)) {
+            throw new Error(`Proxy file not found: ${this.proxyFile}`);
+        }
+
+        try {
+            const fileName = path.basename(this.proxyFile);
+            const fileExtension = path.extname(this.proxyFile).toLowerCase();
+            
+            if (fileExtension === '.txt') {
+                // Handle TXT format (colon-delimited: host:port:username:password)
+                const raw = await fs.readFile(this.proxyFile, 'utf8');
+                const isHttpsFile = /https/i.test(fileName);
+                const protocol = isHttpsFile ? 'https' : 'http';
+                this.loadedProxies.http = this.parseColonList(raw, { protocol, source: fileName });
+                console.log(`📡 Loaded ${this.loadedProxies.http.length} ${protocol.toUpperCase()} proxies from ${fileName}`);
+                
+            } else if (fileExtension === '.json') {
+                // Handle JSON format (v2 format expected)
+                const jsonData = await fs.readJson(this.proxyFile);
+                
+                if (!Array.isArray(jsonData)) {
+                    throw new Error('JSON proxy file must contain an array of proxy objects');
+                }
+                
+                // Detect if it's v2 format by checking for required v2 fields
+                const isV2Format = jsonData.length > 0 && jsonData[0].hasOwnProperty('country') && jsonData[0].hasOwnProperty('connectionType');
+                
+                if (isV2Format) {
+                    // Filter out bad proxies BEFORE conversion for efficiency
+                    const workingProxies = jsonData.filter(proxy => 
+                        proxy.status === true && 
+                        !proxy.isPaymentRequired && 
+                        !proxy.isAuthRequired &&
+                        // Skip proxies that failed the sweep (have lastResult but it's not 'OK')
+                        (!proxy.lastResult || proxy.lastResult === 'OK')
+                    );
+                    
+                    const filtered = jsonData.length - workingProxies.length;
+                    if (filtered > 0) {
+                        const paymentRequired = jsonData.filter(p => p.isPaymentRequired).length;
+                        const authRequired = jsonData.filter(p => p.isAuthRequired).length;
+                        const sweepFailed = jsonData.filter(p => p.lastResult && p.lastResult !== 'OK').length;
+                        const statusFalse = jsonData.filter(p => p.status !== true).length;
+                        console.log(`🔍 Pre-filtered JSON proxies: ${workingProxies.length}/${jsonData.length} working`);
+                        console.log(`   Filtered: ${filtered} total (${paymentRequired} payment required, ${authRequired} auth required, ${sweepFailed} sweep failed, ${statusFalse} status false)`);
+                    }
+                    
+                    this.loadedProxies.http = this.convertV2ToV1Format(workingProxies);
+                    console.log(`📡 Loaded ${this.loadedProxies.http.length} HTTP proxies from ${fileName} (v2 format)`);
+                } else {
+                    throw new Error('JSON proxy file must be in v2 format (containing country and connectionType fields)');
+                }
+                
+            } else {
+                throw new Error(`Unsupported proxy file format: ${fileExtension}. Supported formats: .txt (colon-delimited) or .json (v2 format)`);
             }
 
-            // Filter out non-working proxies
+            // Filter out non-working proxies (mainly for TXT format, JSON is pre-filtered)
             this.filterWorkingProxies();
 
         } catch (error) {
-            console.warn(`⚠️  Could not load proxies: ${error.message}`);
+            throw new Error(`Failed to load proxies from ${this.proxyFile}: ${error.message}`);
         }
     }
 
@@ -69,7 +96,7 @@ export class ProxyManager {
      * Parse colon-delimited proxy list (host:port:username:password per line)
      * Returns array in internal v1-compatible shape
      */
-    parseColonList(text) {
+    parseColonList(text, { protocol = 'http', source = 'unknown.txt' } = {}) {
         const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
         const proxies = [];
         let count = 0;
@@ -88,7 +115,9 @@ export class ProxyManager {
                 login: username,
                 username,
                 password,
-                url: `http://${username}:${encodeURIComponent(password)}@${host}:${port}`,
+                protocol, // store original intended protocol (http|https)
+                source,
+                url: `${protocol}://${username}:${encodeURIComponent(password)}@${host}:${port}`,
                 status: 'OK',
                 lastChecked: null,
                 // Provide baseline fields expected by filters
@@ -183,6 +212,7 @@ export class ProxyManager {
 
     /**
      * Filter out proxies with ERROR status, payment requirements, auth issues, or other failures
+     * Note: JSON files are pre-filtered, this mainly applies to TXT format or any remaining issues
      */
     filterWorkingProxies() {
         const httpWorking = this.loadedProxies.http.filter(proxy => 
@@ -200,7 +230,7 @@ export class ProxyManager {
             (!proxy.lastResult || proxy.lastResult === 'OK')
         );
         
-        // Log detailed filtering results
+        // Log detailed filtering results only if there are actual changes
         const httpFiltered = this.loadedProxies.http.length - httpWorking.length;
         const socks5Filtered = this.loadedProxies.socks5.length - socks5Working.length;
         
@@ -209,7 +239,7 @@ export class ProxyManager {
             const authRequired = this.loadedProxies.http.filter(p => p.isAuthRequired).length;
             const sweepFailed = this.loadedProxies.http.filter(p => p.lastResult && p.lastResult !== 'OK').length;
             const statusError = this.loadedProxies.http.filter(p => p.status !== 'OK').length;
-            console.log(`🔍 Filtered HTTP proxies: ${httpWorking.length}/${this.loadedProxies.http.length} working`);
+            console.log(`🔍 Post-filtered HTTP proxies: ${httpWorking.length}/${this.loadedProxies.http.length} working`);
             console.log(`   Filtered: ${httpFiltered} total (${paymentRequired} payment required, ${authRequired} auth required, ${sweepFailed} sweep failed, ${statusError} status error)`);
         }
         if (socks5Filtered > 0) {
@@ -217,7 +247,7 @@ export class ProxyManager {
             const authRequired = this.loadedProxies.socks5.filter(p => p.isAuthRequired).length;
             const sweepFailed = this.loadedProxies.socks5.filter(p => p.lastResult && p.lastResult !== 'OK').length;
             const statusError = this.loadedProxies.socks5.filter(p => p.status !== 'OK').length;
-            console.log(`🔍 Filtered SOCKS5 proxies: ${socks5Working.length}/${this.loadedProxies.socks5.length} working`);
+            console.log(`🔍 Post-filtered SOCKS5 proxies: ${socks5Working.length}/${this.loadedProxies.socks5.length} working`);
             console.log(`   Filtered: ${socks5Filtered} total (${paymentRequired} payment required, ${authRequired} auth required, ${sweepFailed} sweep failed, ${statusError} status error)`);
         }
 
@@ -371,13 +401,15 @@ export class ProxyManager {
      */
     toPlaywrightProxy(proxy) {
         if (!proxy) return null;
+        // Determine protocol: allow https if explicitly marked or port suggests TLS proxy
+        let protocol = proxy.protocol || 'http';
+        if (!proxy.protocol) {
+            // Heuristic: common TLS proxy ports
+            if ([443, 8443, 10443, 9443].includes(Number(proxy.port))) protocol = 'https';
+        }
 
-        // Only support HTTP proxies due to Playwright/Chromium limitations with SOCKS5
-        const protocol = 'http';
-
-        const config = {
-            server: `${protocol}://${proxy.host}:${proxy.port}`
-        };
+        const server = `${protocol}://${proxy.host}:${proxy.port}`;
+        const config = { server };
 
         // Add authentication for HTTP proxies
         if (proxy.username || proxy.login) {
