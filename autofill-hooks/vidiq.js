@@ -73,100 +73,175 @@ export default {
     urlPatterns: [
         'https://app.vidiq.com/extension_install',
         'https://app.vidiq.com/login',
+        'https://app.vidiq.com/auth/login',
         'https://app.vidiq.com/register',
         'https://app.vidiq.com/signup',
         'https://app.vidiq.com/auth/signup'
     ],
     
-    // Field mappings with dynamic values
+    // Field mappings with dynamic values - Both steps
     fields: {
-        // Prefer VidIQ-specific selectors, but keep standard fallbacks
+        // Step 1: Email field (always visible)
+        'input[type="email"]': {
+            value: '{{email}}',
+            description: 'Email field (step 1)',
+            priority: 1
+        },
         'input[data-testid="form-input-email"]': {
             value: '{{email}}',
-            description: 'Email field (VidIQ)'
+            description: 'Email field (VidIQ step 1)',
+            priority: 1
         },
         'input[name="email"]': {
             value: '{{email}}',
-            description: 'Email field (name)'
-        },
-        'input[type="email"]': {
-            value: '{{email}}',
-            description: 'Email field (type)'
+            description: 'Email field (name step 1)',
+            priority: 1
         },
         'input[placeholder*="email" i]': {
             value: '{{email}}',
-            description: 'Email field (placeholder fallback)'
+            description: 'Email field (placeholder fallback step 1)',
+            priority: 1
+        },
+        // Step 2: Password fields (appear after step 1 submission)
+        'input[type="password"]': {
+            value: '{{password}}',
+            description: 'Password field (step 2)',
+            priority: 2
+        },
+        'input[id="password"]': {
+            value: '{{password}}',
+            description: 'Password field by ID (step 2)',
+            priority: 2
         },
         'input[data-testid="form-input-password"]': {
             value: '{{password}}',
-            description: 'Password field (VidIQ)'
+            description: 'Password field (VidIQ step 2)',
+            priority: 2
         },
         'input[name="password"]': {
             value: '{{password}}',
-            description: 'Password field (name)'
-        },
-        'input[type="password"]': {
-            value: '{{password}}',
-            description: 'Password field (type)'
+            description: 'Password field (name step 2)',
+            priority: 2
         },
         'input[placeholder*="password" i]': {
             value: '{{password}}',
-            description: 'Password field (placeholder fallback)'
+            description: 'Password field (placeholder step 2)',
+            priority: 2
         }
     },
     
-    // Execution settings optimized for race condition handling
+    // Execution settings optimized for two-step login flow
     execution: {
-    maxAttempts: 8,         // More attempts for dynamic forms
-    pollInterval: 1500,     // Longer polling interval
-    waitAfterFill: 800,     // More time for fields to stabilize
-    fieldRetries: 4,        // Increased retries per field
-    fieldRetryDelay: 200,   // Slightly longer delay between field retries
+        maxAttempts: 15,        // More attempts for multi-step dynamic forms
+        pollInterval: 1200,     // Slightly faster polling for dynamic forms
+        waitAfterFill: 1500,    // More time for step 2 to appear after step 1 submission
+        fieldRetries: 4,        // Increased retries per field
+        fieldRetryDelay: 200,   // Slightly longer delay between field retries
         verifyFill: true,       // Verify field values after filling
-        autoSubmit: false,      // Never auto-submit
-
+        autoSubmit: true,       // Enable form submission for both steps
+        
+        // Two-step flow: prevent early completion
+        requireBothEmailAndPassword: true, // Custom flag to force waiting for both fields
+        
         // Race condition prevention
         stabilityChecks: 3,
-        stabilityDelay: 300,
-        minFieldsForSuccess: 2,
-
+        stabilityDelay: 400,
+        minFieldsForSuccess: 2, // Need both email AND password for true success
+        
         // Sequential fill remains to avoid churn
         fillSequentially: true,
         sequentialDelay: 400
     },
     
-    // Custom execution logic (optional)
+    // Custom execution logic for VidIQ two-step login/signup flow
     async customLogic(page, sessionId, hookSystem, userData) {
         console.log(`🎯 VidIQ custom logic executing for session: ${sessionId}`);
         
         if (userData) {
-            console.log(`🎲 Using generated data: ${userData.email}`);
+            console.log(`🎲 Using ${userData.mode || 'generated'} data: ${userData.email}`);
         }
         
-        // Check page content for VidIQ-specific elements (non-blocking)
-        try {
-            const pageContent = await page.textContent('body');
-            if (pageContent && pageContent.includes('extension')) {
-                console.log(`✅ Confirmed: VidIQ extension page detected`);
+        // Wait a bit for dynamic content to load
+        await page.waitForTimeout(500);
+        
+        // Detect current step state
+        const emailField = page.locator('input[type="email"]').first();
+        const passwordField = page.locator('input[type="password"], input[id="password"]').first();
+        const emailCount = await emailField.count();
+        const passwordCount = await passwordField.count();
+        
+        console.log(`🔍 Form analysis: email fields=${emailCount}, password fields=${passwordCount}`);
+        
+        // Check if email field has value (indicates we're past step 1)
+        let emailFilled = false;
+        if (emailCount > 0) {
+            try {
+                const emailValue = await emailField.inputValue();
+                emailFilled = emailValue && emailValue.length > 0;
+                console.log(`📧 Email field status: filled=${emailFilled} (value: "${emailValue || 'empty'}")`);
+            } catch (e) {
+                console.log(`⚠️  Could not check email value: ${e.message}`);
             }
-            
-            // Look for install buttons
-            const installButton = await page.locator('text=/install|add to chrome|get extension/i').first();
-            if (await installButton.count() > 0) {
-                console.log(`🎯 Found extension install button`);
-            }
-            
-            // Look for submit buttons (don't click, just detect)
-            const submitButton = await page.locator('button[type="submit"], button[data-testid="signup-button"]').first();
-            if (await submitButton.count() > 0) {
-                const buttonText = await submitButton.textContent();
-                console.log(`🔘 Found submit button: "${buttonText}" (not clicking for safety)`);
-            }
-            
-            // Do not probe or fill optional/unknown fields to avoid noise
-            
-        } catch (error) {
-            console.log(`⚠️  Could not analyze VidIQ page: ${error.message}`);
         }
+        
+        if (emailCount > 0 && passwordCount === 0 && !emailFilled) {
+            console.log(`📧 Step 1 detected: Email-only form (empty)`);
+            return { step: 1, needsEmail: true, continueMonitoring: true };
+            
+        } else if (emailCount > 0 && passwordCount === 0 && emailFilled) {
+            console.log(`⏳ Transition state: Email filled, waiting for step 2...`);
+            
+            // Try clicking continue button if it exists and wasn't clicked yet
+            const continueBtn = page.locator('button:has-text("Continue with email"), button[type="submit"]').first();
+            if (await continueBtn.count() > 0) {
+                try {
+                    const isEnabled = await continueBtn.isEnabled();
+                    if (isEnabled) {
+                        await continueBtn.click();
+                        console.log(`� Clicked continue button, waiting for step 2...`);
+                        await page.waitForTimeout(2000); // Wait for step 2 to appear
+                    }
+                } catch (e) {
+                    console.log(`⚠️  Continue button click failed: ${e.message}`);
+                }
+            }
+            
+            return { step: 'transition', continueMonitoring: true };
+            
+        } else if (passwordCount > 0) {
+            console.log(`🔐 Step 2 detected: Password form visible`);
+            
+            // Fill password if it's empty and we have the data
+            if (userData && userData.password) {
+                try {
+                    const currentValue = await passwordField.inputValue();
+                    if (!currentValue) {
+                        await passwordField.fill(userData.password);
+                        console.log(`✅ Password filled in step 2`);
+                        
+                        // Look for final submit button
+                        const finalSubmitBtn = page.locator('button[type="submit"]:visible').first();
+                        if (await finalSubmitBtn.count() > 0) {
+                            const buttonText = await finalSubmitBtn.textContent().catch(() => 'Submit');
+                            console.log(`🔘 Found final submit button: "${buttonText}"`);
+                            
+                            if (userData.submitForm) {
+                                await finalSubmitBtn.click();
+                                console.log(`🚀 Final form submitted`);
+                            }
+                        }
+                    } else {
+                        console.log(`ℹ️  Password field already filled`);
+                    }
+                } catch (error) {
+                    console.log(`⚠️  Step 2 password fill error: ${error.message}`);
+                }
+            }
+            
+            return { step: 2, completed: true };
+        }
+        
+        console.log(`❓ Unknown form state - will continue monitoring...`);
+        return { step: 'unknown', continueMonitoring: true };
     }
 };

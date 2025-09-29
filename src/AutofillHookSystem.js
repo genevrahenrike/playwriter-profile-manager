@@ -17,6 +17,7 @@ export class AutofillHookSystem {
         this.sessionFieldCounts = new Map(); // Track successful field fills per session
         this.activeFillOperations = new Map(); // Track active fill operations per session
         this.postRefreshRetryCounts = new Map(); // Bounded retries for post-refresh refills per session+hook
+        this.sessionCredentials = new Map(); // Store actual credentials for sessions (for login flows)
         
         // EventBus for coordinating with other systems
         this.eventBus = options.eventBus || null;
@@ -62,6 +63,29 @@ export class AutofillHookSystem {
         });
         
         console.log(`🎲 RandomDataGenerator initialized with tracking: ${this.dataGenerator.config.enableTracking}`);
+    }
+
+    /**
+     * Set actual credentials for a session (for login flows)
+     * @param {string} sessionId - Session ID
+     * @param {Object} credentials - Credentials object
+     * @param {string} credentials.email - Email address
+     * @param {string} credentials.password - Password
+     * @param {boolean} credentials.submitForm - Whether to submit form after filling
+     * @param {string} credentials.mode - Mode: 'login' or 'signup'
+     */
+    setCredentialsForSession(sessionId, credentials) {
+        this.sessionCredentials.set(sessionId, credentials);
+        console.log(`🔐 Set credentials for session ${sessionId}: ${credentials.email} (${credentials.mode || 'default'} mode, submit: ${!!credentials.submitForm})`);
+    }
+
+    /**
+     * Get credentials for a session
+     * @param {string} sessionId - Session ID
+     * @returns {Object|null} Credentials object or null
+     */
+    getCredentialsForSession(sessionId) {
+        return this.sessionCredentials.get(sessionId) || null;
     }
 
     /**
@@ -311,6 +335,19 @@ export class AutofillHookSystem {
      * @returns {Object} Generated user data
      */
     generateFieldValues(hook, sessionId, siteUrl = null) {
+        // First check if we have actual credentials for this session (login flows)
+        const sessionCreds = this.getCredentialsForSession(sessionId);
+        if (sessionCreds && sessionCreds.email && sessionCreds.password) {
+            console.log(`🔐 Using session credentials for ${hook.name}: ${sessionCreds.email}`);
+            return {
+                email: sessionCreds.email,
+                password: sessionCreds.password,
+                fullName: sessionCreds.email.split('@')[0], // Use email prefix as name
+                submitForm: sessionCreds.submitForm || false,
+                mode: sessionCreds.mode || 'login'
+            };
+        }
+        
         // Check if hook supports dynamic generation
         if (!hook.useDynamicGeneration) {
             return null;
@@ -781,6 +818,11 @@ export class AutofillHookSystem {
             // Get execution settings with improved defaults for race condition handling
             // Apply proxy-aware timeout multipliers if in proxy mode
             const proxyMultiplier = this.options.proxyMode ? (this.options.proxyTimeoutMultiplier || 2.5) : 1.0;
+            
+            // Check session credentials for form submission override
+            const sessionCreds = this.getCredentialsForSession(sessionId);
+            const shouldAutoSubmit = sessionCreds && sessionCreds.submitForm === true;
+            
             const baseSettings = {
                 maxAttempts: 3,           // More attempts for better reliability
                 pollInterval: 1500,       // Longer polling for dynamic forms
@@ -788,7 +830,7 @@ export class AutofillHookSystem {
                 fieldRetries: 3,          // Retries per field
                 fieldRetryDelay: 100,     // Delay between field retries
                 verifyFill: true,         // Verify field values after filling
-                autoSubmit: false,
+                autoSubmit: shouldAutoSubmit, // Enable if session credentials specify it
                 // Enhanced race condition prevention defaults
                 stabilityChecks: 2,       // Default stability checks
                 stabilityDelay: 250,      // Default stability delay
@@ -797,6 +839,12 @@ export class AutofillHookSystem {
                 sequentialDelay: 300,     // Default sequential delay
                 ...hook.execution
             };
+            
+            // Override autoSubmit with session credentials if specified (takes precedence over hook config)
+            if (shouldAutoSubmit) {
+                baseSettings.autoSubmit = true;
+                console.log(`🔐 Session credentials enable form submission for ${sessionCreds.mode || 'login'} flow`);
+            }
             
             // Apply proxy multipliers to time-sensitive settings
             const settings = {
@@ -1062,11 +1110,20 @@ export class AutofillHookSystem {
             console.log(`🔍 Critical fields status: present(email=${emailFieldPresent}, password=${passwordFieldPresent}) filled(email=${emailFilled}, password=${passwordFilled}), total filled=${finalFilledCount}`);
             
             // Completion policy:
+            // - If hook requires both email and password, wait for both regardless of field presence
             // - If a password field is present, require BOTH email and password to be filled
             // - If no password field is present, allow completion when either email is filled OR enough fields overall
-            const shouldMarkComplete = passwordFieldPresent
+            const requiresBoth = settings.requireBothEmailAndPassword === true;
+            
+            if (requiresBoth) {
+                console.log(`🔄 Two-step mode: waiting for both email AND password (email: ${emailFilled}, password: ${passwordFilled})`);
+            }
+            
+            const shouldMarkComplete = requiresBoth
                 ? (emailFilled && passwordFilled)
-                : (emailFilled || finalFilledCount >= this.options.minFieldsForSuccess);
+                : passwordFieldPresent
+                    ? (emailFilled && passwordFilled)
+                    : (emailFilled || finalFilledCount >= this.options.minFieldsForSuccess);
             
             if (shouldMarkComplete) {
                 this.markSessionCompleted(sessionId, hook.name, finalFilledCount);

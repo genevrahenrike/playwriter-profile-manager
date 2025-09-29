@@ -1830,17 +1830,30 @@ program
                 success: false,
                 reason: null,
                 signals: [],
-                api2xxCount: 0
+                api2xxCount: 0,
+                postCount: 0,
+                authPostCount: 0
             };
 
             if (!Array.isArray(captured) || captured.length === 0) return result;
 
-            // Count api.vidiq.com 2xx responses
+            // Count all POST requests and auth-related POST requests
+            result.postCount = captured.filter(r => r.type === 'request' && r.method === 'POST').length;
+            result.authPostCount = captured.filter(r => 
+                r.type === 'request' && 
+                r.method === 'POST' && 
+                typeof r.url === 'string' && 
+                (r.url.includes('/auth') || r.url.includes('/login') || r.url.includes('/signin'))
+            ).length;
+
+            // Count api.vidiq.com 2xx responses (excluding amplitude analytics)
             result.api2xxCount = captured.filter(r =>
                 r.type === 'response' &&
                 [200, 201].includes(r.status) &&
                 typeof r.url === 'string' &&
-                r.url.includes('api.vidiq.com/')
+                r.url.includes('api.vidiq.com/') &&
+                !r.url.includes('amplitude') &&
+                !r.url.includes('experimentation')
             ).length;
 
             // Look for app-auth capture signals
@@ -1848,13 +1861,15 @@ program
                 if (r.type === 'response' && (r.hookName === 'vidiq-app-capture' || r.hookName === 'vidiq-capture')) {
                     const url = r.url || '';
                     const sigs = (r.custom && Array.isArray(r.custom.signals)) ? r.custom.signals : [];
+                    
+                    // Only trust signin_success if there was an actual POST request
                     if (sigs.includes('token_refresh_success') && [200, 201].includes(r.status)) {
                         result.success = true;
                         result.reason = 'token_refresh';
                         result.signals = sigs;
                         return result;
                     }
-                    if (sigs.includes('signin_success') && [200, 201].includes(r.status)) {
+                    if (sigs.includes('signin_success') && [200, 201].includes(r.status) && result.authPostCount > 0) {
                         result.success = true;
                         result.reason = 'signin_success';
                         result.signals = sigs;
@@ -1866,8 +1881,8 @@ program
                         result.signals = sigs;
                         return result;
                     }
-                    // Fallback: explicit API endpoints
-                    if ([200, 201].includes(r.status) && typeof url === 'string') {
+                    // Fallback: explicit API endpoints (must have auth POST)
+                    if ([200, 201].includes(r.status) && typeof url === 'string' && result.authPostCount > 0) {
                         if (url.includes('/users/me')) {
                             result.success = true;
                             result.reason = 'session_valid';
@@ -1887,10 +1902,14 @@ program
                 }
             }
 
-            // Soft success: plenty of API activity (e.g., dashboard streaming)
-            if (result.api2xxCount >= 5) {
+            // Strict success: require significant API activity AND evidence of actual authentication
+            if (result.api2xxCount >= 3 && result.authPostCount > 0) {
                 result.success = true;
-                result.reason = 'api_activity_detected';
+                result.reason = 'authenticated_api_activity';
+            } else if (result.api2xxCount >= 8 && result.postCount > 0) {
+                // Very high API activity with some POST requests (less strict fallback)
+                result.success = true;
+                result.reason = 'high_api_activity';
             }
 
             return result;
@@ -1955,8 +1974,8 @@ program
                 const launchOptions = {
                     browserType: 'chromium',
                     headless: !!options.headless,
-                    // Enable autofill monitoring for direct login flows, disable for standard refresh
-                    enableAutofillMonitoring: shouldEnableAutofill,
+                    // For direct login mode, disable autofill initially to prevent filling wrong pages
+                    enableAutofillMonitoring: false,
                     enableAutomation: false,
                     enableRequestCapture: true,
                     // Disable extensions for direct login flow
@@ -1982,7 +2001,32 @@ program
 
                 // Log flow mode
                 if (isDirectLogin) {
-                    console.log(chalk.cyan(`🔐 Direct login mode: extensions disabled, autofill enabled`));
+                    console.log(chalk.cyan(`🔐 Direct login mode: extensions disabled, autofill will be enabled after navigation`));
+                    
+                    // Clean up multiple tabs IMMEDIATELY - keep only the main page for direct login
+                    try {
+                        const context = res.context;
+                        const allPages = context.pages();
+                        console.log(chalk.dim(`🧹 Cleaning up tabs: found ${allPages.length} open tabs`));
+                        
+                        // Close all pages except the first one
+                        for (let i = 1; i < allPages.length; i++) {
+                            try {
+                                await allPages[i].close();
+                                console.log(chalk.dim(`✅ Closed tab ${i+1}: ${allPages[i].url()}`));
+                            } catch (e) {
+                                console.log(chalk.yellow(`⚠️  Could not close tab ${i+1}: ${e.message}`));
+                            }
+                        }
+                        
+                        // Ensure we're working with the main page
+                        const mainPage = allPages[0];
+                        if (mainPage && !mainPage.isClosed()) {
+                            console.log(chalk.dim(`🎯 Using main tab: ${mainPage.url()}`));
+                        }
+                    } catch (e) {
+                        console.log(chalk.yellow(`⚠️  Tab cleanup error: ${e.message}`));
+                    }
                 } else {
                     console.log(chalk.dim(`🔄 Standard refresh mode: extensions enabled, autofill disabled`));
                 }
@@ -1993,6 +2037,36 @@ program
                 console.log(chalk.dim(`↪️  Navigating to ${targetUrl} ...`));
                 try {
                     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: Math.min(perRunTimeout, 45000) });
+                    
+                    // NOW enable autofill monitoring for direct login mode (after navigation to correct page)
+                    if (isDirectLogin && shouldEnableAutofill) {
+                        console.log(chalk.cyan(`🎯 Enabling autofill monitoring on login page...`));
+                        
+                        // Get actual profile credentials for login
+                        const profileCreds = await getCredentials(profile.id || profile.name);
+                        if (profileCreds && profileCreds.email && profileCreds.password) {
+                            console.log(chalk.green(`🔐 Found credentials for ${profile.name}: ${profileCreds.email}`));
+                            
+                            // Configure autofill system with actual credentials and enable submission
+                            launcher.autofillSystem.setCredentialsForSession(sessionId, {
+                                email: profileCreds.email,
+                                password: profileCreds.password,
+                                submitForm: true,  // Enable form submission for login
+                                mode: 'login'      // Set to login mode
+                            });
+                        } else {
+                            console.log(chalk.yellow(`⚠️  No credentials found for ${profile.name}, using dynamic generation`));
+                        }
+                        
+                        try {
+                            await launcher.autofillSystem.startMonitoring(sessionId, res.context);
+                            // Give autofill a moment to register the new page
+                            await new Promise(r => setTimeout(r, 1000));
+                            console.log(chalk.dim(`✅ Autofill monitoring enabled for session: ${sessionId}`));
+                        } catch (e) {
+                            console.log(chalk.yellow(`⚠️  Failed to enable autofill: ${e.message}`));
+                        }
+                    }
                 } catch (navErr) {
                     console.log(chalk.yellow(`⚠️  Navigation warning: ${navErr.message}`));
                 }
@@ -2161,6 +2235,8 @@ program
                     reason: outcome.reason,
                     signals: outcome.signals || [],
                     api2xxCount: outcome.api2xxCount || 0,
+                    postCount: outcome.postCount || 0,
+                    authPostCount: outcome.authPostCount || 0,
                     loginRequired: outcome.reason === 'login_required',
                     loginFlow: outcome.reason === 'login_required' ? loginFlow : undefined,
                     captureExport: exportedPath || undefined,
@@ -2178,19 +2254,24 @@ program
                     const label = outcome.reason === 'token_refresh' ? 'Token refreshed' :
                                   outcome.reason === 'signin_success' ? 'Signin OK' :
                                   outcome.reason === 'session_valid' ? 'Session valid' :
+                                  outcome.reason === 'authenticated_api_activity' ? 'Auth API activity' :
+                                  outcome.reason === 'high_api_activity' ? 'High API activity' :
                                   outcome.reason === 'api_activity_detected' ? 'API active' : 'Success';
                     const flowInfo = isDirectLogin ? ' (direct login)' : ' (standard)';
-                    console.log(chalk.green(`✅ ${label} for ${profile.name}${flowInfo} (api2xx=${resultLine.api2xxCount})`));
+                    const postInfo = outcome.authPostCount > 0 ? `, auth_posts=${outcome.authPostCount}` : (outcome.postCount > 0 ? `, posts=${outcome.postCount}` : '');
+                    console.log(chalk.green(`✅ ${label} for ${profile.name}${flowInfo} (api2xx=${resultLine.api2xxCount}${postInfo})`));
                 } else if (outcome.reason === 'login_required') {
                     const flowInfo = isDirectLogin ? ' - Direct login mode enabled' : '';
                     console.log(chalk.yellow(`🔐 Login required for ${profile.name} (${loginFlow})${flowInfo}`));
                     if (isDirectLogin) {
-                        console.log(chalk.dim('Autofill monitoring was enabled for login form interaction.'));
+                        const postInfo = outcome.postCount > 0 ? ` (${outcome.postCount} POST requests captured)` : ' (no form submissions detected)';
+                        console.log(chalk.dim(`Autofill monitoring was enabled for login form interaction${postInfo}.`));
                     } else {
                         console.log(chalk.dim('Saved login page sample for analysis. Use --direct-login for autofill assistance.'));
                     }
                 } else {
-                    console.log(chalk.red(`❌ Refresh failed for ${profile.name}: ${outcome.reason}`));
+                    const postInfo = outcome.postCount > 0 ? ` (${outcome.postCount} POST, ${outcome.authPostCount} auth POST)` : '';
+                    console.log(chalk.red(`❌ Refresh failed for ${profile.name}: ${outcome.reason}${postInfo}`));
                 }
             } catch (err) {
                 console.error(chalk.red(`💥 Refresh error for ${profile.name}: ${err.message}`));
